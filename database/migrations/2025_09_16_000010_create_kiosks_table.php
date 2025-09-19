@@ -12,6 +12,11 @@ return new class extends Migration
             $table->increments('kiosk_id');
             $table->string('location', 100)->nullable();
             $table->boolean('is_active')->default(1);
+            $table->datetime('last_seen')->nullable()->comment('Timestamp of when this kiosk was last seen/heard from');
+
+            // Add indexes for better query performance
+            $table->index('last_seen', 'idx_kiosks_last_seen');
+            $table->index(['is_active', 'last_seen'], 'idx_kiosks_active_last_seen');
         });
     }
 
