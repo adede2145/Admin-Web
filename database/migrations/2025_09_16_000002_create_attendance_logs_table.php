@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedInteger('kiosk_id')->nullable();
             
             // Photo capture fields for RFID scanning
-            $table->longText('photo_data')->nullable(); // Base64 encoded photo data
+            $table->longBlob('photo_data')->nullable(); // Photo binary data (longblob)
             $table->string('photo_content_type', 100)->nullable(); // MIME type (image/jpeg, image/png)
             $table->timestamp('photo_captured_at')->nullable(); // When photo was taken
             $table->string('photo_filename', 255)->nullable(); // Original filename if any
