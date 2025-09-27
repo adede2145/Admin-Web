@@ -7,6 +7,17 @@ use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
+    public function __construct()
+    {
+        // Ensure only super admins can access department management
+        $this->middleware(function ($request, $next) {
+            if (!auth()->check() || !auth()->user()->role || auth()->user()->role->role_name !== 'super_admin') {
+                abort(403, 'Access denied. Only Super Admins can manage departments.');
+            }
+            return $next($request);
+        });
+    }
+
     public function index()
     {
         $departments = Department::withCount('employees')->get();
@@ -21,8 +32,7 @@ class DepartmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:departments,name',
-            'description' => 'nullable|string'
+            'department_name' => 'required|string|max:100|unique:departments,department_name',
         ]);
 
         Department::create($validated);
@@ -38,27 +48,63 @@ class DepartmentController extends Controller
 
     public function update(Request $request, Department $department)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:departments,name,' . $department->id,
-            'description' => 'nullable|string'
-        ]);
+        try {
+            $validated = $request->validate([
+                'department_name' => 'required|string|max:100|unique:departments,department_name,' . $department->department_id . ',department_id',
+            ], [
+                'department_name.required' => 'Department name is required.',
+                'department_name.string' => 'Department name must be a valid text.',
+                'department_name.max' => 'Department name cannot exceed 100 characters.',
+                'department_name.unique' => 'A department with this name already exists.',
+            ]);
 
-        $department->update($validated);
+            $department->update($validated);
 
-        return redirect()->route('departments.index')
-            ->with('success', 'Department updated successfully.');
+            return redirect()->route('departments.index')
+                ->with('success', 'Department "' . $validated['department_name'] . '" updated successfully!');
+                
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('departments.index')
+                ->withErrors($e->validator)
+                ->withInput()
+                ->with('error', 'Failed to update department. Please check the form for errors.');
+        } catch (\Exception $e) {
+            \Log::error('Department update failed', [
+                'department_id' => $department->department_id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->user()->admin_id
+            ]);
+            
+            return redirect()->route('departments.index')
+                ->with('error', 'An unexpected error occurred while updating the department.');
+        }
     }
 
     public function destroy(Department $department)
     {
-        if ($department->employees()->count() > 0) {
+        try {
+            $departmentName = $department->department_name;
+            $employeeCount = $department->employees()->count();
+            
+            if ($employeeCount > 0) {
+                return redirect()->route('departments.index')
+                    ->with('error', 'Cannot delete "' . $departmentName . '" because it has ' . $employeeCount . ' employee(s). Please reassign or remove employees first.');
+            }
+
+            $department->delete();
+
             return redirect()->route('departments.index')
-                ->with('error', 'Cannot delete department with existing employees.');
+                ->with('success', 'Department "' . $departmentName . '" deleted successfully!');
+                
+        } catch (\Exception $e) {
+            \Log::error('Department deletion failed', [
+                'department_id' => $department->department_id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->user()->admin_id
+            ]);
+            
+            return redirect()->route('departments.index')
+                ->with('error', 'An unexpected error occurred while deleting the department.');
         }
-
-        $department->delete();
-
-        return redirect()->route('departments.index')
-            ->with('success', 'Department deleted successfully.');
     }
 }

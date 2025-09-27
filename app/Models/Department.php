@@ -12,11 +12,18 @@ class Department extends Model
     protected $primaryKey = 'department_id';
 
     protected $fillable = [
-        'department_name',
-        'description'
+        'department_name'
     ];
 
     public $timestamps = false;
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName()
+    {
+        return 'department_id';
+    }
 
     public function employees()
     {

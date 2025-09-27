@@ -16,10 +16,17 @@ class SuperAdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-       if (auth()->check() && auth()->user()->role->role_name === 'superadmin') {
-    return $next($request);
-}
+        if (!auth()->check()) {
+            abort(403, 'Access denied. Authentication required.');
+        }
 
-        abort(403, 'Unauthorized'); // block if not superadmin
+        $admin = auth()->user();
+        
+        // Check if the authenticated user is a super admin (note: role_name should be 'super_admin' not 'superadmin')
+        if (!$admin->role || $admin->role->role_name !== 'super_admin') {
+            abort(403, 'Access denied. Only Super Admins can perform this action.');
+        }
+
+        return $next($request);
     }
 }
