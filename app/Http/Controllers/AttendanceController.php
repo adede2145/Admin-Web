@@ -133,16 +133,16 @@ class AttendanceController extends Controller
             $log = \App\Models\AuditLog::create([
                 'admin_id'    => auth()->user()->admin_id,
                 'action'      => 'edit',
-                'model_type'  => \App\Models\AttendanceLog::class,
-                'model_id'    => $attendanceLog->log_id,
-                'old_values'  => $oldValues,
-                'new_values'  => $newValues,
+                'model_type'  => 'AttendanceLog',
+                'model_id'    => $attendanceLog->attendance_id,
+                'old_values'  => json_encode($oldValues),
+                'new_values'  => json_encode($newValues),
                 'ip_address'  => request()->ip(),
                 'user_agent'  => request()->userAgent(),
             ]);
             \Log::info('Audit log created successfully', [
                 'log_id' => $log->id,
-                'attendance_log_id' => $attendanceLog->log_id,
+                'attendance_id' => $attendanceLog->attendance_id,
                 'changes' => [
                     'old' => $oldValues,
                     'new' => $newValues
@@ -151,7 +151,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             \Log::error('Failed to create audit log', [
                 'error' => $e->getMessage(),
-                'attendance_log_id' => $attendanceLog->log_id
+                'attendance_id' => $attendanceLog->attendance_id
             ]);
         }
 
@@ -178,8 +178,8 @@ class AttendanceController extends Controller
     {
         $request->validate([
             'employee_id' => 'required|exists:employees,employee_id',
-            'method' => 'required|in:rfid,fingerprint,manual',
-            'kiosk_id' => 'nullable|exists:kiosks,kiosk_id'
+            'method' => 'required|in:rfid,fingerprint',
+            'kiosk_id' => 'required|exists:kiosks,kiosk_id'
         ]);
 
         // Create attendance log
@@ -194,96 +194,6 @@ class AttendanceController extends Controller
             'success' => true,
             'message' => 'Attendance logged successfully',
             'log' => $log
-        ]);
-    }
-
-    // Web-based time in/out functionality
-    public function timeInOut(Request $request)
-    {
-        $request->validate([
-            'employee_id' => 'required|exists:employees,employee_id',
-            'action' => 'required|in:time_in,time_out'
-        ]);
-
-        $employee = \App\Models\Employee::findOrFail($request->employee_id);
-        
-        // Check if user can manage this employee's attendance
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            auth()->user()->department_id !== $employee->department_id) {
-            return back()->with('error', 'You can only manage attendance for employees in your department.');
-        }
-
-        if ($request->action === 'time_in') {
-            // Check if employee already has an active time_in today without time_out
-            $existingLog = AttendanceLog::where('employee_id', $request->employee_id)
-                ->whereDate('time_in', today())
-                ->whereNull('time_out')
-                ->first();
-
-            if ($existingLog) {
-                return back()->with('error', $employee->full_name . ' has already timed in today at ' . 
-                    $existingLog->time_in->format('h:i A') . '. Please time out first.');
-            }
-
-            // Create new time in record
-            try {
-                $log = AttendanceLog::create([
-                    'employee_id' => $request->employee_id,
-                    'time_in' => now(),
-                    'method' => 'manual', // Indicate this was manually entered by admin
-                    'kiosk_id' => null
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to create time-in record: ' . $e->getMessage());
-                return back()->with('error', 'Failed to time in: ' . $e->getMessage());
-            }
-
-            return back()->with('success', $employee->full_name . ' has been timed in successfully at ' . 
-                $log->time_in->format('h:i A') . '.');
-
-        } else { // time_out
-            // Find the most recent time_in without time_out for this employee
-            $activeLog = AttendanceLog::where('employee_id', $request->employee_id)
-                ->whereNull('time_out')
-                ->orderBy('time_in', 'desc')
-                ->first();
-
-            if (!$activeLog) {
-                return back()->with('error', $employee->full_name . ' has no active time-in record to time out.');
-            }
-
-            // Update the log with time_out
-            $activeLog->update(['time_out' => now()]);
-
-            $workHours = $activeLog->time_in->diffInHours(now());
-            
-            return back()->with('success', $employee->full_name . ' has been timed out successfully at ' . 
-                now()->format('h:i A') . '. Total work time: ' . number_format($workHours, 1) . ' hours.');
-        }
-    }
-
-    // Show photo captured during RFID scanning
-    public function showPhoto($id)
-    {
-        $attendanceLog = AttendanceLog::findOrFail($id);
-        
-        // Check if user can view this photo (RBAC)
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            auth()->user()->department_id !== $attendanceLog->employee->department_id) {
-            abort(403, 'You can only view photos from your department.');
-        }
-
-        if (!$attendanceLog->hasPhoto()) {
-            abort(404, 'No photo found for this attendance record.');
-        }
-
-        $contentType = $attendanceLog->photo_content_type ?: 'image/jpeg';
-        $photoData = base64_decode($attendanceLog->photo_data);
-
-        return response($photoData, 200, [
-            'Content-Type' => $contentType,
-            'Cache-Control' => 'public, max-age=3600', // Cache for 1 hour
-            'Content-Disposition' => 'inline; filename="attendance_photo_' . $id . '.jpg"'
         ]);
     }
 
