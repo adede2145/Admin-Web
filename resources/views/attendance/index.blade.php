@@ -419,6 +419,12 @@
 </div>
 @endforeach
 
+<div id="bladePayload" class="d-none"
+     data-has-report="{{ session('generated_report_id') ? '1' : '0' }}"
+     data-success="{{ session('success') ? e(session('success')) : '' }}"
+     data-error="{{ session('error') ? e(session('error')) : '' }}">
+</div>
+
 <script>
     // Auto-refresh functionality - automatically starts on page load
     let autoRefreshInterval = null;
@@ -488,9 +494,9 @@
         }
     });
 
-    document.getElementById('empSelectAll')?.addEventListener('change', function() {
+    document.getElementById('empSelectAll')?.addEventListener('change', function(e) {
         document.querySelectorAll('.emp-item').forEach(cb => {
-            cb.checked = event.target.checked;
+            cb.checked = e.target.checked;
         });
     });
 
@@ -542,12 +548,14 @@
     });
 
     // Auto-show modal when page loads if report was generated
-    @if(session('generated_report_id'))
-    document.addEventListener('DOMContentLoaded', function() {
-        var modal = new bootstrap.Modal(document.getElementById('generatedReportModal'));
-        modal.show();
-    });
-    @endif
+    const bladePayload = document.getElementById('bladePayload');
+    const hasGeneratedReport = bladePayload?.dataset.hasReport === '1';
+    if (hasGeneratedReport) {
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = new bootstrap.Modal(document.getElementById('generatedReportModal'));
+            modal.show();
+        });
+    }
 
     // Cool notification functions
     function showNotification(type, message) {
@@ -574,19 +582,18 @@
     }
 
     // Show notifications based on session messages
-    @if(session('success'))
-    document.addEventListener('DOMContentLoaded', function() {
-        showNotification('success', '{{ session('
-            success ') }}');
-    });
-    @endif
-
-    @if(session('error'))
-    document.addEventListener('DOMContentLoaded', function() {
-        showNotification('error', '{{ session('
-            error ') }}');
-    });
-    @endif
+    const flashSuccessMessage = bladePayload?.dataset.success || '';
+    const flashErrorMessage = bladePayload?.dataset.error || '';
+    if (flashSuccessMessage) {
+        document.addEventListener('DOMContentLoaded', function() {
+            showNotification('success', flashSuccessMessage);
+        });
+    }
+    if (flashErrorMessage) {
+        document.addEventListener('DOMContentLoaded', function() {
+            showNotification('error', flashErrorMessage);
+        });
+    }
 
     // Photo viewing functions
     function showAttendancePhoto(logId, employeeName, dateTime) {

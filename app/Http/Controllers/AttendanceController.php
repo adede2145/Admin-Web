@@ -12,6 +12,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class AttendanceController extends Controller
 {
@@ -99,7 +101,7 @@ class AttendanceController extends Controller
         // Check if user can edit this record
         if (
             auth()->user()->role->role_name !== 'super_admin' &&
-            auth()->user()->getAttribute('department_id') !== $attendanceLog->employee->department_id
+            auth()->user()->department_id !== $attendanceLog->employee->department_id
         ) {
             abort(403, 'You can only edit attendance records from your department.');
         }
@@ -170,7 +172,7 @@ class AttendanceController extends Controller
         // Check if user can delete this record
         if (
             auth()->user()->role->role_name !== 'super_admin' &&
-            auth()->user()->getAttribute('department_id') !== $attendanceLog->employee->department_id
+            auth()->user()->department_id !== $attendanceLog->employee->department_id
         ) {
             abort(403, 'You can only delete attendance records from your department.');
         }
@@ -562,7 +564,7 @@ class AttendanceController extends Controller
 
     private function downloadAsExcel($report, $overrides, $filename)
     {
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet = new Spreadsheet();
 
         // Employee Summary Sheet
         $summarySheet = $spreadsheet->getActiveSheet();
@@ -641,7 +643,7 @@ class AttendanceController extends Controller
             $summarySheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'dtr_excel_');
         $writer->save($tempFile);
 
