@@ -83,7 +83,12 @@ class AttendanceLog extends Model
         }
         
         $contentType = $this->photo_content_type ?: 'image/jpeg';
-        return "data:{$contentType};base64,{$this->photo_data}";
+        // Ensure we are returning base64 for embedding even if stored as binary
+        $raw = $this->photo_data;
+        // If it's already base64-like, keep it; otherwise base64-encode binary
+        $isBase64 = is_string($raw) && base64_encode(base64_decode($raw, true)) === $raw;
+        $base64 = $isBase64 ? $raw : base64_encode($raw);
+        return "data:{$contentType};base64,{$base64}";
     }
 
     public function isRfidWithPhoto()

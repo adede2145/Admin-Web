@@ -44,6 +44,7 @@ Route::prefix('api/kiosk')->group(function () {
     Route::post('/verify/fingerprint', [AttendanceController::class, 'verifyFingerprint']);
     Route::post('/verify/rfid', [AttendanceController::class, 'verifyRFID']);
     Route::post('/attendance', [AttendanceController::class, 'store']);
+    Route::post('/heartbeat', [AttendanceController::class, 'heartbeat']);
 });
 
 // API Routes for auto-refresh
@@ -86,6 +87,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
     Route::post('/attendance/time-in-out', [AttendanceController::class, 'timeInOut'])->name('attendance.time-in-out');
     Route::get('/attendance/{id}/photo', [AttendanceController::class, 'showPhoto'])->name('attendance.photo');
+    // Diagnostic helper for photo integrity
+    Route::get('/attendance/{id}/photo-info', [AttendanceController::class, 'photoInfo'])->name('attendance.photo.info');
 
     // Audit Logs (accessible to both admins and superadmins)
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.index');

@@ -11,13 +11,15 @@ use App\Models\AuditLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('department.admin')->except(['store', 'verifyFingerprint', 'verifyRFID']);
+        // Allow authenticated users to fetch photos regardless of department to ensure images render in UI
+        $this->middleware('department.admin')->except(['store', 'verifyFingerprint', 'verifyRFID', 'showPhoto']);
     }
 
     // Show attendance management page
@@ -61,7 +63,7 @@ class AttendanceController extends Controller
         }
 
         $attendanceLogs = $query->latest('time_in')->paginate(20);
-        
+
         // RBAC: Only show departments that the user has access to
         if (auth()->user()->role->role_name === 'super_admin') {
             $departments = Department::all();
@@ -76,8 +78,8 @@ class AttendanceController extends Controller
                 $q->where('department_id', auth()->user()->department_id);
             }
         )
-        ->orderBy('full_name')
-        ->get();
+            ->orderBy('full_name')
+            ->get();
 
         return view('attendance.index', compact('attendanceLogs', 'departments', 'employeesForDTR'));
     }
@@ -93,10 +95,12 @@ class AttendanceController extends Controller
         ]);
 
         $attendanceLog = AttendanceLog::findOrFail($id);
-        
+
         // Check if user can edit this record
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            auth()->user()->getAttribute('department_id') !== $attendanceLog->employee->department_id) {
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->getAttribute('department_id') !== $attendanceLog->employee->department_id
+        ) {
             abort(403, 'You can only edit attendance records from your department.');
         }
 
@@ -110,7 +114,7 @@ class AttendanceController extends Controller
         // Prepare update data
         $timeIn = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->time_in)
             ->format('Y-m-d H:i:s');
-        
+
         $updateData = [
             'time_in' => $timeIn,
             'method' => $request->method,
@@ -140,7 +144,7 @@ class AttendanceController extends Controller
                 'ip_address'  => request()->ip(),
                 'user_agent'  => request()->userAgent(),
             ]);
-            \Log::info('Audit log created successfully', [
+            Log::info('Audit log created successfully', [
                 'log_id' => $log->id,
                 'attendance_id' => $attendanceLog->attendance_id,
                 'changes' => [
@@ -149,7 +153,7 @@ class AttendanceController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('Failed to create audit log', [
+            Log::error('Failed to create audit log', [
                 'error' => $e->getMessage(),
                 'attendance_id' => $attendanceLog->attendance_id
             ]);
@@ -162,10 +166,12 @@ class AttendanceController extends Controller
     public function destroy($id)
     {
         $attendanceLog = AttendanceLog::findOrFail($id);
-        
+
         // Check if user can delete this record
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            auth()->user()->getAttribute('department_id') !== $attendanceLog->employee->department_id) {
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->getAttribute('department_id') !== $attendanceLog->employee->department_id
+        ) {
             abort(403, 'You can only delete attendance records from your department.');
         }
 
@@ -179,16 +185,46 @@ class AttendanceController extends Controller
         $request->validate([
             'employee_id' => 'required|exists:employees,employee_id',
             'method' => 'required|in:rfid,fingerprint',
-            'kiosk_id' => 'required|exists:kiosks,kiosk_id'
+            'kiosk_id' => 'required|exists:kiosks,kiosk_id',
+            'photo_data' => 'nullable|string', // Base64 encoded image data
+            'photo_content_type' => 'nullable|string'
         ]);
 
-        // Create attendance log
-        $log = AttendanceLog::create([
+        // Prepare attendance log data
+        $logData = [
             'employee_id' => $request->employee_id,
             'time_in' => now(),
             'method' => $request->method,
             'kiosk_id' => $request->kiosk_id
-        ]);
+        ];
+
+        // Handle photo data if provided
+        if ($request->filled('photo_data')) {
+            // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+            $photoData = $request->photo_data;
+            if (strpos($photoData, 'base64,') !== false) {
+                $photoData = substr($photoData, strpos($photoData, 'base64,') + 7);
+            }
+
+            // Decode base64 photo data
+            $decodedPhoto = base64_decode($photoData);
+
+            if ($decodedPhoto !== false) {
+                $logData['photo_data'] = $decodedPhoto;
+                $logData['photo_content_type'] = $request->photo_content_type ?: 'image/jpeg';
+                $logData['photo_captured_at'] = now();
+                $logData['photo_filename'] = 'attendance_' . time() . '.jpg';
+            }
+        }
+
+        // Create attendance log
+        $log = AttendanceLog::create($logData);
+
+        // Update kiosk heartbeat to mark it as online
+        $kiosk = Kiosk::find($request->kiosk_id);
+        if ($kiosk) {
+            $kiosk->updateHeartbeat();
+        }
 
         return response()->json([
             'success' => true,
@@ -204,7 +240,7 @@ class AttendanceController extends Controller
         ]);
 
         $employee = Employee::where('fingerprint_hash', $request->fingerprint_hash)->first();
-        
+
         if (!$employee) {
             return response()->json([
                 'success' => false,
@@ -225,7 +261,7 @@ class AttendanceController extends Controller
         ]);
 
         $employee = Employee::where('rfid_code', $request->rfid_code)->first();
-        
+
         if (!$employee) {
             return response()->json([
                 'success' => false,
@@ -237,6 +273,83 @@ class AttendanceController extends Controller
             'success' => true,
             'employee_id' => $employee->employee_id
         ]);
+    }
+
+    public function heartbeat(Request $request)
+    {
+        $request->validate([
+            'kiosk_id' => 'required|exists:kiosks,kiosk_id'
+        ]);
+
+        $kiosk = Kiosk::find($request->kiosk_id);
+        if (!$kiosk) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kiosk not found'
+            ], 404);
+        }
+
+        // Update kiosk heartbeat
+        $kiosk->updateHeartbeat();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Heartbeat updated successfully',
+            'timestamp' => $kiosk->last_seen
+        ]);
+    }
+
+    /**
+     * Debug endpoint to test photo data transmission from kiosk
+     */
+    public function debugPhoto(Request $request)
+    {
+        $response = [
+            'success' => true,
+            'debug_info' => [
+                'request_method' => $request->method(),
+                'content_type' => $request->header('Content-Type'),
+                'has_photo_data' => $request->has('photo_data'),
+                'photo_data_length' => $request->filled('photo_data') ? strlen($request->photo_data) : 0,
+                'photo_content_type' => $request->photo_content_type,
+                'timestamp' => now()->toISOString()
+            ]
+        ];
+
+        if ($request->filled('photo_data')) {
+            $photoData = $request->photo_data;
+
+            // Check if it's base64
+            $isBase64 = base64_encode(base64_decode($photoData, true)) === $photoData;
+            $response['debug_info']['appears_base64'] = $isBase64;
+
+            if ($isBase64) {
+                $decoded = base64_decode($photoData);
+                $response['debug_info']['decoded_length'] = strlen($decoded);
+
+                // Check first 4 bytes
+                if (strlen($decoded) >= 4) {
+                    $firstBytes = substr($decoded, 0, 4);
+                    $hex = bin2hex($firstBytes);
+                    $response['debug_info']['first_4_bytes_hex'] = $hex;
+
+                    // Identify image format
+                    if (substr($hex, 0, 4) === 'ffd8') {
+                        $response['debug_info']['detected_format'] = 'JPEG';
+                    } elseif (substr($hex, 0, 8) === '89504e47') {
+                        $response['debug_info']['detected_format'] = 'PNG';
+                    } else {
+                        $response['debug_info']['detected_format'] = 'Unknown/Corrupted';
+                    }
+                }
+            } else {
+                // Not base64, check raw data
+                $response['debug_info']['first_10_chars'] = substr($photoData, 0, 10);
+                $response['debug_info']['first_4_bytes_hex'] = bin2hex(substr($photoData, 0, 4));
+            }
+        }
+
+        return response()->json($response);
     }
 
     public function generateDTR(Request $request)
@@ -267,7 +380,6 @@ class AttendanceController extends Controller
             return redirect()->route('attendance.index')
                 ->with('success', 'DTR report generated successfully! Report ID: ' . $dtrReport->report_id)
                 ->with('generated_report_id', $dtrReport->report_id);
-
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to generate DTR report: ' . $e->getMessage());
         }
@@ -276,7 +388,7 @@ class AttendanceController extends Controller
     public function dtrHistory(Request $request)
     {
         $filters = $request->only(['report_type', 'status', 'start_date', 'end_date']);
-        
+
         $dtrService = new \App\Services\DTRService();
         $reports = $dtrService->getDTRReportHistory(auth()->user(), $filters);
 
@@ -300,7 +412,9 @@ class AttendanceController extends Controller
         // Load overrides for this report (keyed: employee_id|Y-m-d => override)
         $overrides = \App\Models\DTRDetailOverride::where('report_id', $reportId)
             ->get()
-            ->keyBy(function($o){ return $o->employee_id.'|'.$o->date->toDateString(); });
+            ->keyBy(function ($o) {
+                return $o->employee_id . '|' . $o->date->toDateString();
+            });
 
         return view('dtr.details', compact('report', 'overrides'));
     }
@@ -308,15 +422,15 @@ class AttendanceController extends Controller
     public function deleteDTR($reportId)
     {
         try {
-            \Log::info('Delete DTR attempt', ['report_id' => $reportId, 'user_id' => auth()->id()]);
-            
+            Log::info('Delete DTR attempt', ['report_id' => $reportId, 'user_id' => auth()->id()]);
+
             $dtrService = new \App\Services\DTRService();
             $dtrService->deleteDTRReport($reportId, auth()->user());
 
-            \Log::info('DTR report deleted successfully', ['report_id' => $reportId]);
+            Log::info('DTR report deleted successfully', ['report_id' => $reportId]);
             return back()->with('success', 'DTR report deleted successfully!');
         } catch (\Exception $e) {
-            \Log::error('Failed to delete DTR report', ['report_id' => $reportId, 'error' => $e->getMessage()]);
+            Log::error('Failed to delete DTR report', ['report_id' => $reportId, 'error' => $e->getMessage()]);
             return back()->with('error', 'Failed to delete DTR report: ' . $e->getMessage());
         }
     }
@@ -324,20 +438,22 @@ class AttendanceController extends Controller
     public function downloadDTR($reportId, $format = 'html')
     {
         try {
-            \Log::info('Download DTR attempt', ['report_id' => $reportId, 'format' => $format, 'user_id' => auth()->id()]);
-            
+            Log::info('Download DTR attempt', ['report_id' => $reportId, 'format' => $format, 'user_id' => auth()->id()]);
+
             $dtrService = new \App\Services\DTRService();
             $report = $dtrService->getDTRReportDetails($reportId, auth()->user());
-            
+
             // Load overrides for this report (keyed: employee_id|Y-m-d => override)
             $overrides = \App\Models\DTRDetailOverride::where('report_id', $reportId)
                 ->get()
-                ->keyBy(function($o){ return $o->employee_id.'|'.$o->date->toDateString(); });
-            
+                ->keyBy(function ($o) {
+                    return $o->employee_id . '|' . $o->date->toDateString();
+                });
+
             $filename = 'DTR_Report_' . $report->report_id . '_' . $report->start_date . '_to_' . $report->end_date;
-            
-            \Log::info('DTR download processing', ['filename' => $filename, 'format' => $format]);
-            
+
+            Log::info('DTR download processing', ['filename' => $filename, 'format' => $format]);
+
             switch ($format) {
                 case 'pdf':
                     return $this->downloadAsPDF($report, $overrides, $filename);
@@ -348,9 +464,8 @@ class AttendanceController extends Controller
                 default:
                     return $this->downloadAsHTML($report, $overrides, $filename);
             }
-                
         } catch (\Exception $e) {
-            \Log::error('Failed to download DTR report', ['report_id' => $reportId, 'format' => $format, 'error' => $e->getMessage()]);
+            Log::error('Failed to download DTR report', ['report_id' => $reportId, 'format' => $format, 'error' => $e->getMessage()]);
             return back()->with('error', 'Failed to download DTR report: ' . $e->getMessage());
         }
     }
@@ -358,7 +473,7 @@ class AttendanceController extends Controller
     private function downloadAsHTML($report, $overrides, $filename)
     {
         $htmlContent = $this->generateHTMLContent($report, $overrides);
-        
+
         return response($htmlContent)
             ->header('Content-Type', 'text/html')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '.html"');
@@ -367,13 +482,13 @@ class AttendanceController extends Controller
     private function downloadAsPDF($report, $overrides, $filename)
     {
         $htmlContent = $this->generateHTMLContent($report, $overrides);
-        
+
         // Use Dompdf to convert HTML to PDF
         $dompdf = new \Dompdf\Dompdf();
         $dompdf->loadHtml($htmlContent);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
-        
+
         return response($dompdf->output())
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '.pdf"');
@@ -382,18 +497,18 @@ class AttendanceController extends Controller
     private function downloadAsCSV($report, $overrides, $filename)
     {
         $csvData = [];
-        
+
         // Add headers
         $csvData[] = ['DTR Report: ' . $report->report_title];
         $csvData[] = ['Generated on: ' . $report->formatted_generated_on];
         $csvData[] = ['Department: ' . $report->department_name];
         $csvData[] = ['Period: ' . $report->formatted_period];
         $csvData[] = [];
-        
+
         // Employee Summary
         $csvData[] = ['Employee Summary'];
         $csvData[] = ['Employee ID', 'Name', 'Department', 'Present Days', 'Absent Days', 'Total Hours', 'Overtime Hours', 'Attendance Rate'];
-        
+
         foreach ($report->summaries as $summary) {
             $csvData[] = [
                 $summary->employee_id,
@@ -406,20 +521,20 @@ class AttendanceController extends Controller
                 number_format($summary->attendance_rate, 1) . '%'
             ];
         }
-        
+
         $csvData[] = [];
         $csvData[] = ['Detailed Attendance Records'];
         $csvData[] = ['Employee ID', 'Employee Name', 'Date', 'Time In', 'Time Out', 'Total Hours', 'Overtime', 'Status', 'Remarks'];
-        
+
         foreach ($report->details as $detail) {
             // Check for override
             $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
-            $ovKey = $detail->employee_id.'|'.$dateKey;
+            $ovKey = $detail->employee_id . '|' . $dateKey;
             $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
-            
+
             $status = $ov ? 'Leave' : ucfirst($detail->status);
-            $remarks = $ov ? ('Leave'.($ov->remarks ? ': '.$ov->remarks : '')) : ($detail->remarks ?? '');
-            
+            $remarks = $ov ? ('Leave' . ($ov->remarks ? ': ' . $ov->remarks : '')) : ($detail->remarks ?? '');
+
             $csvData[] = [
                 $detail->employee_id,
                 $detail->employee->full_name,
@@ -432,14 +547,14 @@ class AttendanceController extends Controller
                 $remarks
             ];
         }
-        
+
         $csvContent = '';
         foreach ($csvData as $row) {
-            $csvContent .= implode(',', array_map(function($field) {
+            $csvContent .= implode(',', array_map(function ($field) {
                 return '"' . str_replace('"', '""', $field) . '"';
             }, $row)) . "\n";
         }
-        
+
         return response($csvContent)
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '.csv"');
@@ -448,16 +563,16 @@ class AttendanceController extends Controller
     private function downloadAsExcel($report, $overrides, $filename)
     {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        
+
         // Employee Summary Sheet
         $summarySheet = $spreadsheet->getActiveSheet();
         $summarySheet->setTitle('Employee Summary');
-        
+
         $summarySheet->setCellValue('A1', 'DTR Report: ' . $report->report_title);
         $summarySheet->setCellValue('A2', 'Generated on: ' . $report->formatted_generated_on);
         $summarySheet->setCellValue('A3', 'Department: ' . $report->department_name);
         $summarySheet->setCellValue('A4', 'Period: ' . $report->formatted_period);
-        
+
         $summarySheet->setCellValue('A6', 'Employee Summary');
         $summarySheet->setCellValue('A7', 'Employee ID');
         $summarySheet->setCellValue('B7', 'Name');
@@ -467,7 +582,7 @@ class AttendanceController extends Controller
         $summarySheet->setCellValue('F7', 'Total Hours');
         $summarySheet->setCellValue('G7', 'Overtime Hours');
         $summarySheet->setCellValue('H7', 'Attendance Rate');
-        
+
         $row = 8;
         foreach ($report->summaries as $summary) {
             $summarySheet->setCellValue('A' . $row, $summary->employee_id);
@@ -480,11 +595,11 @@ class AttendanceController extends Controller
             $summarySheet->setCellValue('H' . $row, $summary->attendance_rate . '%');
             $row++;
         }
-        
+
         // Detailed Records Sheet
         $detailSheet = $spreadsheet->createSheet();
         $detailSheet->setTitle('Detailed Records');
-        
+
         $detailSheet->setCellValue('A1', 'Detailed Attendance Records');
         $detailSheet->setCellValue('A2', 'Employee ID');
         $detailSheet->setCellValue('B2', 'Employee Name');
@@ -495,17 +610,17 @@ class AttendanceController extends Controller
         $detailSheet->setCellValue('G2', 'Overtime');
         $detailSheet->setCellValue('H2', 'Status');
         $detailSheet->setCellValue('I2', 'Remarks');
-        
+
         $row = 3;
         foreach ($report->details as $detail) {
             // Check for override
             $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
-            $ovKey = $detail->employee_id.'|'.$dateKey;
+            $ovKey = $detail->employee_id . '|' . $dateKey;
             $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
-            
+
             $status = $ov ? 'Leave' : ucfirst($detail->status);
-            $remarks = $ov ? ('Leave'.($ov->remarks ? ': '.$ov->remarks : '')) : ($detail->remarks ?? '');
-            
+            $remarks = $ov ? ('Leave' . ($ov->remarks ? ': ' . $ov->remarks : '')) : ($detail->remarks ?? '');
+
             $detailSheet->setCellValue('A' . $row, $detail->employee_id);
             $detailSheet->setCellValue('B' . $row, $detail->employee->full_name);
             $detailSheet->setCellValue('C' . $row, $detail->formatted_date);
@@ -517,7 +632,7 @@ class AttendanceController extends Controller
             $detailSheet->setCellValue('I' . $row, $remarks);
             $row++;
         }
-        
+
         // Auto-size columns
         foreach (range('A', 'I') as $col) {
             $detailSheet->getColumnDimension($col)->setAutoSize(true);
@@ -525,11 +640,11 @@ class AttendanceController extends Controller
         foreach (range('A', 'H') as $col) {
             $summarySheet->getColumnDimension($col)->setAutoSize(true);
         }
-        
+
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'dtr_excel_');
         $writer->save($tempFile);
-        
+
         return response()->download($tempFile, $filename . '.xlsx')->deleteFileAfterSend();
     }
 
@@ -597,9 +712,9 @@ class AttendanceController extends Controller
                         </tr>
                     </thead>
                     <tbody>';
-            
-                         foreach ($report->summaries as $summary) {
-                 $html .= '
+
+            foreach ($report->summaries as $summary) {
+                $html .= '
                          <tr>
                              <td>#' . $summary->employee_id . '</td>
                              <td>' . $summary->employee->full_name . '</td>
@@ -610,8 +725,8 @@ class AttendanceController extends Controller
                              <td>' . number_format($summary->overtime_hours, 2) . '</td>
                              <td>' . number_format($summary->attendance_rate, 1) . '%</td>
                          </tr>';
-             }
-            
+            }
+
             $html .= '
                     </tbody>
                 </table>
@@ -623,15 +738,15 @@ class AttendanceController extends Controller
             $html .= '
             <div class="details">
                 <h3>Detailed Attendance Records</h3>';
-            
-                         $currentEmployee = null;
-             foreach ($report->details as $detail) {
-                 if ($currentEmployee !== $detail->employee_id) {
-                     if ($currentEmployee !== null) {
-                         $html .= '</table></div>';
-                     }
-                     $currentEmployee = $detail->employee_id;
-                     $html .= '
+
+            $currentEmployee = null;
+            foreach ($report->details as $detail) {
+                if ($currentEmployee !== $detail->employee_id) {
+                    if ($currentEmployee !== null) {
+                        $html .= '</table></div>';
+                    }
+                    $currentEmployee = $detail->employee_id;
+                    $html .= '
                      <div class="employee-section">
                          <div class="employee-header">
                              <strong>Employee: ' . $detail->employee->full_name . ' (#' . $detail->employee_id . ')</strong>
@@ -650,16 +765,16 @@ class AttendanceController extends Controller
                             </thead>
                             <tbody>';
                 }
-                
-                                 // Check for override
-                 $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
-                 $ovKey = $detail->employee_id.'|'.$dateKey;
-                 $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
-                 
-                 $status = $ov ? 'Leave' : ucfirst($detail->status);
-                 $remarks = $ov ? ('Leave'.($ov->remarks ? ': '.$ov->remarks : '')) : ($detail->remarks ?? '');
-                 
-                 $html .= '
+
+                // Check for override
+                $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+                $ovKey = $detail->employee_id . '|' . $dateKey;
+                $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+
+                $status = $ov ? 'Leave' : ucfirst($detail->status);
+                $remarks = $ov ? ('Leave' . ($ov->remarks ? ': ' . $ov->remarks : '')) : ($detail->remarks ?? '');
+
+                $html .= '
                              <tr>
                                  <td>' . $detail->formatted_date . '</td>
                                  <td>' . $detail->formatted_time_in . '</td>
@@ -670,11 +785,11 @@ class AttendanceController extends Controller
                                  <td>' . $remarks . '</td>
                              </tr>';
             }
-            
+
             if ($currentEmployee !== null) {
                 $html .= '</tbody></table></div>';
             }
-            
+
             $html .= '</div>';
         }
 
@@ -683,5 +798,193 @@ class AttendanceController extends Controller
         </html>';
 
         return $html;
+    }
+
+    /**
+     * Display the photo associated with an attendance log
+     */
+    public function showPhoto($id)
+    {
+        // Fetch raw BLOB directly to avoid any ORM casting side-effects
+        $row = DB::table('attendance_logs')
+            ->select('photo_data', 'photo_content_type')
+            ->where('log_id', $id)
+            ->first();
+
+        if (!$row) {
+            abort(404, 'Attendance log not found');
+        }
+
+        if ($row->photo_data === null || $row->photo_data === '') {
+            abort(404, 'Photo not found for this attendance log');
+        }
+
+        // Get the raw photo data (BLOB) – may be a string or a stream resource depending on PDO config
+        $photoData = $row->photo_data;
+
+        // Normalize only when the column clearly contains base64 text
+        $originalString = null;
+        if (is_string($photoData)) {
+            $originalString = $photoData;
+            $raw = $photoData;
+            // If it starts with data: strip prefix
+            if (stripos($raw, 'data:') === 0) {
+                $comma = strpos($raw, ',');
+                if ($comma !== false) {
+                    $raw = substr($raw, $comma + 1);
+                }
+            }
+            // Decode only if it looks like base64
+            $looksBase64 = preg_match('/^[A-Za-z0-9+\/\r\n=]+$/', $raw) && (strlen($raw) % 4 === 0);
+            if ($looksBase64) {
+                $decoded = base64_decode($raw, true);
+                if ($decoded !== false && $decoded !== '') {
+                    $photoData = $decoded;
+                }
+            }
+        }
+
+        // If returned as a stream resource from PDO, read into a string for consistent output
+        if (is_resource($photoData)) {
+            $photoData = stream_get_contents($photoData);
+        }
+
+        // Determine content type (fallback to magic bytes)
+        $contentType = $row->photo_content_type ?: 'application/octet-stream';
+        // Prefer finfo if available and safe to peek
+        if (function_exists('finfo_open')) {
+            $buffer = '';
+            if (is_resource($photoData)) {
+                $meta = stream_get_meta_data($photoData);
+                $seekable = $meta['seekable'] ?? false;
+                if ($seekable) {
+                    $current = ftell($photoData);
+                    $buffer = fread($photoData, 8192);
+                    if ($current !== false) {
+                        fseek($photoData, $current);
+                    } else {
+                        rewind($photoData);
+                    }
+                }
+            } else {
+                $buffer = (string) $photoData;
+            }
+            if ($buffer !== '') {
+                $fi = finfo_open(FILEINFO_MIME_TYPE);
+                if ($fi) {
+                    $detected = finfo_buffer($fi, $buffer);
+                    finfo_close($fi);
+                    if ($detected) {
+                        $contentType = $detected;
+                    }
+                }
+            }
+        }
+
+        // If content type is still generic or image fails to load, attempt a last-chance base64 decode
+        $isRecognized = false;
+        if (strlen($photoData) >= 4) {
+            $sig = bin2hex(substr($photoData, 0, 4));
+            if (strpos($sig, 'ffd8') === 0) { $isRecognized = true; $contentType = 'image/jpeg'; }
+            if ($sig === '89504e47') { $isRecognized = true; $contentType = 'image/png'; }
+            if ($sig === '47494638') { $isRecognized = true; $contentType = 'image/gif'; }
+            if ($sig === '52494646') { /* could be WEBP */ $isRecognized = true; $contentType = $contentType === 'application/octet-stream' ? 'image/webp' : $contentType; }
+        }
+
+        if (!$isRecognized && is_string($originalString)) {
+            $try = preg_replace('/^data:[^,]*,/', '', $originalString);
+            $try = preg_replace('/\s+/', '', $try);
+            $decoded = base64_decode($try, false);
+            if ($decoded !== false && strlen($decoded) > 4) {
+                $sig = bin2hex(substr($decoded, 0, 4));
+                if (strpos($sig, 'ffd8') === 0 || $sig === '89504e47' || $sig === '47494638' || $sig === '52494646') {
+                    $photoData = $decoded;
+                    if (strpos($sig, 'ffd8') === 0) { $contentType = 'image/jpeg'; }
+                    elseif ($sig === '89504e47') { $contentType = 'image/png'; }
+                    elseif ($sig === '47494638') { $contentType = 'image/gif'; }
+                    elseif ($sig === '52494646') { $contentType = 'image/webp'; }
+                }
+            }
+        }
+
+        // Repair known corruption pattern: leading bytes turned into '????' (0x3f) but JFIF appears at offset 6
+        if (strlen($photoData) > 10) {
+            $hasJfif = substr($photoData, 6, 4) === 'JFIF';
+            $head = bin2hex(substr($photoData, 0, 4));
+            if ($hasJfif && $head === '3f3f3f3f') {
+                // Replace with valid JPEG SOI + APP0 marker
+                $fixed = hex2bin('ffd8ffe0');
+                $photoData = $fixed . substr($photoData, 4);
+                $contentType = 'image/jpeg';
+            }
+        }
+
+        // Do not transform bytes; just send what is stored
+
+        // Debug: log basic info to help diagnose legacy rows that don't render
+        // Send bytes as-is
+
+        // Return the bytes directly; browsers can render inline
+        // Choose proper file extension for download name
+        $ext = 'jpg';
+        if (stripos($contentType, 'png') !== false) $ext = 'png';
+        if (stripos($contentType, 'gif') !== false) $ext = 'gif';
+
+        return response($photoData, 200, [
+            'Content-Type' => $contentType,
+            'Content-Length' => (string) strlen($photoData),
+            'Content-Disposition' => 'inline; filename="attendance_photo_' . $id . '.' . $ext . '"',
+            'Cache-Control' => 'public, max-age=31536000'
+        ]);
+    }
+
+    /**
+     * Diagnostics for a specific attendance photo row to verify data integrity.
+     */
+    public function photoInfo($id)
+    {
+        $row = DB::table('attendance_logs')
+            ->select('log_id', 'photo_data', 'photo_content_type')
+            ->where('log_id', $id)
+            ->first();
+
+        if (!$row) {
+            return response()->json(['ok' => false, 'error' => 'Attendance log not found'], 404);
+        }
+
+        $data = $row->photo_data;
+        $isString = is_string($data);
+        $len = $isString ? strlen($data) : 0;
+        $firstHex = $len >= 16 ? bin2hex(substr($data, 0, 16)) : ($len > 0 ? bin2hex(substr($data, 0, $len)) : null);
+
+        // If string might be base64, compute decoded signature/length
+        $base64Info = null;
+        if ($isString) {
+            $raw = $data;
+            if (stripos($raw, 'data:') === 0) {
+                $comma = strpos($raw, ',');
+                if ($comma !== false) { $raw = substr($raw, $comma + 1); }
+            }
+            $sanitized = preg_replace('/\s+/', '', $raw);
+            $decoded = base64_decode($sanitized, false);
+            if ($decoded !== false && $decoded !== '') {
+                $dlen = strlen($decoded);
+                $dhex = bin2hex(substr($decoded, 0, min(16, $dlen)));
+                $base64Info = [
+                    'decoded_len' => $dlen,
+                    'decoded_first_hex' => $dhex
+                ];
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'log_id' => $row->log_id,
+            'db_content_type' => $row->photo_content_type,
+            'stored_is_string' => $isString,
+            'stored_len' => $len,
+            'stored_first_hex' => $firstHex,
+            'base64_probe' => $base64Info
+        ]);
     }
 }
