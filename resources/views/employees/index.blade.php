@@ -21,15 +21,6 @@
         <h1 class="fw-bold fs-2 mb-0">
             <i class="bi bi-people me-2 fs-4"></i>Employees
         </h1>
-        @php $empPeriod = request('period','month'); @endphp
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">Select Period</span>
-            <select class="form-select form-select-sm" id="empPeriod">
-                <option value="week" {{ $empPeriod==='week' ? 'selected' : '' }}>Last 7 Days</option>
-                <option value="month" {{ $empPeriod==='month' ? 'selected' : '' }}>This Month</option>
-                <option value="quarter" {{ $empPeriod==='quarter' ? 'selected' : '' }}>Last 90 Days</option>
-            </select>
-        </div>
     </div>
 
     {{-- Employee statistics are now calculated in the controller --}}
@@ -43,9 +34,9 @@
                         <h4 class="card-title mb-0">
                             <i class="bi bi-list-ul me-2"></i>Employee List
                         </h4>
-                        <form action="{{ route('employees.index') }}" method="GET" class="d-flex align-items-center" style="max-width: 320px; margin-left: auto; margin-right: auto;">
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employees..." value="{{ request('search') }}" style="width: 200px;">
-                            <button type="submit" class="btn btn-sm btn-outline-primary ms-2"><i class="bi bi-search"></i></button>
+                        <form action="{{ route('employees.index') }}" method="GET" class="d-flex align-items-center justify-content-center" style="max-width: 450px; margin: 0 auto;">
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employees..." value="{{ request('search') }}" style="width: 320px;">
+                            <button type="submit" class="btn btn-sm ms-2 px-3" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a;"><i class="bi bi-search me-1"></i>Search</button>
                         </form>
                     </div>
                 </div>
@@ -350,11 +341,6 @@
                 if (e.target.closest('button')) return;
                 window.location.href = this.getAttribute('data-href');
             });
-        });
-        document.getElementById('empPeriod')?.addEventListener('change', function(){
-            const params = new URLSearchParams(window.location.search);
-            params.set('period', this.value);
-            window.location.search = params.toString();
         });
         function updatePreview(empId, input) {
             if (input.files && input.files[0]) {

@@ -13,6 +13,11 @@
 
     <!-- Filters -->
     <div class="aa-card mb-4">
+        <div class="card-header header-maroon">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-funnel me-2"></i>Filter Options
+            </h5>
+        </div>
         <div class="card-body">
             <form method="GET" class="row g-3">
                 <div class="col-md-2">
@@ -68,6 +73,11 @@
 
     <!-- Audit Logs Table -->
     <div class="aa-card">
+        <div class="card-header header-maroon">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-list-ul me-2"></i>Audit Logs
+            </h5>
+        </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
-        body { background:#eceff3; }
+        body { background:#d1d5db; }
         .aa-app { min-height:100vh; display:flex; flex-direction:column; }
         .aa-main-content { display:flex; flex:1; }
         /* Sidebar: widened */
@@ -28,7 +28,7 @@
         .aa-search .input-group .form-control { height:36px; padding:.375rem .75rem; font-size:.95rem; border:0; background:transparent; color:#212529; }
         .aa-search .input-group .form-control::placeholder { color:#6c757d; }
         .aa-search .input-group .input-group-text { height:36px; padding:.375rem .5rem; font-size:1rem; border:0; background:transparent; color:#6c757d; }
-        .aa-card { background:#fff; border:1px solid #e5e7eb; border-radius:.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .aa-card { background:#fff; border:1px solid #e5e7eb; border-radius:.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1); }
         .aa-card .card-body { padding: 1.5rem; }
         .badge-aa { background:var(--aa-yellow); color:#3d0a0a; }
         /* Card headers: taller color bars, larger titles and icons */
