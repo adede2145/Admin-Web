@@ -90,17 +90,6 @@
             <div class="aa-card h-100" style="background: rgb(177, 12, 12);  color: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-body d-flex align-items-center justify-content-between p-4">
                     <div class="text-start">
-                        <div class="display-1 fw-bold" style="color:#fff">{{ $lateCount }}</div>
-                        <div class="small" style="color:#fff">LATE ARRIVALS</div>
-                    </div>
-                    <i class="bi bi-clock display-3 ms-3" style="color:#fff;"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-3">
-            <div class="aa-card h-100" style="background: rgb(177, 12, 12);  color: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
-                <div class="card-body d-flex align-items-center justify-content-between p-4">
-                    <div class="text-start">
                         <div class="display-1 fw-bold" style="color:#fff">{{ $absentCount }}</div>
                         <div class="small" style="color:#fff">ABSENT TODAY</div>
                     </div>

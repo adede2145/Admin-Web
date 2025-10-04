@@ -182,7 +182,7 @@
                                                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ovModal_{{ $summary->employee->employee_id }}_{{ \Carbon\Carbon::parse($detail->date)->toDateString() }}">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <button class="btn btn-outline-danger" onclick="removeOverride({{ $report->report_id }}, {{ $summary->employee->employee_id }}, '{{ \Carbon\Carbon::parse($detail->date)->toDateString() }}')">
+                                                    <button class="btn btn-outline-danger remove-override-btn" data-report-id="{{ $report->report_id }}" data-employee-id="{{ $summary->employee->employee_id }}" data-date="{{ \Carbon\Carbon::parse($detail->date)->toDateString() }}">
                                                         <i class="bi bi-x-circle"></i>
                                                     </button>
                                                 @else
@@ -273,11 +273,19 @@
         </div>
     </div>
     <script>
-        function removeOverride(reportId, employeeId, dateStr) {
+        document.addEventListener('click', function (event) {
+            const target = event.target.closest('.remove-override-btn');
+            if (!target) return;
+
+            const reportId = target.getAttribute('data-report-id');
+            const employeeId = target.getAttribute('data-employee-id');
+            const dateStr = target.getAttribute('data-date');
+
             if (!confirm('Remove leave for ' + dateStr + '?')) return;
+
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '{{ route('dtr.override.destroy') }}';
+            form.action = "{{ route('dtr.override.destroy') }}";
 
             const csrf = document.createElement('input');
             csrf.type = 'hidden';
@@ -311,6 +319,6 @@
 
             document.body.appendChild(form);
             form.submit();
-        }
+        });
     </script>
 @endsection

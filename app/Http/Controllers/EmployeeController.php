@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\Department;
+use App\Models\EmployeeFingerprintTemplate;
+use App\Http\Requests\StoreEmployeeRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
@@ -22,15 +26,15 @@ class EmployeeController extends Controller
 
             // Search filter
             if ($search = request('search')) {
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('full_name', 'like', "%$search%")
-                      ->orWhere('employee_id', $search)
-                      ->orWhere('rfid_code', 'like', "%$search%");
+                        ->orWhere('employee_id', $search)
+                        ->orWhere('rfid_code', 'like', "%$search%");
                 });
             }
 
             $employees = $query->paginate(11);
-            
+
             // Ensure departments are available for the user's access level
             if (auth()->user()->role->role_name === 'super_admin') {
                 $departments = Department::all();
@@ -41,20 +45,22 @@ class EmployeeController extends Controller
             // Calculate employee statistics
             $selectedEmployeeId = request('employee_id') ?: optional($employees->first())->employee_id;
             $selectedEmployee = $selectedEmployeeId ? Employee::with('department')->find($selectedEmployeeId) : null;
-            
+
             // Verify user has access to the selected employee
-            if ($selectedEmployee && 
-                auth()->user()->role->role_name !== 'super_admin' && 
-                auth()->user()->department_id !== $selectedEmployee->department_id) {
+            if (
+                $selectedEmployee &&
+                auth()->user()->role->role_name !== 'super_admin' &&
+                auth()->user()->department_id !== $selectedEmployee->department_id
+            ) {
                 $selectedEmployee = null;
                 $selectedEmployeeId = null;
             }
-            
+
             $employeeStats = $this->calculateEmployeeStats($selectedEmployee);
 
             return view('employees.index', compact('employees', 'departments', 'selectedEmployee', 'employeeStats'));
         } catch (\Exception $e) {
-            \Log::error('Error in EmployeeController@index: ' . $e->getMessage());
+            Log::error('Error in EmployeeController@index: ' . $e->getMessage());
             return back()->with('error', 'An error occurred while loading employees. Please try again.');
         }
     }
@@ -77,20 +83,20 @@ class EmployeeController extends Controller
 
         $period = request('period', 'month');
         $today = \Carbon\Carbon::today();
-        
-        $start = match($period) {
+
+        $start = match ($period) {
             'week' => $today->copy()->subDays(6),
             'quarter' => $today->copy()->subDays(89),
             default => $today->copy()->startOfMonth()
         };
-        
+
         $end = $today->copy();
 
         $logs = $employee->attendanceLogs()
             ->whereBetween('time_in', [$start->startOfDay(), $end->endOfDay()])
             ->get();
 
-        $daysPresent = $logs->groupBy(function($log) {
+        $daysPresent = $logs->groupBy(function ($log) {
             return \Carbon\Carbon::parse($log->time_in)->format('Y-m-d');
         })->count();
 
@@ -102,7 +108,7 @@ class EmployeeController extends Controller
         foreach ($logs as $log) {
             $timeIn = \Carbon\Carbon::parse($log->time_in);
             $timeOut = $log->time_out ? \Carbon\Carbon::parse($log->time_out) : null;
-            
+
             if ($timeOut) {
                 $hours = $timeIn->diffInMinutes($timeOut) / 60;
                 $totalHours += $hours;
@@ -126,6 +132,77 @@ class EmployeeController extends Controller
         ];
     }
 
+    // Store new employee
+    public function store(StoreEmployeeRequest $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Prepare employee data
+            $employeeData = [
+                'employee_id' => $request->emp_id,
+                'full_name' => $request->emp_name,
+                'employment_type' => 'full_time', // Default, can be made configurable
+                'rfid_code' => $request->rfid_uid,
+                'department_id' => $request->department_id,
+            ];
+
+            // Handle profile image
+            if ($request->hasFile('profile_image')) {
+                $file = $request->file('profile_image');
+                $employeeData['photo_data'] = file_get_contents($file->getRealPath());
+                $employeeData['photo_content_type'] = $file->getMimeType();
+            }
+
+            // Create employee record
+            $employee = Employee::create($employeeData);
+
+            // Store primary fingerprint template
+            EmployeeFingerprintTemplate::create([
+                'employee_id' => $employee->employee_id,
+                'template_index' => 1,
+                'template_data' => base64_decode($request->primary_template),
+                'finger_position' => 'index',
+                'template_quality' => 85.00 // Default quality score
+            ]);
+
+            // Store backup fingerprint template if provided
+            if ($request->backup_template) {
+                EmployeeFingerprintTemplate::create([
+                    'employee_id' => $employee->employee_id,
+                    'template_index' => 2,
+                    'template_data' => base64_decode($request->backup_template),
+                    'finger_position' => 'thumb',
+                    'template_quality' => 85.00 // Default quality score
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee registered successfully!',
+                'employee' => [
+                    'id' => $employee->employee_id,
+                    'name' => $employee->full_name,
+                    'department' => $employee->department->department_name ?? 'Unknown'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Employee registration failed: ' . $e->getMessage(), [
+                'employee_id' => $request->emp_id,
+                'user_id' => auth()->id(),
+                'stack_trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     // Update employee
     public function update(Request $request, $id)
     {
@@ -137,16 +214,20 @@ class EmployeeController extends Controller
         ]);
 
         $employee = Employee::findOrFail($id);
-        
+
         // Check if user can edit this employee
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            auth()->user()->department_id !== $employee->department_id) {
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $employee->department_id
+        ) {
             abort(403, 'You can only edit employees from your department.');
         }
 
         // Department admins can only assign employees to their own department
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            $request->department_id != auth()->user()->department_id) {
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            $request->department_id != auth()->user()->department_id
+        ) {
             abort(403, 'You can only assign employees to your department.');
         }
 
@@ -164,7 +245,7 @@ class EmployeeController extends Controller
                 $updateData['photo_content_type'] = $file->getMimeType();
                 $updateData['photo_path'] = null;
             } catch (\Exception $e) {
-                \Log::error('Error uploading employee photo: ' . $e->getMessage());
+                Log::error('Error uploading employee photo: ' . $e->getMessage());
                 return back()->with('error', 'Failed to upload photo. Employee updated without photo.');
             }
         }
@@ -178,10 +259,12 @@ class EmployeeController extends Controller
     public function destroy($id)
     {
         $employee = Employee::findOrFail($id);
-        
+
         // Check if user can delete this employee
-        if (auth()->user()->role->role_name !== 'super_admin' && 
-            auth()->user()->department_id !== $employee->department_id) {
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $employee->department_id
+        ) {
             abort(403, 'You can only delete employees from your department.');
         }
 

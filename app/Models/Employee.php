@@ -11,7 +11,7 @@ class Employee extends Model
     use HasFactory, Auditable;
 
     protected $primaryKey = 'employee_id';
-    
+
     // Disable timestamps since the table doesn't have created_at/updated_at columns
     public $timestamps = false;
 
@@ -21,7 +21,9 @@ class Employee extends Model
         'fingerprint_hash',
         'rfid_code',
         'department_id',
-        'photo_path'
+        'photo_path',
+        'photo_data',
+        'photo_content_type'
     ];
 
     protected $hidden = [
@@ -41,6 +43,11 @@ class Employee extends Model
     public function role()
     {
         return $this->belongsTo(Role::class, 'role_id', 'role_id');
+    }
+
+    public function fingerprintTemplates()
+    {
+        return $this->hasMany(EmployeeFingerprintTemplate::class, 'employee_id', 'employee_id');
     }
 
     // Accessors

@@ -77,6 +77,9 @@
                 <a class="nav-link {{ request()->is('attendance') ? 'active' : '' }}" href="{{ route('attendance.index') }}"><i class="bi bi-clock-history"></i> Attendance Log</a>
                 <a class="nav-link {{ request()->is('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}"><i class="bi bi-graph-up"></i> Reports</a>
                 <a class="nav-link {{ request()->is('employees') ? 'active' : '' }}" href="{{ route('employees.index') }}"><i class="bi bi-people"></i> Employees</a>
+                @if(auth()->check() && auth()->user()->role && in_array(auth()->user()->role->role_name, ['admin','super_admin']))
+                    <a class="nav-link {{ request()->is('employees/register') ? 'active' : '' }}" href="{{ route('employees.register') }}"><i class="bi bi-person-plus"></i> Register Employee</a>
+                @endif
                 <a class="nav-link {{ request()->is('audit-logs*') ? 'active' : '' }}" href="{{ route('audit.index') }}" id="recentAuditsLink">
                     <i class="bi bi-clock-history"></i> Recent Audits
                     @php

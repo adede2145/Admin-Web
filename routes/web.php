@@ -90,6 +90,14 @@ Route::middleware(['auth'])->group(function () {
     // Diagnostic helper for photo integrity
     Route::get('/attendance/{id}/photo-info', [AttendanceController::class, 'photoInfo'])->name('attendance.photo.info');
 
+    // Register Employee (Admin or Super Admin only)
+    Route::middleware(['admin_or_superadmin'])->group(function () {
+        Route::get('/employees/register', function () {
+            return view('employees.register');
+        })->name('employees.register');
+        Route::post('/employees/register', [EmployeeController::class, 'store'])->name('employees.store');
+    });
+
     // Audit Logs (accessible to both admins and superadmins)
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit.show');
