@@ -425,95 +425,125 @@
     }
 
     async function enrollFingerprint(isPrimary = true) {
-        const statusElement = isPrimary ? primaryStatus : backupStatus;
-        const progressElement = isPrimary ? primaryProgress : backupProgress;
-        const progressBarElement = isPrimary ? primaryProgressBar : backupProgressBar;
-        const instructionElement = isPrimary ? primaryInstruction : backupInstruction;
-        const templateElement = isPrimary ? primaryTemplate : backupTemplate;
-        const buttonElement = isPrimary ? capturePrimaryBtn : captureBackupBtn;
-        const fingerType = isPrimary ? 'index finger' : 'thumb';
+    const statusElement = isPrimary ? primaryStatus : backupStatus;
+    const progressElement = isPrimary ? primaryProgress : backupProgress;
+    const progressBarElement = isPrimary ? primaryProgressBar : backupProgressBar;
+    const instructionElement = isPrimary ? primaryInstruction : backupInstruction;
+    const templateElement = isPrimary ? primaryTemplate : backupTemplate;
+    const fingerType = isPrimary ? 'index finger' : 'thumb';
 
-        enrollmentInProgress = true;
-        updateUIBasedOnDeviceStatus(); // Update UI to disable buttons
+    enrollmentInProgress = true;
+    updateUIBasedOnDeviceStatus();
 
-        // Show progress UI
-        progressElement.classList.remove('d-none');
-        statusElement.textContent = 'Initializing...';
-        statusElement.className = 'text-primary';
+    progressElement.classList.remove('d-none');
+    statusElement.textContent = 'Initializing...';
+    statusElement.className = isPrimary ? 'text-primary' : 'text-secondary';
+    progressBarElement.style.width = '0%';
+    instructionElement.textContent = `Initializing scanner for ${fingerType}...`;
+
+    let sessionId = null;
+    let pollTimer = null;
+
+    try {
+        instructionElement.textContent = `Place your ${fingerType} on the scanner...`;
+        statusElement.textContent = 'Waiting for finger...';
+        progressBarElement.style.width = '10%';
+
+        const startResp = await fetch(`${bridgeBase}/api/fingerprint/enroll/start`, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(5000)
+        });
+        if (!startResp.ok) throw new Error(await startResp.text().catch(()=>'Failed to start enrollment'));
+        const startData = await startResp.json();
+        sessionId = startData.sessionId;
+        if (!sessionId) throw new Error('No sessionId from Device Bridge');
+
+        const pollIntervalMs = 300;
+        const maxDurationMs = 35000;
+        const startedAt = Date.now();
+
+        await new Promise((resolve, reject) => {
+            pollTimer = setInterval(async () => {
+                try {
+                    if (Date.now() - startedAt > maxDurationMs) {
+                        clearInterval(pollTimer); pollTimer = null;
+                        return reject(new Error('Enrollment timeout'));
+                    }
+
+                    const progResp = await fetch(`${bridgeBase}/api/fingerprint/enroll/progress/${sessionId}`, {
+                        cache: 'no-store',
+                        signal: AbortSignal.timeout(3000)
+                    });
+                    if (!progResp.ok) throw new Error(await progResp.text().catch(()=>'Progress poll failed'));
+                    const prog = await progResp.json();
+
+                    const pct = Math.max(0, Math.min(100, Number(prog.progress) || 0));
+                    progressBarElement.style.width = `${pct}%`;
+
+                    statusElement.textContent = prog.message || (prog.phase === 'processing' ? 'Processing...' : 'Scanning...');
+                    const scansLeft = typeof prog.scansLeft === 'number' ? prog.scansLeft : null;
+                    if (scansLeft !== null && scansLeft > 0) {
+                        instructionElement.textContent = `Lift and place your ${fingerType} again... (${scansLeft} more)`;
+                    } else if (prog.done) {
+                        instructionElement.textContent = `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully!`;
+                    } else if (prog.failed) {
+                        instructionElement.textContent = `Failed to enroll ${fingerType}. Please try again.`;
+                    } else if (prog.phase === 'waiting') {
+                        instructionElement.textContent = `Place your ${fingerType} on the scanner...`;
+                    }
+
+                    if (prog.failed) {
+                        clearInterval(pollTimer); pollTimer = null;
+                        return reject(new Error(prog.message || 'Enrollment failed'));
+                    }
+
+                    if (prog.done) {
+                        const finishResp = await fetch(`${bridgeBase}/api/fingerprint/enroll/finish/${sessionId}`, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            cache: 'no-store',
+                            signal: AbortSignal.timeout(4000)
+                        });
+                        if (!finishResp.ok) throw new Error(await finishResp.text().catch(()=>'Failed to finalize enrollment'));
+                        const fin = await finishResp.json();
+                        if (!fin.template) throw new Error('No template returned');
+
+                        templateElement.value = fin.template;
+                        progressBarElement.style.width = '100%';
+                        statusElement.textContent = `${isPrimary ? 'Primary' : 'Backup'} fingerprint captured successfully!`;
+                        statusElement.className = 'text-success fw-bold';
+
+                        clearInterval(pollTimer); pollTimer = null;
+                        return resolve();
+                    }
+                } catch (err) {
+                    clearInterval(pollTimer); pollTimer = null;
+                    reject(err);
+                }
+            }, pollIntervalMs);
+        });
+
+        showNotification(
+            isPrimary ? 'Primary Fingerprint Captured!' : 'Backup Fingerprint Captured!',
+            isPrimary ? 'You can now scan a backup fingerprint or continue.' : 'Both fingerprints have been captured successfully!',
+            'success'
+        );
+    } catch (error) {
+        console.error('Enrollment error:', error);
         progressBarElement.style.width = '0%';
-        instructionElement.textContent = `Initializing scanner for ${fingerType}...`;
-
-        try {
-            // One-shot enrollment call to Device Bridge
-            instructionElement.textContent = `Place your ${fingerType} on the scanner...`;
-            statusElement.textContent = 'Waiting for finger...';
-            progressBarElement.style.width = '15%';
-
-            const enrollResponse = await fetch(`${bridgeBase}/api/fingerprint/enroll`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json'
-                },
-                cache: 'no-store',
-                signal: AbortSignal.timeout(35000)
-            });
-
-            if (!enrollResponse.ok) {
-                const text = await enrollResponse.text().catch(() => '');
-                throw new Error(text || `HTTP ${enrollResponse.status}: ${enrollResponse.statusText}`);
-            }
-
-            // Simulate progress while waiting for the single-shot result
-            progressBarElement.style.width = '60%';
-            statusElement.textContent = 'Scanning in progress...';
-            instructionElement.textContent = `Lift and place your ${fingerType} as prompted...`;
-
-            const result = await enrollResponse.json();
-            if (!result?.template) {
-                throw new Error('No template returned from Device Bridge');
-            }
-
-            templateElement.value = result.template;
-            progressBarElement.style.width = '100%';
-            statusElement.textContent = `${isPrimary ? 'Primary' : 'Backup'} fingerprint captured successfully!`;
-            statusElement.className = 'text-success fw-bold';
-            instructionElement.textContent = `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully!`;
-
-            showNotification(
-                isPrimary ? 'Primary Fingerprint Captured!' : 'Backup Fingerprint Captured!',
-                isPrimary ? 'You can now proceed to scan the backup fingerprint (thumb) or continue with registration.' : 'Both fingerprints have been captured successfully!',
-                'success'
-            );
-
-        } catch (error) {
-            console.error('Enrollment error:', error);
-            progressBarElement.style.width = '0%';
-            statusElement.textContent = `Failed: ${error.message}`;
-            statusElement.className = 'text-danger';
-            instructionElement.textContent = `Failed to enroll ${fingerType}. Please try again.`;
-
-            showNotification(
-                'Fingerprint Enrollment Failed',
-                `Could not capture ${fingerType}: ${error.message}`,
-                'error'
-            );
-        } finally {
-            enrollmentInProgress = false;
-
-            // Hide progress after delay
-            setTimeout(() => {
-                progressElement.classList.add('d-none');
-                progressBarElement.style.width = '0%';
-            }, 2000);
-
-            // Update UI based on new state
-            setTimeout(() => {
-                updateUIBasedOnDeviceStatus();
-            }, 500);
-        }
+        statusElement.textContent = `Failed: ${error.message}`;
+        statusElement.className = 'text-danger';
+        instructionElement.textContent = `Failed to enroll ${fingerType}. Please try again.`;
+        showNotification('Fingerprint Enrollment Failed', `Could not capture ${fingerType}: ${error.message}`, 'error');
+    } finally {
+        if (pollTimer) { clearInterval(pollTimer); }
+        enrollmentInProgress = false;
+        setTimeout(() => { progressElement.classList.add('d-none'); progressBarElement.style.width = '0%'; }, 1200);
+        setTimeout(updateUIBasedOnDeviceStatus, 300);
     }
-
-
+}
 
     function showNotification(title, message, type = 'info') {
         // Create notification element
