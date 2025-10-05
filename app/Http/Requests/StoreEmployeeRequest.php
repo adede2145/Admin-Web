@@ -29,7 +29,8 @@ class StoreEmployeeRequest extends FormRequest
             'emp_name' => 'required|string|max:100',
             'emp_id' => 'required|string|max:50|unique:employees,employee_id',
             'department_id' => 'required|exists:departments,department_id',
-            'rfid_uid' => 'required|string|max:100|unique:employees,rfid_code',
+            // Be permissive on content; length mainly to protect DB index sizes
+            'rfid_uid' => 'required|string|max:191|unique:employees,rfid_code',
             'primary_template' => 'required|string',
             'backup_template' => 'nullable|string',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
@@ -51,6 +52,7 @@ class StoreEmployeeRequest extends FormRequest
             'department_id.exists' => 'Selected department does not exist.',
             'rfid_uid.required' => 'RFID card scan is required.',
             'rfid_uid.unique' => 'This RFID card is already registered.',
+            'rfid_uid.max' => 'RFID value is too long.',
             'primary_template.required' => 'Primary fingerprint template is required.',
             'profile_image.image' => 'Profile image must be a valid image file.',
             'profile_image.max' => 'Profile image must not exceed 5MB.',
@@ -65,6 +67,9 @@ class StoreEmployeeRequest extends FormRequest
      */
     public function withValidator($validator)
     {
+        // Sanitize inputs prior to running validation rules
+        $this->prepareForValidation();
+
         $validator->after(function ($validator) {
             // Additional validation: department restriction for non-super admins
             $user = auth()->user();
@@ -75,5 +80,21 @@ class StoreEmployeeRequest extends FormRequest
                 $validator->errors()->add('department_id', 'You can only register employees to your department.');
             }
         });
+    }
+
+    /**
+     * Normalize and sanitize incoming data before validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $rfid = (string) ($this->input('rfid_uid', ''));
+        // Remove non-printable characters (incl. stray reader control bytes) and trim spaces
+        $rfid = preg_replace('/[^\x20-\x7E]/', '', $rfid ?? '');
+        // Collapse internal whitespace to single spaces and trim
+        $rfid = trim(preg_replace('/\s+/', ' ', $rfid));
+
+        $this->merge([
+            'rfid_uid' => $rfid,
+        ]);
     }
 }

@@ -43,7 +43,8 @@ class EmployeeController extends Controller
             }
 
             // Calculate employee statistics
-            $selectedEmployeeId = request('employee_id') ?: optional($employees->first())->employee_id;
+            $firstEmployee = collect($employees->items())->first();
+            $selectedEmployeeId = request('employee_id') ?: optional($firstEmployee)->employee_id;
             $selectedEmployee = $selectedEmployeeId ? Employee::with('department')->find($selectedEmployeeId) : null;
 
             // Verify user has access to the selected employee
@@ -187,7 +188,7 @@ class EmployeeController extends Controller
                     'name' => $employee->full_name,
                     'department' => $employee->department->department_name ?? 'Unknown'
                 ]
-            ]);
+            ], 200, [], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('Employee registration failed: ' . $e->getMessage(), [
@@ -199,7 +200,7 @@ class EmployeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed: ' . $e->getMessage()
-            ], 500);
+            ], 500, [], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         }
     }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB as DBFacade;
 
 class AuditLog extends Model
 {
@@ -20,8 +21,9 @@ class AuditLog extends Model
     ];
 
     protected $casts = [
-        'old_values' => 'array',
-        'new_values' => 'array',
+        // Store old/new values as raw JSON text to avoid encoding issues; decode lazily if needed
+        'old_values' => 'string',
+        'new_values' => 'string',
         'read_by' => 'array',
         'first_read_at' => 'datetime',
     ];
@@ -84,7 +86,7 @@ class AuditLog extends Model
                 // For Employee model audits, check if employee belongs to admin's department
                 $modelQuery->where('model_type', 'App\\Models\\Employee')
                     ->whereExists(function ($employeeQuery) use ($admin) {
-                        $employeeQuery->select(\DB::raw(1))
+                        $employeeQuery->select(DBFacade::raw(1))
                             ->from('employees')
                             ->whereColumn('employees.employee_id', 'audit_logs.model_id')
                             ->where('employees.department_id', $admin->department_id);
@@ -94,7 +96,7 @@ class AuditLog extends Model
                 // For AttendanceLog model audits, check if employee belongs to admin's department
                 $modelQuery->where('model_type', 'App\\Models\\AttendanceLog')
                     ->whereExists(function ($attendanceQuery) use ($admin) {
-                        $attendanceQuery->select(\DB::raw(1))
+                        $attendanceQuery->select(DBFacade::raw(1))
                             ->from('attendance_logs')
                             ->join('employees', 'employees.employee_id', '=', 'attendance_logs.employee_id')
                             ->whereColumn('attendance_logs.log_id', 'audit_logs.model_id')

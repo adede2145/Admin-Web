@@ -119,7 +119,16 @@
                             @endif
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label class="form-label">Employment Type</label>
+                            <select id="employmentType" name="employment_type" class="form-select" required>
+                                <option value="">Select employment type</option>
+                                <option value="full_time">Full Time</option>
+                                <option value="part_time">Part Time</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
                             <label class="form-label">RFID (fallback) <span id="rfidStatus" class="ms-2 small text-muted"></span></label>
                             <div class="input-group">
                                 <input type="text" class="form-control" id="rfidUid" name="rfid_uid" placeholder="Tap card or type UID" autocomplete="off">
@@ -240,24 +249,38 @@
     let enrollmentInProgress = false;
     let fingerprintDeviceModel = '';
 
+    // Global sanitizer for RFID text so all handlers can use it
+    function sanitize(raw) {
+        const original = String(raw ?? '');
+        console.log('RFID Input - Raw value:', JSON.stringify(original));
+        const printableOnly = original.replace(/[^\x20-\x7E]/g, '');
+        const collapsed = printableOnly.replace(/\s+/g, ' ').trim();
+        return collapsed;
+    }
+
     function updateRegisterEnabled() {
         const empName = document.getElementById('empName').value.trim();
         const empId = document.getElementById('empId').value.trim();
         const rfid = (rfidInput?.value || '').trim();
         const deptId = (document.getElementById('departmentId')?.value || '').trim();
+        const empType = (document.getElementById('employmentType')?.value || '').trim();
         const hasPrimaryFp = !!primaryTemplate.value;
 
-        const ok = empName && empId && deptId && hasPrimaryFp && rfid.length > 0;
+        const ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
         registerBtn.disabled = !ok;
 
         if (ok) {
-            registerHint.textContent = 'Ready to submit.';
+            registerHint.textContent = 'Ready to submit. Click Register button to proceed.';
+            registerHint.className = 'ms-2 text-success';
         } else if (!hasPrimaryFp) {
             registerHint.textContent = 'Primary fingerprint is required.';
+            registerHint.className = 'ms-2 text-muted';
         } else if (!rfid) {
             registerHint.textContent = 'RFID scan is required.';
+            registerHint.className = 'ms-2 text-muted';
         } else {
             registerHint.textContent = 'Please fill all required fields.';
+            registerHint.className = 'ms-2 text-muted';
         }
     }
 
@@ -537,12 +560,35 @@
         updateRegisterEnabled();
     });
 
+    // Manual button to check if ready to register
+    document.getElementById('checkReadyBtn')?.addEventListener('click', () => {
+        console.log('Manual check ready button clicked');
+        updateRegisterEnabled();
+
+        setTimeout(() => {
+            if (registerBtn.disabled === false) {
+                showNotification(
+                    'Ready to Register!',
+                    'All required fields are complete. Click Register to proceed.',
+                    'success'
+                );
+            } else {
+                showNotification(
+                    'Not Ready',
+                    'Please complete all required fields (Name, ID, Department, Employment Type, RFID, and Primary Fingerprint).',
+                    'warning'
+                );
+            }
+        }, 100);
+    });
+
     // Detect keyboard-wedge bursts (fast keystrokes typical of RFID readers)
     if (rfidInput) {
         let lastTs = 0;
         let burstCount = 0;
         const burstWindowMs = 400; // window for considering a burst
         const minBurst = 4; // minimal fast chars to consider as wedge
+
         rfidInput.addEventListener('keydown', (e) => {
             const now = performance.now();
             if (now - lastTs < 35) {
@@ -552,20 +598,58 @@
             }
             lastTs = now;
         });
-        const sanitize = (s) => {
-            // Most readers send HEX UID plus optional CR/LF; keep hex only
-            const hex = s.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
-            return hex || s.trim(); // fallback to raw if it wasn't hex
-        };
-        rfidInput.addEventListener('input', () => {
-            const val = sanitize(rfidInput.value);
-            if (rfidInput.value !== val) rfidInput.value = val;
-            if (val && burstCount >= minBurst) {
-                rfidStatus.textContent = 'RFID input detected';
-                rfidStatus.classList.remove('text-muted');
+
+        // Sanitize RFID to strip control characters and normalize whitespace
+        rfidInput.addEventListener('input', (e) => {
+            try {
+                const cleaned = sanitize(rfidInput.value);
+                if (rfidInput.value !== cleaned) {
+                    const selStart = rfidInput.selectionStart;
+                    rfidInput.value = cleaned;
+                    try { rfidInput.setSelectionRange(selStart, selStart); } catch {}
+                }
+                const rfidValue = rfidInput.value;
+                console.log('RFID Input - Value entered:', JSON.stringify(rfidValue));
+
+                // Update status based on detection method (no sanitization)
+                if (rfidValue) {
+                    if (burstCount >= minBurst) {
+                        rfidStatus.textContent = '✓ RFID card detected';
+                        rfidStatus.className = 'text-success small';
+                    } else {
+                        rfidStatus.textContent = '✓ RFID manually entered';
+                        rfidStatus.className = 'text-primary small';
+                    }
+                } else {
+                    rfidStatus.textContent = '';
+                    rfidStatus.className = 'text-muted small';
+                }
+
+                // Keep manual flow but reflect button state
+                updateRegisterEnabled();
+
+            } catch (error) {
+                console.error('RFID input handling error:', error);
+                rfidStatus.textContent = '⚠ Processing error';
+                rfidStatus.className = 'text-warning small';
             }
-            updateRegisterEnabled();
         });
+
+        // Handle paste events (some RFID software uses paste)
+        rfidInput.addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const event = new Event('input', {
+                    bubbles: true
+                });
+                rfidInput.dispatchEvent(event);
+
+                // NO AUTO-REGISTRATION on paste
+                console.log('RFID pasted, but auto-registration is disabled');
+            }, 10);
+        });
+
+
+
         // Initial focus to streamline scanning
         setTimeout(() => rfidInput.focus(), 100);
     }
@@ -585,13 +669,29 @@
         registerBtn.disabled = true;
 
         try {
+            // Sanitize before submit
+            const rfidValue = sanitize(rfidInput?.value || '');
+            rfidInput.value = rfidValue;
+            console.log('Submitting RFID value (sanitized):', JSON.stringify(rfidValue));
+
             const formData = new FormData(document.getElementById('registerForm'));
+
+            // Log form data for debugging (no modification)
+            console.log('Form submission data:');
+            for (let [key, value] of formData.entries()) {
+                if (key === 'rfid_uid') {
+                    console.log(`  ${key}:`, JSON.stringify(value));
+                } else {
+                    console.log(`  ${key}:`, typeof value === 'string' ? value.substring(0, 50) + (value.length > 50 ? '...' : '') : '[File]');
+                }
+            }
 
             const response = await fetch(document.getElementById('registerForm').action, {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 }
             });
 
@@ -611,6 +711,10 @@
                     backupTemplate.value = '';
                     profilePreview.classList.add('d-none');
                     profilePreview.src = '';
+
+                    // Reset RFID status
+                    rfidStatus.textContent = '';
+                    rfidStatus.className = 'text-muted small';
 
                     // Reset fingerprint sections and update UI
                     updateUIBasedOnDeviceStatus();
@@ -634,9 +738,13 @@
 
         } catch (error) {
             console.error('Registration error:', error);
+            let errorMessage = error.message || 'An error occurred during registration. Please try again.';
+
+            // No special-case clearing; user can correct and resubmit
+
             showNotification(
                 'Registration Failed',
-                error.message || 'An error occurred during registration. Please try again.',
+                errorMessage,
                 'error'
             );
         } finally {
@@ -663,8 +771,16 @@
         profilePreview.classList.remove('d-none');
     });
 
-    // Re-evaluate enabling when fields change
-    ['empName', 'empId', 'departmentId'].forEach(id => document.getElementById(id)?.addEventListener('input', updateRegisterEnabled));
+    // Re-evaluate enabling when fields change (manually triggered)
+    ['empName', 'empId', 'departmentId', 'employmentType'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updateRegisterEnabled);
+        document.getElementById(id)?.addEventListener('change', updateRegisterEnabled);
+    });
+
+    // Add click handler to register button to ensure state is current
+    registerBtn?.addEventListener('click', () => {
+        updateRegisterEnabled(); // Final check before submission
+    });
 
     // Initial checks
     setTimeout(() => {
