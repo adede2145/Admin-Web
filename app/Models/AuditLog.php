@@ -28,6 +28,17 @@ class AuditLog extends Model
         'first_read_at' => 'datetime',
     ];
 
+    // Accessor to decode JSON strings when accessing the attributes
+    public function getOldValuesAttribute($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    public function getNewValuesAttribute($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
     public function admin()
     {
         return $this->belongsTo(Admin::class, 'admin_id');
