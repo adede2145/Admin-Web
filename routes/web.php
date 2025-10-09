@@ -50,6 +50,7 @@ Route::prefix('api/kiosk')->group(function () {
 // API Routes for auto-refresh
 Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/attendance/logs', [App\Http\Controllers\Api\AttendanceController::class, 'getLogs'])->name('api.attendance.logs');
+    Route::get('/attendance/{id}/verification-data', [AttendanceController::class, 'getVerificationData'])->name('api.attendance.verification-data');
 });
 
 // Admin Routes
@@ -90,6 +91,10 @@ Route::middleware(['auth'])->group(function () {
     // Diagnostic helper for photo integrity
     Route::get('/attendance/{id}/photo-info', [AttendanceController::class, 'photoInfo'])->name('attendance.photo.info');
 
+    // RFID Verification routes
+    Route::post('/attendance/{id}/approve', [AttendanceController::class, 'approveRfid'])->name('attendance.approve');
+    Route::post('/attendance/{id}/reject', [AttendanceController::class, 'rejectRfid'])->name('attendance.reject');
+
     // Register Employee (Admin or Super Admin only)
     Route::middleware(['admin_or_superadmin'])->group(function () {
         Route::get('/employees/register', function () {
@@ -118,6 +123,9 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
     Route::post('/admin/users', [AdminController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{id}', [AdminController::class, 'update'])->name('admin.users.update');
     Route::delete('/admin/users/{id}', [AdminController::class, 'destroy'])->name('admin.users.destroy');
+    
+    // API endpoint for employee filtering
+    Route::get('/api/employees/by-department', [AdminController::class, 'getEmployeesByDepartment'])->name('api.employees.by_department');
 
     // Department Management
     Route::resource('departments', DepartmentController::class);

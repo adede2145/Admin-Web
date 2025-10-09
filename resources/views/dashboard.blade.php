@@ -21,16 +21,32 @@
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-house text-muted fs-4"></i>
             <span class="fw-bold fs-2">Home Dashboard</span>
+            @if(auth()->user()->role->role_name !== 'super_admin')
+            <div class="ms-3">
+                <span class="badge bg-info fs-6">
+                    <i class="bi bi-building me-1"></i>{{ auth()->user()->department->department_name ?? 'N/A' }}
+                </span>
+            </div>
+            @endif
         </div>
         <div class="d-flex align-items-center gap-3">
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Employee
+                    @if(auth()->user()->role->role_name === 'super_admin')
+                    All Employees
+                    @else
+                    {{ auth()->user()->department->department_name ?? 'Department' }} Employees
+                    @endif
                 </button>
                 <ul class="dropdown-menu border-0 shadow rounded-3">
-                    <li><a class="dropdown-item" href="#">All Employees</a></li>
                     @if(auth()->user()->role->role_name === 'super_admin')
+                    <li><a class="dropdown-item" href="#">All Employees</a></li>
                     <li><a class="dropdown-item" href="#">By Department</a></li>
+                    @else
+                    <li><a class="dropdown-item" href="#">Department Employees</a></li>
+                    <li>
+                        <h6 class="dropdown-header">{{ auth()->user()->department->department_name ?? 'N/A' }}</h6>
+                    </li>
                     @endif
                 </ul>
             </div>
@@ -49,27 +65,42 @@
     <!-- Stats Overview (Present, Late, Absent) -->
     @php
     $today = \Carbon\Carbon::today();
-    // Stats: always for today
+
+    // Role-based data scoping - Define this first
+    $isSuper = auth()->user()->role->role_name === 'super_admin';
+    $userDeptId = auth()->user()->department_id;
+
+    // Stats: always for today with role-based scoping
     $logQueryToday = \App\Models\AttendanceLog::query()->whereDate('time_in', $today);
-    if (auth()->user()->role->role_name !== 'super_admin') {
-    $logQueryToday->whereHas('employee', function($q){ $q->where('department_id', auth()->user()->department_id); });
+    if (!$isSuper) {
+    $logQueryToday->whereHas('employee', function($q) use ($userDeptId){ $q->where('department_id', $userDeptId); });
     }
     $presentCount = (clone $logQueryToday)->distinct('employee_id')->count('employee_id');
     $lateCount = (clone $logQueryToday)->whereTime('time_in', '>', '08:00:00')->count();
+
+    // Employee base query with role scoping
     $employeeBase = \App\Models\Employee::query();
-    if (auth()->user()->role->role_name !== 'super_admin') {
-    $employeeBase->where('department_id', auth()->user()->department_id);
+    if (!$isSuper) {
+    $employeeBase->where('department_id', $userDeptId);
     }
-    $totalEmployees = $employeeBase->count();
-    $absentCount = max($totalEmployees - $presentCount, 0);
-    // Pie chart period query
+    $totalEmployeesToday = $employeeBase->count();
+    $absentCount = max($totalEmployeesToday - $presentCount, 0);
+
+    // RFID pending verifications count (role-scoped)
+    $pendingRfidQuery = \App\Models\AttendanceLog::where('method', 'rfid')->where('verification_status', 'pending');
+    if (!$isSuper) {
+    $pendingRfidQuery->whereHas('employee', function($q) use ($userDeptId){ $q->where('department_id', $userDeptId); });
+    }
+    $pendingRfidCount = $pendingRfidQuery->count();
+
+    // Pie chart period query with role scoping
     $start = $today; $end = $today->copy();
     if ($period === 'week') { $start = $today->copy()->subDays(6); }
     if ($period === 'month') { $start = $today->copy()->startOfMonth(); }
     $chartLogQuery = \App\Models\AttendanceLog::query()
     ->whereBetween('time_in', [$start->startOfDay(), $end->endOfDay()]);
-    if (auth()->user()->role->role_name !== 'super_admin') {
-    $chartLogQuery->whereHas('employee', function($q){ $q->where('department_id', auth()->user()->department_id); });
+    if (!$isSuper) {
+    $chartLogQuery->whereHas('employee', function($q) use ($userDeptId){ $q->where('department_id', $userDeptId); });
     }
     $rfidCount = (clone $chartLogQuery)->where('method','rfid')->count();
     $fpCount = (clone $chartLogQuery)->where('method','fingerprint')->count();
@@ -80,7 +111,13 @@
                 <div class="card-body d-flex align-items-center justify-content-between p-4">
                     <div class="text-start">
                         <div class="display-1 fw-bold" style="color:#fff">{{ $presentCount }}</div>
-                        <div class="small" style="color:#fff">PRESENT TODAY</div>
+                        <div class="small" style="color:#fff">
+                            @if($isSuper)
+                            PRESENT TODAY
+                            @else
+                            PRESENT TODAY
+                            @endif
+                        </div>
                     </div>
                     <i class="bi bi-person-check display-3 ms-3" style="color:#fff;"></i>
                 </div>
@@ -91,36 +128,88 @@
                 <div class="card-body d-flex align-items-center justify-content-between p-4">
                     <div class="text-start">
                         <div class="display-1 fw-bold" style="color:#fff">{{ $absentCount }}</div>
-                        <div class="small" style="color:#fff">ABSENT TODAY</div>
+                        <div class="small" style="color:#fff">
+                            @if($isSuper)
+                            ABSENT TODAY
+                            @else
+                            ABSENT TODAY
+                            @endif
+                        </div>
                     </div>
                     <i class="bi bi-person-x display-3 ms-3" style="color:#fff;"></i>
                 </div>
             </div>
         </div>
+        @if($pendingRfidCount > 0)
+        <div class="col-md-4 mb-3">
+            <div class="aa-card h-100" style="background: rgb(255, 193, 7); color: #000; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
+                <div class="card-body d-flex align-items-center justify-content-between p-4">
+                    <div class="text-start">
+                        <div class="display-1 fw-bold" style="color:#000">{{ $pendingRfidCount }}</div>
+                        <div class="small fw-bold" style="color:#000">
+                            RFID VERIFICATIONS PENDING
+                        </div>
+                        <a href="{{ route('attendance.index', ['rfid_status' => 'pending', 'login_method' => 'rfid']) }}"
+                            class="btn btn-dark btn-sm mt-2">
+                            <i class="bi bi-eye me-1"></i>Review
+                        </a>
+                    </div>
+                    <i class="bi bi-exclamation-triangle display-3 ms-3" style="color:#000;"></i>
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Today's Summary (move this above the charts) -->
     @php
-    // Additional statistics for Today's Summary
+    // Employee statistics based on role (using already defined $isSuper and $userDeptId)
+    if ($isSuper) {
     $totalEmployees = \App\Models\Employee::count();
     $totalDepartments = \App\Models\Department::count();
+    } else {
+    // Department admin sees only their department's employees
+    $totalEmployees = \App\Models\Employee::where('department_id', $userDeptId)->count();
+    $totalDepartments = 1; // Only their own department
+    }
 
-    // Updated kiosk counting with heartbeat status
+    // Kiosk statistics - Super admin sees all, department admin sees department-specific
+    if ($isSuper) {
     $totalKiosks = \App\Models\Kiosk::count();
     $activeKiosks = \App\Models\Kiosk::where('is_active', 1)->count();
-    $onlineKiosks = \App\Models\Kiosk::online()->count(); // Using the new scope
-    $offlineKiosks = \App\Models\Kiosk::offline()->count(); // Using the new scope
-    $attendanceRate = $totalEmployees > 0 ? round(($presentCount / $totalEmployees) * 100, 1) : 0;
-    $lateRate = $totalEmployees > 0 ? round(($lateCount / $totalEmployees) * 100, 1) : 0;
-    $absentRate = $totalEmployees > 0 ? round(($absentCount / $totalEmployees) * 100, 1) : 0;
+    $onlineKiosks = \App\Models\Kiosk::online()->count();
+    $offlineKiosks = \App\Models\Kiosk::offline()->count();
+    } else {
+    // Assuming kiosks have department_id or are linked to departments
+    $totalKiosks = \App\Models\Kiosk::count(); // For now, show all kiosks
+    $activeKiosks = \App\Models\Kiosk::where('is_active', 1)->count();
+    $onlineKiosks = \App\Models\Kiosk::online()->count();
+    $offlineKiosks = \App\Models\Kiosk::offline()->count();
+    }
+
+    // Calculate rates based on scoped data (use totalEmployeesToday for accurate daily calculations)
+    $attendanceRate = $totalEmployeesToday > 0 ? round(($presentCount / $totalEmployeesToday) * 100, 1) : 0;
+    $lateRate = $totalEmployeesToday > 0 ? round(($lateCount / $totalEmployeesToday) * 100, 1) : 0;
+    $absentRate = $totalEmployeesToday > 0 ? round(($absentCount / $totalEmployeesToday) * 100, 1) : 0;
     @endphp
     <div class="row mb-4">
         <div class="col-12">
             <div class="aa-card" style="min-height: 200px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-header header-yellow">
                     <h4 class="card-title mb-0">
-                        <i class="bi bi-graph-up me-2"></i>Today's Summary
+                        <i class="bi bi-graph-up me-2"></i>
+                        @if($isSuper)
+                        System-wide Summary
+                        @else
+                        {{ auth()->user()->department->department_name ?? 'Department' }} Summary
+                        @endif
                     </h4>
+                    @if(!$isSuper)
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        You are viewing data specific to your department only
+                    </small>
+                    @endif
                 </div>
                 <div class="card-body p-4">
                     <div class="row text-center align-items-center justify-content-center g-4">
@@ -129,13 +218,25 @@
                             <div class="display-3 fw-bold text-success mb-2">
                                 <i class="bi bi-people-fill me-2"></i>{{ $totalEmployees }}
                             </div>
-                            <div class="fs-4 text-muted">Total Employees</div>
+                            <div class="fs-4 text-muted">
+                                @if($isSuper)
+                                Total Employees
+                                @else
+                                Department Employees
+                                @endif
+                            </div>
                         </div>
                         <div class="col-3 d-flex flex-column align-items-center justify-content-center">
                             <div class="display-3 fw-bold text-info mb-2">
                                 <i class="bi bi-building me-2"></i>{{ $totalDepartments }}
                             </div>
-                            <div class="fs-4 text-muted">Departments</div>
+                            <div class="fs-4 text-muted">
+                                @if($isSuper)
+                                Departments
+                                @else
+                                Your Department
+                                @endif
+                            </div>
                         </div>
                         <div class="col-3 d-flex flex-column align-items-center justify-content-center">
                             <div class="display-3 fw-bold text-warning mb-2">
@@ -148,7 +249,7 @@
                                 <i class="bi bi-pc-display-horizontal me-2"></i>{{ $onlineKiosks }}
                             </div>
                             <div class="fs-4 text-muted">Online Kiosks</div>
-                            <div class="small text-muted"> {{ $totalKiosks }} Total</div>
+                            <div class="small text-muted">{{ $totalKiosks }} Total</div>
                         </div>
                     </div>
                 </div>
@@ -160,7 +261,14 @@
         <div class="col-lg-6">
             <div class="aa-card h-100" style="min-height: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-header header-maroon">
-                    <h4 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Login Method Pie Chart</h4>
+                    <h4 class="mb-0">
+                        <i class="bi bi-pie-chart me-2"></i>
+                        @if($isSuper)
+                        Login Method Distribution (System-wide)
+                        @else
+                        Login Method Distribution ({{ auth()->user()->department->department_name ?? 'Department' }})
+                        @endif
+                    </h4>
                 </div>
                 <div class="card-body position-relative">
                     <div class="position-absolute" style="top:.5rem; right:.75rem;">
@@ -190,7 +298,12 @@
             <div class="aa-card h-100" style="min-height: 720px; position: relative; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-header header-maroon">
                     <h1 class="card-title mb-0">
-                        <i class="bi bi-clock-history me-2"></i>Recent Activity
+                        <i class="bi bi-clock-history me-2"></i>
+                        @if($isSuper)
+                        Recent Activity (All)
+                        @else
+                        Recent Activity ({{ auth()->user()->department->department_name ?? 'Department' }})
+                        @endif
                     </h1>
                 </div>
                 <div class="card-body p-4" style="padding-bottom: 4.5rem !important;">

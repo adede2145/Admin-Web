@@ -39,6 +39,11 @@ class AttendanceController extends Controller
             }
         }
 
+        // RFID verification status filter
+        if ($request->filled('rfid_status')) {
+            $query->where('method', 'rfid')->where('verification_status', $request->rfid_status);
+        }
+
         // Department restriction for non-super admins
         if (auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id) {
             $query->whereHas('employee', function ($q) {

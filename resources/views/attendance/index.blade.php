@@ -35,6 +35,125 @@
         font-weight: 600;
         color: #495057;
     }
+
+    /* Enhanced Table Styling */
+    .attendance-table {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: none;
+    }
+
+    .attendance-table thead th {
+        background: linear-gradient(135deg, #8B0000, #A52A2A);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        border: none;
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .attendance-table tbody tr {
+        border-bottom: 1px solid #f1f3f4;
+        transition: all 0.2s ease;
+    }
+
+    .attendance-table tbody tr:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .attendance-table tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border: none;
+        font-size: 0.9rem;
+    }
+
+    /* Enhanced Badge Styling */
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.7rem;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    /* Employee Avatar Styling */
+    .employee-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8B0000, #A52A2A);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    /* Photo View Button Styling */
+    .photo-view-btn {
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+
+    .photo-view-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+
+    /* Action Buttons Styling */
+    .action-buttons .btn {
+        margin: 0 0.1rem;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+
+    .action-buttons .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Time display styling */
+    .time-info {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .time-date {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    /* Verification badge improvements */
+    .verification-badge {
+        border-radius: 20px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    /* Kiosk badge styling */
+    .kiosk-badge {
+        background: linear-gradient(135deg, #6c757d, #495057);
+        border: none;
+        border-radius: 20px;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
 </style>
 <div class="container-fluid">
 
@@ -64,77 +183,171 @@
 
     <!-- Filters -->
     <div class="aa-card mb-3 filter-card">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-funnel me-2"></i>Filter Attendance Records
+                </h6>
+                <small class="text-muted">
+                    @if(auth()->user()->role->role_name === 'super_admin')
+                    System-wide access
+                    @else
+                    Limited to {{ auth()->user()->department->department_name ?? 'your department' }}
+                    @endif
+                </small>
+            </div>
+        </div>
         <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end">
-                <div class="col-md-2">
-                    <label class="form-label">From</label>
-                    <input type="date" name="start_date" class="form-control" value="{{ request('start_date', date('Y-m-d')) }}">
+            <form method="GET" class="row g-3 align-items-end" id="attendanceFiltersForm">
+                <!-- Date Range Filters -->
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label">
+                        <i class="bi bi-calendar-date me-1"></i>From Date
+                    </label>
+                    <input type="date"
+                        name="start_date"
+                        class="form-control"
+                        value="{{ request('start_date', now()->subDays(7)->format('Y-m-d')) }}"
+                        max="{{ date('Y-m-d') }}">
+                    <div class="form-text small">Default: 7 days ago</div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">To</label>
-                    <input type="date" name="end_date" class="form-control" value="{{ request('end_date', date('Y-m-d')) }}">
+
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label">
+                        <i class="bi bi-calendar-check me-1"></i>To Date
+                    </label>
+                    <input type="date"
+                        name="end_date"
+                        class="form-control"
+                        value="{{ request('end_date', date('Y-m-d')) }}"
+                        max="{{ date('Y-m-d') }}">
+                    <div class="form-text small">Default: Today</div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Employee</label>
+
+                <!-- Employee Filter -->
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label">
+                        <i class="bi bi-person me-1"></i>Employee
+                    </label>
                     @php
-                    $empQuery = \App\Models\Employee::query();
+                    $empQuery = \App\Models\Employee::with('department');
                     if (auth()->user()->role->role_name !== 'super_admin') {
                     $empQuery->where('department_id', auth()->user()->department_id);
                     }
                     $empOptions = $empQuery->orderBy('full_name')->get();
                     @endphp
                     <select name="employee_id" class="form-select">
-                        <option value="">All Employees</option>
+                        <option value="">
+                            @if(auth()->user()->role->role_name === 'super_admin')
+                            All Employees ({{ $empOptions->count() }})
+                            @else
+                            All in {{ auth()->user()->department->department_name ?? 'Department' }} ({{ $empOptions->count() }})
+                            @endif
+                        </option>
                         @foreach($empOptions as $emp)
-                        <option value="{{ $emp->employee_id }}" {{ (string)request('employee_id') === (string)$emp->employee_id ? 'selected' : '' }}>{{ $emp->full_name }}</option>
+                        <option value="{{ $emp->employee_id }}"
+                            {{ (string)request('employee_id') === (string)$emp->employee_id ? 'selected' : '' }}>
+                            {{ $emp->full_name }}
+                            @if(auth()->user()->role->role_name === 'super_admin')
+                            <span class="text-muted">({{ $emp->department->department_name ?? 'No Dept' }})</span>
+                            @endif
+                        </option>
                         @endforeach
                     </select>
+                    <div class="form-text small">
+                        @if($empOptions->count() === 0)
+                        <span class="text-warning">No employees found</span>
+                        @else
+                        {{ $empOptions->count() }} employee(s) available
+                        @endif
+                    </div>
                 </div>
+
+                <!-- Department Filter (Super Admin Only) -->
                 @if(auth()->user()->role->role_name === 'super_admin')
-                <div class="col-md-2">
-                    <label class="form-label">Department</label>
-                    <select name="department_id" class="form-select">
-                        <option value="">All Departments</option>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label">
+                        <i class="bi bi-building me-1"></i>Department
+                    </label>
+                    <select name="department_id" class="form-select" id="departmentFilter">
+                        <option value="">All Departments ({{ $departments->count() }})</option>
                         @foreach($departments as $dept)
-                        <option value="{{ $dept->department_id }}" {{ request('department_id') == $dept->department_id ? 'selected' : '' }}>
+                        <option value="{{ $dept->department_id }}"
+                            {{ request('department_id') == $dept->department_id ? 'selected' : '' }}>
                             {{ $dept->department_name }}
                         </option>
                         @endforeach
                     </select>
-                </div>
-                @else
-                <div class="col-md-2">
-                    <label class="form-label">Department</label>
-                    <input type="text" class="form-control" value="{{ auth()->user()->department->department_name ?? 'N/A' }}" readonly>
-                    <input type="hidden" name="department_id" value="{{ auth()->user()->department_id }}">
-                    <div class="form-text small">Your department only</div>
+                    <div class="form-text small">System-wide access</div>
                 </div>
                 @endif
-                <div class="col-md-1">
-                    <label class="form-label">Method</label>
+
+                <!-- Method Filter -->
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label">
+                        <i class="bi bi-gear me-1"></i>Method
+                    </label>
                     <select name="login_method" class="form-select">
-                        <option value="">All</option>
-                        <option value="rfid" {{ request('login_method') == 'rfid' ? 'selected' : '' }}>RFID</option>
-                        <option value="fingerprint" {{ request('login_method') == 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
-                        <option value="manual" {{ request('login_method') == 'manual' ? 'selected' : '' }}>Manual</option>
+                        <option value="">All Methods</option>
+                        <option value="rfid" {{ request('login_method') == 'rfid' ? 'selected' : '' }}>
+                            <i class="bi bi-credit-card"></i> RFID
+                        </option>
+                        <option value="fingerprint" {{ request('login_method') == 'fingerprint' ? 'selected' : '' }}>
+                            <i class="bi bi-fingerprint"></i> Fingerprint
+                        </option>
+                        <option value="manual" {{ request('login_method') == 'manual' ? 'selected' : '' }}>
+                            <i class="bi bi-person-gear"></i> Manual
+                        </option>
                     </select>
                 </div>
-                <div class="col-md-1">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">All</option>
-                        <option value="late" {{ request('status') == 'late' ? 'selected' : '' }}>Late</option>
-                        <option value="on_time" {{ request('status') == 'on_time' ? 'selected' : '' }}>On Time</option>
+
+                <!-- RFID Status Filter (Only show if RFID method selected or super admin) -->
+                @if(auth()->user()->role->role_name === 'super_admin' || request('login_method') === 'rfid')
+                <div class="col-lg-2 col-md-3" id="rfidStatusFilter" @if(!(request('login_method')==='rfid' || auth()->user()->role->role_name === 'super_admin')) style="display: none;" @endif>
+                    <label class="form-label">
+                        <i class="bi bi-shield-check me-1"></i>RFID Status
+                    </label>
+                    <select name="rfid_status" class="form-select">
+                        <option value="">All RFID Status</option>
+                        <option value="pending" {{ request('rfid_status') == 'pending' ? 'selected' : '' }}>
+                            Pending
+                        </option>
+                        <option value="verified" {{ request('rfid_status') == 'verified' ? 'selected' : '' }}>
+                            Verified
+                        </option>
+                        <option value="rejected" {{ request('rfid_status') == 'rejected' ? 'selected' : '' }}>
+                            Rejected
+                        </option>
                     </select>
                 </div>
-                <div class="col-md-1">
+                @endif
+
+                <!-- Quick Date Presets -->
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label">
+                        <i class="bi bi-lightning me-1"></i>Quick Filters
+                    </label>
+                    <select class="form-select" id="quickDateFilter">
+                        <option value="">Custom Range</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="this_week">This Week</option>
+                        <option value="last_week">Last Week</option>
+                        <option value="this_month">This Month</option>
+                        <option value="last_30_days">Last 30 Days</option>
+                    </select>
+                    <div class="form-text small">Quick date ranges</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-lg-1 col-md-2">
                     <label class="form-label">&nbsp;</label>
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-warning text-dark fw-semibold">
-                            <i class="bi bi-search me-2"></i>Filter
+                        <button type="submit" class="btn btn-warning text-dark fw-semibold" id="applyFiltersBtn">
+                            <i class="bi bi-search me-2"></i>Apply
                         </button>
                         <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-2"></i>Clear
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
                         </a>
                     </div>
                 </div>
@@ -143,39 +356,131 @@
             <!-- Active Filters Display -->
             @php
             $activeFilters = [];
-            if (request('start_date') && request('start_date') !== date('Y-m-d')) {
-            $activeFilters[] = 'From: ' . \Carbon\Carbon::parse(request('start_date'))->format('M d, Y');
+            $defaultStartDate = now()->subDays(7)->format('Y-m-d');
+            $defaultEndDate = date('Y-m-d');
+
+            // Date filters
+            if (request('start_date') && request('start_date') !== $defaultStartDate) {
+            $activeFilters[] = [
+            'label' => 'From: ' . \Carbon\Carbon::parse(request('start_date'))->format('M d, Y'),
+            'type' => 'date',
+            'removable' => true
+            ];
             }
-            if (request('end_date') && request('end_date') !== date('Y-m-d')) {
-            $activeFilters[] = 'To: ' . \Carbon\Carbon::parse(request('end_date'))->format('M d, Y');
+            if (request('end_date') && request('end_date') !== $defaultEndDate) {
+            $activeFilters[] = [
+            'label' => 'To: ' . \Carbon\Carbon::parse(request('end_date'))->format('M d, Y'),
+            'type' => 'date',
+            'removable' => true
+            ];
             }
+
+            // Employee filter
             if (request('employee_id')) {
             $emp = \App\Models\Employee::find(request('employee_id'));
-            $activeFilters[] = 'Employee: ' . ($emp ? $emp->full_name : 'Unknown');
+            $activeFilters[] = [
+            'label' => 'Employee: ' . ($emp ? $emp->full_name : 'Unknown'),
+            'type' => 'employee',
+            'removable' => true
+            ];
             }
-            if (request('department_id')) {
+
+            // Department filter (Super Admin only)
+            if (request('department_id') && auth()->user()->role->role_name === 'super_admin') {
             $dept = \App\Models\Department::find(request('department_id'));
-            $activeFilters[] = 'Department: ' . ($dept ? $dept->department_name : 'Unknown');
+            $activeFilters[] = [
+            'label' => 'Department: ' . ($dept ? $dept->department_name : 'Unknown'),
+            'type' => 'department',
+            'removable' => true
+            ];
             }
+
+            // Method filter
             if (request('login_method')) {
-            $activeFilters[] = 'Method: ' . ucfirst(request('login_method'));
+            $methodIcons = [
+            'rfid' => 'bi-credit-card',
+            'fingerprint' => 'bi-fingerprint',
+            'manual' => 'bi-person-gear'
+            ];
+            $icon = $methodIcons[request('login_method')] ?? 'bi-gear';
+            $activeFilters[] = [
+            'label' => 'Method: ' . ucfirst(request('login_method')),
+            'type' => 'method',
+            'icon' => $icon,
+            'removable' => true
+            ];
             }
-            if (request('status')) {
-            $activeFilters[] = 'Status: ' . ucfirst(str_replace('_', ' ', request('status')));
+
+            // RFID Status filter
+            if (request('rfid_status')) {
+            $statusEmojis = [
+            'pending' => '',
+            'verified' => '',
+            'rejected' => ''
+            ];
+            $emoji = $statusEmojis[request('rfid_status')] ?? '';
+            $activeFilters[] = [
+            'label' => $emoji . ' RFID: ' . ucfirst(request('rfid_status')),
+            'type' => 'rfid_status',
+            'removable' => true
+            ];
+            }
+
+            // Role-based access indicator
+            if (auth()->user()->role->role_name !== 'super_admin') {
+            $activeFilters[] = [
+            'label' => 'Scope: ' . (auth()->user()->department->department_name ?? 'Department'),
+            'type' => 'scope',
+            'removable' => false
+            ];
             }
             @endphp
 
             @if(count($activeFilters) > 0)
             <div class="mt-3 pt-3 border-top">
-                <div class="d-flex align-items-center">
-                    <span class="text-muted small me-2">
-                        <i class="bi bi-funnel me-1"></i>Filters Applied:
+                <div class="d-flex align-items-center flex-wrap">
+                    <span class="text-muted small me-3 mb-2">
+                        <i class="bi bi-funnel-fill me-1"></i>Active Filters:
                     </span>
-                    <div class="d-flex flex-wrap gap-1">
+                    <div class="d-flex flex-wrap gap-2">
                         @foreach($activeFilters as $filter)
-                        <span class="badge bg-primary">{{ $filter }}</span>
+                        <span class="badge {{ $filter['removable'] ? 'bg-primary' : 'bg-secondary' }} d-flex align-items-center">
+                            @if(isset($filter['icon']))
+                            <i class="bi {{ $filter['icon'] }} me-1"></i>
+                            @endif
+                            {{ $filter['label'] }}
+                            @if($filter['removable'])
+                            <button type="button" class="btn-close btn-close-white ms-2"
+                                style="font-size: 0.6em;"
+                                @php $filterType=$filter['type']; @endphp
+                                onclick='removeFilter("{{ $filterType }}")'
+                                title="Remove this filter"></button>
+                            @endif
+                        </span>
                         @endforeach
+
+                        @if(collect($activeFilters)->where('removable', true)->count() > 1)
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearAllFilters()">
+                            <i class="bi bi-x-circle me-1"></i>Clear All
+                        </button>
+                        @endif
                     </div>
+                </div>
+
+                <!-- Filter Summary Stats -->
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Showing
+                        <strong>{{ $attendanceLogs->total() ?? 0 }}</strong>
+                        attendance record(s)
+                        @if(auth()->user()->role->role_name !== 'super_admin')
+                        from {{ auth()->user()->department->department_name ?? 'your department' }}
+                        @endif
+                        @if(request('start_date') || request('end_date'))
+                        for the selected date range
+                        @endif
+                    </small>
                 </div>
             </div>
             @endif
@@ -223,17 +528,22 @@
                     </div>
 
                     <div id="attendance-logs-table" class="table-responsive scroll-hide" style="max-height: 580px; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none;">
-                        <table class="table table-hover">
-                            <thead style="background: #fff; position: sticky; top: 0; z-index: 10;">
+                        <table class="table table-hover attendance-table">
+                            <thead>
                                 <tr>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">ID</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Employee</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Department</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Time In</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Time Out</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Method</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Kiosk</th>
-                                    <th scope="col" style="color: var(--aa-maroon); font-weight: 700;">Actions</th>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">Employee</th>
+                                    @if(auth()->user()->role->role_name === 'super_admin')
+                                    <th scope="col">Department</th>
+                                    @endif
+                                    <th scope="col">Time In</th>
+                                    <th scope="col">Time Out</th>
+                                    <th scope="col">Method</th>
+                                    <th scope="col">Reason</th>
+                                    <th scope="col">Photo</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Kiosk</th>
+                                    <th scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="attendanceTableBody">
@@ -420,9 +730,9 @@
 @endforeach
 
 <div id="bladePayload" class="d-none"
-     data-has-report="{{ session('generated_report_id') ? '1' : '0' }}"
-     data-success="{{ session('success') ? e(session('success')) : '' }}"
-     data-error="{{ session('error') ? e(session('error')) : '' }}">
+    data-has-report="{{ session('generated_report_id') ? '1' : '0' }}"
+    data-success="{{ session('success') ? e(session('success')) : '' }}"
+    data-error="{{ session('error') ? e(session('error')) : '' }}">
 </div>
 
 <script>
@@ -433,6 +743,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         const lastUpdatedSpan = document.getElementById('lastUpdated');
         const refreshStatus = document.getElementById('refreshStatus');
+
+        // Initialize enhanced filters
+        initializeFilters();
 
         // Auto-start refresh when page loads
         startAutoRefresh();
@@ -494,6 +807,172 @@
         }
     });
 
+    // Enhanced Filter Functions
+    function initializeFilters() {
+        // Quick date filter functionality
+        const quickDateFilter = document.getElementById('quickDateFilter');
+        const startDateInput = document.querySelector('input[name="start_date"]');
+        const endDateInput = document.querySelector('input[name="end_date"]');
+        const methodSelect = document.querySelector('select[name="login_method"]');
+        const rfidStatusFilter = document.getElementById('rfidStatusFilter');
+
+        if (quickDateFilter) {
+            quickDateFilter.addEventListener('change', function() {
+                const today = new Date();
+                let startDate, endDate;
+
+                switch (this.value) {
+                    case 'today':
+                        startDate = endDate = formatDate(today);
+                        break;
+                    case 'yesterday':
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        startDate = endDate = formatDate(yesterday);
+                        break;
+                    case 'this_week':
+                        const startOfWeek = new Date(today);
+                        startOfWeek.setDate(today.getDate() - today.getDay());
+                        startDate = formatDate(startOfWeek);
+                        endDate = formatDate(today);
+                        break;
+                    case 'last_week':
+                        const lastWeekEnd = new Date(today);
+                        lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+                        const lastWeekStart = new Date(lastWeekEnd);
+                        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+                        startDate = formatDate(lastWeekStart);
+                        endDate = formatDate(lastWeekEnd);
+                        break;
+                    case 'this_month':
+                        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                        startDate = formatDate(startOfMonth);
+                        endDate = formatDate(today);
+                        break;
+                    case 'last_30_days':
+                        const thirtyDaysAgo = new Date(today);
+                        thirtyDaysAgo.setDate(today.getDate() - 30);
+                        startDate = formatDate(thirtyDaysAgo);
+                        endDate = formatDate(today);
+                        break;
+                    default:
+                        return; // Don't change dates for custom range
+                }
+
+                if (startDate && endDate) {
+                    startDateInput.value = startDate;
+                    endDateInput.value = endDate;
+                }
+            });
+        }
+
+        // Method filter change handler for RFID status visibility
+        if (methodSelect && rfidStatusFilter) {
+            methodSelect.addEventListener('change', function() {
+                if (this.value === 'rfid') {
+                    rfidStatusFilter.style.display = '';
+                } else {
+                    rfidStatusFilter.style.display = 'none';
+                    // Clear RFID status when method is not RFID
+                    const rfidStatusSelect = rfidStatusFilter.querySelector('select[name="rfid_status"]');
+                    if (rfidStatusSelect) {
+                        rfidStatusSelect.value = '';
+                    }
+                }
+            });
+        }
+
+        // Department filter for employee options (Super Admin only)
+        const departmentFilter = document.getElementById('departmentFilter');
+        const employeeSelect = document.querySelector('select[name="employee_id"]');
+
+        if (departmentFilter && employeeSelect) {
+            departmentFilter.addEventListener('change', function() {
+                const selectedDept = this.value;
+                const options = employeeSelect.querySelectorAll('option');
+
+                options.forEach(option => {
+                    if (option.value === '') {
+                        // Keep "All Employees" option
+                        option.style.display = '';
+                        return;
+                    }
+
+                    if (!selectedDept) {
+                        // Show all employees when no department selected
+                        option.style.display = '';
+                    } else {
+                        // Show/hide based on department match in option text
+                        const optionText = option.textContent;
+                        const deptName = this.options[this.selectedIndex].textContent;
+                        option.style.display = optionText.includes(deptName) ? '' : 'none';
+                    }
+                });
+
+                // Reset employee selection when department changes
+                employeeSelect.value = '';
+            });
+        }
+
+        // Form validation before submit
+        const filtersForm = document.getElementById('attendanceFiltersForm');
+        if (filtersForm) {
+            filtersForm.addEventListener('submit', function(e) {
+                const startDate = new Date(startDateInput.value);
+                const endDate = new Date(endDateInput.value);
+
+                if (startDate > endDate) {
+                    e.preventDefault();
+                    showNotification('error', 'Start date cannot be later than end date.');
+                    return false;
+                }
+
+                // Add loading state to apply button
+                const applyBtn = document.getElementById('applyFiltersBtn');
+                if (applyBtn) {
+                    applyBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Applying...';
+                    applyBtn.disabled = true;
+                }
+            });
+        }
+    }
+
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // Filter management functions
+    function removeFilter(filterType) {
+        const currentUrl = new URL(window.location);
+        const params = new URLSearchParams(currentUrl.search);
+
+        switch (filterType) {
+            case 'date':
+                params.delete('start_date');
+                params.delete('end_date');
+                break;
+            case 'employee':
+                params.delete('employee_id');
+                break;
+            case 'department':
+                params.delete('department_id');
+                break;
+            case 'method':
+                params.delete('login_method');
+                break;
+            case 'rfid_status':
+                params.delete('rfid_status');
+                break;
+        }
+
+        // Redirect to URL without the removed filter
+        window.location.href = currentUrl.pathname + '?' + params.toString();
+    }
+
+    function clearAllFilters() {
+        window.location.href = '{{ route("attendance.index") }}';
+    }
+
     document.getElementById('empSelectAll')?.addEventListener('change', function(e) {
         document.querySelectorAll('.emp-item').forEach(cb => {
             cb.checked = e.target.checked;
@@ -534,6 +1013,29 @@
             document.body.appendChild(form);
             form.submit();
         }
+    }
+
+    // RFID Verification Functions
+    function approveRfid(logId) {
+        // Store the logId for later use
+        document.getElementById('confirmApprovalBtn').dataset.logId = logId;
+
+        // Show the approval modal
+        const modal = new bootstrap.Modal(document.getElementById('rfidApprovalModal'));
+        modal.show();
+    }
+
+    function rejectRfid(logId) {
+        // Store the logId for later use
+        document.getElementById('confirmRejectionBtn').dataset.logId = logId;
+
+        // Clear any previous reason text
+        document.getElementById('rejectionReason').value = '';
+        document.getElementById('rejectionReason').classList.remove('is-invalid');
+
+        // Show the rejection modal
+        const modal = new bootstrap.Modal(document.getElementById('rfidRejectionModal'));
+        modal.show();
     }
 
     document.getElementById('openDTRHistoryModal').addEventListener('click', function() {
@@ -595,7 +1097,7 @@
         });
     }
 
-    // Photo viewing functions
+    // Photo viewing functions with RFID verification
     function showAttendancePhoto(logId, employeeName, dateTime) {
         const modal = new bootstrap.Modal(document.getElementById('photoModal'));
         const photoImage = document.getElementById('photoImage');
@@ -605,6 +1107,11 @@
         const photoError = document.getElementById('photoError');
         const photoContent = document.getElementById('photoContent');
         const loadingSpinner = document.getElementById('photoLoadingSpinner');
+        const rfidReasonSection = document.getElementById('rfidReasonSection');
+        const rfidReasonText = document.getElementById('rfidReasonText');
+        const verificationStatusSection = document.getElementById('verificationStatusSection');
+        const verificationStatus = document.getElementById('verificationStatus');
+        const verificationButtons = document.getElementById('verificationButtons');
 
         // Set employee info
         photoEmployeeName.textContent = employeeName;
@@ -622,7 +1129,65 @@
         downloadBtn.href = photoUrl;
         downloadBtn.download = 'attendance_photo_' + logId + '_' + employeeName.replace(/\s+/g, '_') + '.jpg';
 
+        // Fetch RFID verification data
+        fetch('/api/attendance/' + logId + '/verification-data', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.method === 'rfid') {
+                    // Show RFID reason
+                    if (data.rfid_reason) {
+                        rfidReasonText.textContent = data.rfid_reason;
+                        rfidReasonSection.classList.remove('d-none');
+                    } else {
+                        rfidReasonSection.classList.add('d-none');
+                    }
+
+                    // Show verification status
+                    verificationStatus.innerHTML = data.verification_badge;
+                    verificationStatusSection.classList.remove('d-none');
+
+                    // Show verification buttons if pending
+                    if (data.verification_status === 'pending') {
+                        verificationButtons.classList.remove('d-none');
+                        // Store logId for modal functions
+                        verificationButtons.dataset.logId = logId;
+                    } else {
+                        verificationButtons.classList.add('d-none');
+                    }
+                } else {
+                    rfidReasonSection.classList.add('d-none');
+                    verificationStatusSection.classList.add('d-none');
+                    verificationButtons.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching verification data:', error);
+                rfidReasonSection.classList.add('d-none');
+                verificationStatusSection.classList.add('d-none');
+                verificationButtons.classList.add('d-none');
+            });
+
         modal.show();
+    }
+
+    // Modal verification functions
+    function approveFromModal() {
+        const logId = document.getElementById('verificationButtons').dataset.logId;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('photoModal'));
+        modal.hide();
+        approveRfid(logId);
+    }
+
+    function rejectFromModal() {
+        const logId = document.getElementById('verificationButtons').dataset.logId;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('photoModal'));
+        modal.hide();
+        rejectRfid(logId);
     }
 
     function hidePhotoLoading() {
@@ -657,6 +1222,85 @@
                 }
             `;
         document.head.appendChild(style);
+    });
+
+    // RFID Modal Event Handlers
+    document.addEventListener('DOMContentLoaded', function() {
+        // Approval modal confirmation handler
+        document.getElementById('confirmApprovalBtn').addEventListener('click', function() {
+            const logId = this.dataset.logId;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rfidApprovalModal'));
+            modal.hide();
+
+            // Submit the approval form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("attendance.approve", ":logId") }}'.replace(':logId', logId);
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+
+            form.appendChild(csrfToken);
+            document.body.appendChild(form);
+            form.submit();
+        });
+
+        // Rejection modal confirmation handler
+        document.getElementById('confirmRejectionBtn').addEventListener('click', function() {
+            const logId = this.dataset.logId;
+            const reasonTextarea = document.getElementById('rejectionReason');
+            const reason = reasonTextarea.value.trim();
+
+            // Validate that reason is provided
+            if (!reason) {
+                reasonTextarea.classList.add('is-invalid');
+                reasonTextarea.focus();
+                return;
+            }
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rfidRejectionModal'));
+            modal.hide();
+
+            // Submit the rejection form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("attendance.reject", ":logId") }}'.replace(':logId', logId);
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+
+            const reasonField = document.createElement('input');
+            reasonField.type = 'hidden';
+            reasonField.name = 'rejection_reason';
+            reasonField.value = reason;
+
+            form.appendChild(csrfToken);
+            form.appendChild(reasonField);
+            document.body.appendChild(form);
+            form.submit();
+        });
+
+        // Remove validation styling when user starts typing
+        document.getElementById('rejectionReason').addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.photo-view-btn')) {
+                    const button = e.target.closest('.photo-view-btn');
+                    const logId = button.dataset.logId;
+                    const employeeName = button.dataset.employeeName;
+                    const timeIn = button.dataset.timeIn;
+
+                    showAttendancePhoto(logId, employeeName, timeIn);
+                }
+            });
+        });
     });
 </script>
 
@@ -693,13 +1337,13 @@
     </div>
 </div>
 
-<!-- Photo Viewer Modal -->
+<!-- Photo Viewer Modal with RFID Verification -->
 <div class="modal fade" id="photoModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-camera-fill me-2"></i>RFID Scan Photo
+                    <i class="bi bi-camera-fill me-2"></i>RFID Scan Photo & Verification
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -724,13 +1368,39 @@
                         <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
                         <p class="text-muted">Failed to load photo</p>
                     </div>
+
+                    <!-- RFID Reason Display -->
+                    <div id="rfidReasonSection" class="mt-3 p-3 border rounded bg-light">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>RFID Reason
+                        </h6>
+                        <p id="rfidReasonText" class="mb-0"></p>
+                    </div>
+
+                    <!-- Verification Status Display -->
+                    <div id="verificationStatusSection" class="mt-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-shield-check me-1"></i>Verification Status
+                        </h6>
+                        <div id="verificationStatus"></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a id="downloadPhotoBtn" href="#" class="btn btn-primary" download>
+                <a id="downloadPhotoBtn" href="#" class="btn btn-info" download>
                     <i class="bi bi-download me-2"></i>Download Photo
                 </a>
+
+                <!-- Verification Buttons (only show for pending RFID records) -->
+                <div id="verificationButtons" class="d-none">
+                    <button type="button" class="btn btn-success" onclick="approveFromModal()">
+                        <i class="bi bi-check-circle me-2"></i>Approve
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="rejectFromModal()">
+                        <i class="bi bi-x-circle me-2"></i>Reject
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -790,4 +1460,73 @@
     </div>
 </div>
 @endif
+
+<!-- RFID Approval Confirmation Modal -->
+<div class="modal fade" id="rfidApprovalModal" tabindex="-1" aria-labelledby="rfidApprovalModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rfidApprovalModalLabel">
+                    <i class="fas fa-check-circle text-success me-2"></i>Approve RFID Attendance
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-question-circle text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h6 class="mb-3">Confirm RFID Attendance Approval</h6>
+                    <p class="text-muted">Are you sure you want to approve this RFID attendance record? This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmApprovalBtn">
+                    <i class="fas fa-check me-1"></i>Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RFID Rejection Modal -->
+<div class="modal fade" id="rfidRejectionModal" tabindex="-1" aria-labelledby="rfidRejectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rfidRejectionModalLabel">
+                    <i class="fas fa-times-circle text-danger me-2"></i>Reject RFID Attendance
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h6 class="text-center mb-3">Reject RFID Attendance Record</h6>
+                    <p class="text-muted text-center mb-3">Please provide a reason for rejecting this RFID attendance record:</p>
+                </div>
+                <form id="rfidRejectionForm">
+                    <div class="form-group">
+                        <label for="rejectionReason" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="3"
+                            placeholder="Please explain why this attendance record is being rejected..." required></textarea>
+                        <div class="invalid-feedback">
+                            Please provide a reason for rejection.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRejectionBtn">
+                    <i class="fas fa-times me-1"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection

@@ -19,7 +19,8 @@ class Admin extends Authenticatable
         'fingerprint_hash',
         'rfid_code',
         'role_id',
-        'department_id'
+        'department_id',
+        'employee_id'
     ];
 
     protected $hidden = [
@@ -42,6 +43,12 @@ class Admin extends Authenticatable
         return $this->belongsTo(Department::class, 'department_id', 'department_id');
     }
 
+    // Add employee relationship
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employee_id', 'employee_id');
+    }
+
     public function dtrReports()
     {
         return $this->hasMany(DTRReport::class, 'admin_id', 'admin_id');
@@ -50,11 +57,23 @@ class Admin extends Authenticatable
     // Helper methods for roles
     public function isSuperAdmin()
     {
-        return $this->role->role_name === 'super_admin';
+        return $this->role && $this->role->role_name === 'super_admin';
     }
 
     public function isDepartmentAdmin()
     {
-        return $this->role->role_name === 'admin' && !is_null($this->department_id);
+        return $this->role && $this->role->role_name === 'admin' && !is_null($this->department_id);
+    }
+
+    // Get admin's full name from employee record
+    public function getFullNameAttribute()
+    {
+        return $this->employee ? $this->employee->full_name : $this->username;
+    }
+
+    // Check if admin can track attendance
+    public function canTrackAttendance()
+    {
+        return $this->employee_id !== null;
     }
 }

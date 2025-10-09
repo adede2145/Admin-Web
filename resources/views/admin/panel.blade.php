@@ -56,20 +56,45 @@
                                 <div class="form-text">Min 8 chars, start with capital, include a symbol.</div>
                             </div>
 
+                            <!-- Department Filter for Employee Selection -->
                             <div class="mb-3">
-                                <label for="department_id" class="form-label">
+                                <label for="filter_department" class="form-label">
                                     <span class="d-flex align-items-center">
-                                        <i class="bi bi-building me-2 text-muted"></i>
-                                        Department
+                                        <i class="bi bi-funnel me-2 text-muted"></i>
+                                        Filter by Department
                                     </span>
                                 </label>
-                                <select name="department_id" id="department_id" class="form-select" required>
-                                    <option value="">Select Department</option>
+                                <select id="filter_department" class="form-select">
+                                    <option value="all">All Departments</option>
                                     @foreach($departments as $dept)
                                         <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
                                     @endforeach
                                 </select>
-                                <div class="form-text">Department admins can only access their assigned department's data</div>
+                                <div class="form-text">Filter employees by department</div>
+                            </div>
+
+                            <!-- Employee Selection -->
+                            <div class="mb-3">
+                                <label for="employee_search" class="form-label">
+                                    <span class="d-flex align-items-center">
+                                        <i class="bi bi-person-workspace me-2 text-muted"></i>
+                                        Select Employee
+                                    </span>
+                                </label>
+                                <div class="position-relative">
+                                    <input type="text" 
+                                           id="employee_search" 
+                                           class="form-control" 
+                                           placeholder="Search for employee to make admin..."
+                                           autocomplete="off">
+                                    <input type="hidden" name="employee_id" id="selected_employee_id" required>
+                                    <div id="employee_search_results" 
+                                         class="position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-sm" 
+                                         style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+                                </div>
+                                <div class="form-text">
+                                    <span id="available_count">{{ $availableEmployees->count() }}</span> employees available (not already admins)
+                                </div>
                             </div>
 
                             <div class="d-grid">
@@ -275,8 +300,21 @@
                                     <td class="py-3 px-4">#{{ $admin->admin_id }}</td>
                                     <td class="py-3 px-4">
                                         <div class="d-flex align-items-center">
-                                            <i class="bi bi-person me-2 text-muted"></i>
-                                            {{ $admin->username }}
+                                            @if($admin->employee)
+                                                <div class="employee-avatar me-2" style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #8B0000, #A52A2A); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.7rem;">
+                                                    {{ strtoupper(substr($admin->employee->full_name, 0, 2)) }}
+                                                </div>
+                                                <div>
+                                                    <div class="fw-semibold">{{ $admin->username }}</div>
+                                                    <small class="text-muted">{{ $admin->employee->full_name }} (ID: {{ $admin->employee->employee_id }})</small>
+                                                </div>
+                                            @else
+                                                <i class="bi bi-person me-2 text-muted"></i>
+                                                <div>
+                                                    <div class="fw-semibold">{{ $admin->username }}</div>
+                                                    <small class="text-danger">No employee linked</small>
+                                                </div>
+                                            @endif
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
@@ -347,4 +385,186 @@
             </div>
         </div>
     </div>
+
+    <!-- Employee data for JavaScript -->
+    <script type="application/json" id="employeeData">
+        @if(isset($availableEmployees) && $availableEmployees->count() > 0)
+            [
+                @foreach($availableEmployees as $index => $emp)
+                {
+                    "employee_id": {{ $emp->employee_id }},
+                    "full_name": "{{ addslashes($emp->full_name) }}",
+                    "department": "{{ addslashes($emp->department->department_name ?? 'No Department') }}",
+                    "department_id": {{ $emp->department_id ?? 'null' }},
+                    "employment_type": "{{ ucfirst(str_replace('_', ' ', $emp->employment_type)) }}"
+                }@if($index < $availableEmployees->count() - 1),@endif
+                @endforeach
+            ]
+        @else
+            []
+        @endif
+    </script>
+
+    <style>
+        .employee-search-item {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .employee-search-item:hover {
+            background-color: #f8f9fa !important;
+        }
+        
+        .employee-search-item:active {
+            background-color: #e9ecef !important;
+        }
+        
+        #employee_search_results {
+            border-top: none !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        #employee_search:focus {
+            border-color: #8B0000;
+            box-shadow: 0 0 0 0.2rem rgba(139, 0, 0, 0.25);
+        }
+        
+        mark {
+            background-color: #fff3cd;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEmployeeSearch();
+        });
+
+        function initializeEmployeeSearch() {
+            const searchInput = document.getElementById('employee_search');
+            const searchResults = document.getElementById('employee_search_results');
+            const hiddenEmployeeId = document.getElementById('selected_employee_id');
+            const departmentFilter = document.getElementById('filter_department');
+            const availableCountSpan = document.getElementById('available_count');
+            const employeeDataElement = document.getElementById('employeeData');
+            
+            if (!searchInput || !searchResults || !employeeDataElement) return;
+            
+            const allEmployees = JSON.parse(employeeDataElement.textContent);
+            let filteredEmployees = allEmployees;
+            let selectedEmployee = null;
+            
+            // Department filter change handler
+            departmentFilter.addEventListener('change', function() {
+                const deptId = this.value;
+                if (deptId === 'all') {
+                    filteredEmployees = allEmployees;
+                } else {
+                    filteredEmployees = allEmployees.filter(emp => emp.department_id == deptId);
+                }
+                
+                // Update available count
+                availableCountSpan.textContent = filteredEmployees.length;
+                
+                // Clear search and selection
+                searchInput.value = '';
+                hiddenEmployeeId.value = '';
+                selectedEmployee = null;
+                searchResults.style.display = 'none';
+            });
+            
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                
+                if (query.length < 2) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+                
+                const results = filteredEmployees.filter(emp => 
+                    emp.full_name.toLowerCase().includes(query) ||
+                    emp.department.toLowerCase().includes(query) ||
+                    emp.employment_type.toLowerCase().includes(query)
+                );
+                
+                displaySearchResults(results, query);
+            });
+            
+            // Click outside to close
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+            
+            // Focus to show recent searches or all if empty
+            searchInput.addEventListener('focus', function() {
+                if (this.value.length === 0) {
+                    displaySearchResults(filteredEmployees.slice(0, 8), '');
+                }
+            });
+            
+            function displaySearchResults(results, query) {
+                if (results.length === 0) {
+                    searchResults.innerHTML = '<div class="p-3 text-muted text-center">No employees found</div>';
+                    searchResults.style.display = 'block';
+                    return;
+                }
+                
+                let html = '';
+                results.slice(0, 8).forEach(emp => {
+                    html += `
+                        <div class="employee-search-item p-3 border-bottom" data-employee-id="${emp.employee_id}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">${highlightMatch(emp.full_name, query)}</div>
+                                    <small class="text-muted">
+                                        ${highlightMatch(emp.department, query)} • ${highlightMatch(emp.employment_type, query)}
+                                    </small>
+                                </div>
+                                <small class="text-muted">ID: ${emp.employee_id}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                if (results.length > 8) {
+                    html += '<div class="p-2 text-center text-muted small">Showing first 8 results</div>';
+                }
+                
+                searchResults.innerHTML = html;
+                searchResults.style.display = 'block';
+                
+                // Add click handlers
+                searchResults.querySelectorAll('.employee-search-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const employeeId = this.dataset.employeeId;
+                        selectedEmployee = filteredEmployees.find(emp => emp.employee_id == employeeId);
+                        
+                        if (selectedEmployee) {
+                            searchInput.value = selectedEmployee.full_name + ' (' + selectedEmployee.department + ')';
+                            hiddenEmployeeId.value = selectedEmployee.employee_id;
+                            searchResults.style.display = 'none';
+                        }
+                    });
+                });
+            }
+            
+            function highlightMatch(text, query) {
+                if (!query) return text;
+                const regex = new RegExp(`(${query})`, 'gi');
+                return text.replace(regex, '<mark>$1</mark>');
+            }
+            
+            // Clear selection when input is manually cleared
+            searchInput.addEventListener('keyup', function() {
+                if (this.value.trim() === '') {
+                    hiddenEmployeeId.value = '';
+                    selectedEmployee = null;
+                }
+            });
+        }
+    </script>
 @endsection

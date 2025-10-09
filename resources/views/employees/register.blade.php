@@ -248,6 +248,13 @@
     let deviceConnected = false;
     let enrollmentInProgress = false;
     let fingerprintDeviceModel = '';
+    
+    // Request throttling and optimization
+    let lastBridgeCheck = 0;
+    let bridgeCheckInterval = 5000; // Start with 5 seconds
+    let maxBridgeCheckInterval = 30000; // Max 30 seconds
+    let bridgeCheckTimer = null;
+    let isCheckingBridge = false;
 
     // Global sanitizer for RFID text so all handlers can use it
     function sanitize(raw) {
@@ -363,6 +370,19 @@
     }
 
     async function checkBridge() {
+        // Prevent concurrent checks
+        if (isCheckingBridge) {
+            return;
+        }
+        
+        const now = Date.now();
+        if (now - lastBridgeCheck < 2000) { // Minimum 2 seconds between checks
+            return;
+        }
+        
+        isCheckingBridge = true;
+        lastBridgeCheck = now;
+        
         try {
             console.log('Checking Device Bridge...');
 
@@ -401,6 +421,13 @@
 
             console.log('Device status changed:', wasConnected, '->', deviceConnected);
 
+            // Adjust polling interval based on connection status
+            if (deviceConnected) {
+                bridgeCheckInterval = Math.min(bridgeCheckInterval * 0.8, 10000); // Faster when connected, max 10s
+            } else {
+                bridgeCheckInterval = Math.min(bridgeCheckInterval * 1.2, maxBridgeCheckInterval); // Slower when disconnected
+            }
+
             // Always update UI when device status changes
             updateUIBasedOnDeviceStatus();
 
@@ -410,6 +437,9 @@
             const wasConnected = deviceConnected;
             deviceConnected = false;
             fingerprintDeviceModel = '';
+
+            // Increase interval on failure
+            bridgeCheckInterval = Math.min(bridgeCheckInterval * 1.5, maxBridgeCheckInterval);
 
             deviceStatus.textContent = 'Device Bridge not running on this PC.';
             deviceStatus.className = 'text-danger status-text';
@@ -421,6 +451,14 @@
             if (wasConnected !== deviceConnected) {
                 updateUIBasedOnDeviceStatus();
             }
+        } finally {
+            isCheckingBridge = false;
+            
+            // Schedule next check with adaptive interval
+            if (bridgeCheckTimer) {
+                clearTimeout(bridgeCheckTimer);
+            }
+            bridgeCheckTimer = setTimeout(checkBridge, bridgeCheckInterval);
         }
     }
 
@@ -443,6 +481,8 @@
 
         let sessionId = null;
         let pollTimer = null;
+        let lastProgress = 0; // Track last progress to prevent resets
+        let scanCount = 0; // Track number of scans completed
 
         try {
             instructionElement.textContent = `Place your ${fingerType} on the scanner...`;
@@ -462,7 +502,7 @@
             sessionId = startData.sessionId;
             if (!sessionId) throw new Error('No sessionId from Device Bridge');
 
-            const pollIntervalMs = 300;
+            const pollIntervalMs = 1000; // Reduced from 300ms to 1 second
             const maxDurationMs = 35000;
             const startedAt = Date.now();
 
@@ -482,15 +522,41 @@
                         if (!progResp.ok) throw new Error(await progResp.text().catch(() => 'Progress poll failed'));
                         const prog = await progResp.json();
 
-                        const pct = Math.max(0, Math.min(100, Number(prog.progress) || 0));
-                        progressBarElement.style.width = `${pct}%`;
+                        // Calculate accurate progress based on scan completion
+                        const scansLeft = typeof prog.scansLeft === 'number' ? prog.scansLeft : null;
+                        let accurateProgress = 0;
+                        
+                        if (scansLeft !== null) {
+                            // Calculate progress based on actual scans completed (4 total scans)
+                            const scansCompleted = 4 - scansLeft;
+                            accurateProgress = Math.max(0, Math.min(100, (scansCompleted / 4) * 100));
+                        } else {
+                            // Fallback to API progress if scan count not available
+                            accurateProgress = Math.max(0, Math.min(100, Number(prog.progress) || 0));
+                        }
+                        
+                        // Accumulate progress instead of resetting
+                        if (accurateProgress > lastProgress) {
+                            lastProgress = accurateProgress;
+                            progressBarElement.style.width = `${accurateProgress}%`;
+                        }
 
                         statusElement.textContent = prog.message || (prog.phase === 'processing' ? 'Processing...' : 'Scanning...');
-                        const scansLeft = typeof prog.scansLeft === 'number' ? prog.scansLeft : null;
+                        
+                        // Track scan completion
+                        if (prog.phase === 'processing' && scansLeft !== null) {
+                            const currentScanCount = 4 - scansLeft;
+                            if (currentScanCount > scanCount) {
+                                scanCount = currentScanCount;
+                                console.log(`Scan ${scanCount} of 4 completed`);
+                            }
+                        }
+                        
                         if (scansLeft !== null && scansLeft > 0) {
-                            instructionElement.textContent = `Lift and place your ${fingerType} again... (${scansLeft} more)`;
+                            const scansCompleted = 4 - scansLeft;
+                            instructionElement.textContent = `Lift and place your ${fingerType} again... (${scansCompleted}/4 scans completed, ${scansLeft} more needed)`;
                         } else if (prog.done) {
-                            instructionElement.textContent = `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully!`;
+                            instructionElement.textContent = `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully! (4/4 scans completed)`;
                         } else if (prog.failed) {
                             instructionElement.textContent = `Failed to enroll ${fingerType}. Please try again.`;
                         } else if (prog.phase === 'waiting') {
@@ -550,10 +616,20 @@
                 clearInterval(pollTimer);
             }
             enrollmentInProgress = false;
-            setTimeout(() => {
-                progressElement.classList.add('d-none');
-                progressBarElement.style.width = '0%';
-            }, 1200);
+            
+            // Only hide progress if enrollment failed, otherwise keep it visible
+            if (statusElement.className.includes('text-danger')) {
+                setTimeout(() => {
+                    progressElement.classList.add('d-none');
+                    progressBarElement.style.width = '0%';
+                }, 1200);
+            } else {
+                // Keep progress visible for successful enrollment
+                setTimeout(() => {
+                    progressElement.classList.add('d-none');
+                }, 3000); // Hide after 3 seconds but don't reset progress bar
+            }
+            
             setTimeout(updateUIBasedOnDeviceStatus, 300);
         }
     }
@@ -833,7 +909,7 @@
         updateUIBasedOnDeviceStatus();
     }, 100);
 
-    // Check bridge every 3 seconds
-    setInterval(checkBridge, 3000);
+    // Start adaptive polling (no more fixed interval)
+    bridgeCheckTimer = setTimeout(checkBridge, bridgeCheckInterval);
 </script>
 @endsection

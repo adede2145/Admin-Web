@@ -12,7 +12,7 @@ class AttendanceLog extends Model
 
     protected $table = 'attendance_logs';
     protected $primaryKey = 'log_id';
-    
+
     // Disable timestamps since the table doesn't have created_at/updated_at columns
     public $timestamps = false;
 
@@ -25,13 +25,21 @@ class AttendanceLog extends Model
         'photo_data',
         'photo_content_type',
         'photo_captured_at',
-        'photo_filename'
+        'photo_filename',
+        'rfid_reason',
+        'is_verified',
+        'verification_status',
+        'verified_by',
+        'verified_at',
+        'verification_notes'
     ];
 
     protected $casts = [
         'time_in' => 'datetime',
         'time_out' => 'datetime',
-        'photo_captured_at' => 'datetime'
+        'photo_captured_at' => 'datetime',
+        'verified_at' => 'datetime',
+        'is_verified' => 'boolean'
     ];
 
     public function employee()
@@ -42,6 +50,11 @@ class AttendanceLog extends Model
     public function kiosk()
     {
         return $this->belongsTo(Kiosk::class, 'kiosk_id', 'kiosk_id');
+    }
+
+    public function verifiedBy()
+    {
+        return $this->belongsTo(Admin::class, 'verified_by', 'admin_id');
     }
 
     // Scopes for attendance methods
@@ -72,7 +85,7 @@ class AttendanceLog extends Model
         if (!$this->hasPhoto()) {
             return null;
         }
-        
+
         return route('attendance.photo', $this->log_id);
     }
 
@@ -81,7 +94,7 @@ class AttendanceLog extends Model
         if (!$this->hasPhoto()) {
             return null;
         }
-        
+
         $contentType = $this->photo_content_type ?: 'image/jpeg';
         // Ensure we are returning base64 for embedding even if stored as binary
         $raw = $this->photo_data;
@@ -94,5 +107,37 @@ class AttendanceLog extends Model
     public function isRfidWithPhoto()
     {
         return $this->method === 'rfid' && $this->hasPhoto();
+    }
+
+    // RFID verification helper methods
+    public function isRfidPending()
+    {
+        return $this->method === 'rfid' && $this->verification_status === 'pending';
+    }
+
+    public function isRfidVerified()
+    {
+        return $this->method === 'rfid' && $this->verification_status === 'verified';
+    }
+
+    public function isRfidRejected()
+    {
+        return $this->method === 'rfid' && $this->verification_status === 'rejected';
+    }
+
+    public function needsVerification()
+    {
+        return $this->method === 'rfid' && $this->verification_status === 'pending';
+    }
+
+    public function getVerificationStatusBadge()
+    {
+        $badges = [
+            'pending' => '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending</span>',
+            'verified' => '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Verified</span>',
+            'rejected' => '<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>'
+        ];
+
+        return $badges[$this->verification_status] ?? '';
     }
 }

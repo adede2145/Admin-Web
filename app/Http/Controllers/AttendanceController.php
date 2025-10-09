@@ -57,6 +57,11 @@ class AttendanceController extends Controller
             }
         }
 
+        // RFID verification status filter
+        if ($request->filled('rfid_status')) {
+            $query->where('method', 'rfid')->where('verification_status', $request->rfid_status);
+        }
+
         // Department restriction for non-super admins
         if (auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id) {
             $query->whereHas('employee', function ($q) {
@@ -887,10 +892,22 @@ class AttendanceController extends Controller
         $isRecognized = false;
         if (strlen($photoData) >= 4) {
             $sig = bin2hex(substr($photoData, 0, 4));
-            if (strpos($sig, 'ffd8') === 0) { $isRecognized = true; $contentType = 'image/jpeg'; }
-            if ($sig === '89504e47') { $isRecognized = true; $contentType = 'image/png'; }
-            if ($sig === '47494638') { $isRecognized = true; $contentType = 'image/gif'; }
-            if ($sig === '52494646') { /* could be WEBP */ $isRecognized = true; $contentType = $contentType === 'application/octet-stream' ? 'image/webp' : $contentType; }
+            if (strpos($sig, 'ffd8') === 0) {
+                $isRecognized = true;
+                $contentType = 'image/jpeg';
+            }
+            if ($sig === '89504e47') {
+                $isRecognized = true;
+                $contentType = 'image/png';
+            }
+            if ($sig === '47494638') {
+                $isRecognized = true;
+                $contentType = 'image/gif';
+            }
+            if ($sig === '52494646') { /* could be WEBP */
+                $isRecognized = true;
+                $contentType = $contentType === 'application/octet-stream' ? 'image/webp' : $contentType;
+            }
         }
 
         if (!$isRecognized && is_string($originalString)) {
@@ -901,10 +918,15 @@ class AttendanceController extends Controller
                 $sig = bin2hex(substr($decoded, 0, 4));
                 if (strpos($sig, 'ffd8') === 0 || $sig === '89504e47' || $sig === '47494638' || $sig === '52494646') {
                     $photoData = $decoded;
-                    if (strpos($sig, 'ffd8') === 0) { $contentType = 'image/jpeg'; }
-                    elseif ($sig === '89504e47') { $contentType = 'image/png'; }
-                    elseif ($sig === '47494638') { $contentType = 'image/gif'; }
-                    elseif ($sig === '52494646') { $contentType = 'image/webp'; }
+                    if (strpos($sig, 'ffd8') === 0) {
+                        $contentType = 'image/jpeg';
+                    } elseif ($sig === '89504e47') {
+                        $contentType = 'image/png';
+                    } elseif ($sig === '47494638') {
+                        $contentType = 'image/gif';
+                    } elseif ($sig === '52494646') {
+                        $contentType = 'image/webp';
+                    }
                 }
             }
         }
@@ -965,7 +987,9 @@ class AttendanceController extends Controller
             $raw = $data;
             if (stripos($raw, 'data:') === 0) {
                 $comma = strpos($raw, ',');
-                if ($comma !== false) { $raw = substr($raw, $comma + 1); }
+                if ($comma !== false) {
+                    $raw = substr($raw, $comma + 1);
+                }
             }
             $sanitized = preg_replace('/\s+/', '', $raw);
             $decoded = base64_decode($sanitized, false);
@@ -988,5 +1012,156 @@ class AttendanceController extends Controller
             'stored_first_hex' => $firstHex,
             'base64_probe' => $base64Info
         ]);
+    }
+
+    // RFID Verification Methods for Admin Review
+    public function approveRfid(Request $request, $id)
+    {
+        $attendanceLog = AttendanceLog::findOrFail($id);
+
+        // Check if user can verify this record
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $attendanceLog->employee->department_id
+        ) {
+            abort(403, 'You can only verify attendance records from your department.');
+        }
+
+        // Check if this is an RFID record that needs verification
+        if ($attendanceLog->method !== 'rfid') {
+            return back()->with('error', 'Only RFID records can be verified.');
+        }
+
+        if ($attendanceLog->verification_status !== 'pending') {
+            return back()->with('error', 'This record has already been processed.');
+        }
+
+        // Update verification status
+        $attendanceLog->update([
+            'is_verified' => true,
+            'verification_status' => 'verified',
+            'verified_by' => auth()->user()->admin_id,
+            'verified_at' => now(),
+            'verification_notes' => null
+        ]);
+
+        // Create audit log
+        try {
+            \App\Models\AuditLog::create([
+                'admin_id' => auth()->user()->admin_id,
+                'action' => 'verify',
+                'model_type' => 'AttendanceLog',
+                'model_id' => $attendanceLog->log_id,
+                'old_values' => json_encode(['verification_status' => 'pending']),
+                'new_values' => json_encode(['verification_status' => 'verified']),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create audit log for RFID verification', [
+                'error' => $e->getMessage(),
+                'log_id' => $attendanceLog->log_id
+            ]);
+        }
+
+        return back()->with('success', 'RFID attendance record verified successfully!');
+    }
+
+    public function rejectRfid(Request $request, $id)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500'
+        ]);
+
+        $attendanceLog = AttendanceLog::findOrFail($id);
+
+        // Check if user can reject this record
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $attendanceLog->employee->department_id
+        ) {
+            abort(403, 'You can only reject attendance records from your department.');
+        }
+
+        // Check if this is an RFID record that needs verification
+        if ($attendanceLog->method !== 'rfid') {
+            return back()->with('error', 'Only RFID records can be rejected.');
+        }
+
+        if ($attendanceLog->verification_status !== 'pending') {
+            return back()->with('error', 'This record has already been processed.');
+        }
+
+        // Update verification status
+        $attendanceLog->update([
+            'is_verified' => false,
+            'verification_status' => 'rejected',
+            'verified_by' => auth()->user()->admin_id,
+            'verified_at' => now(),
+            'verification_notes' => $request->rejection_reason
+        ]);
+
+        // Create audit log
+        try {
+            \App\Models\AuditLog::create([
+                'admin_id' => auth()->user()->admin_id,
+                'action' => 'reject',
+                'model_type' => 'AttendanceLog',
+                'model_id' => $attendanceLog->log_id,
+                'old_values' => json_encode(['verification_status' => 'pending']),
+                'new_values' => json_encode([
+                    'verification_status' => 'rejected',
+                    'verification_notes' => $request->rejection_reason
+                ]),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create audit log for RFID rejection', [
+                'error' => $e->getMessage(),
+                'log_id' => $attendanceLog->log_id
+            ]);
+        }
+
+        return back()->with('success', 'RFID attendance record rejected successfully!');
+    }
+
+    // API endpoint to get verification data for a log
+    public function getVerificationData($id)
+    {
+        $attendanceLog = AttendanceLog::findOrFail($id);
+
+        // Check if user can view this record
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $attendanceLog->employee->department_id
+        ) {
+            abort(403, 'You can only view attendance records from your department.');
+        }
+
+        return response()->json([
+            'method' => $attendanceLog->method,
+            'rfid_reason' => $attendanceLog->rfid_reason,
+            'verification_status' => $attendanceLog->verification_status,
+            'verification_badge' => $attendanceLog->getVerificationStatusBadge(),
+            'verified_by' => $attendanceLog->verifiedBy ? $attendanceLog->verifiedBy->username : null,
+            'verified_at' => $attendanceLog->verified_at ? $attendanceLog->verified_at->format('M d, Y h:i A') : null,
+            'verification_notes' => $attendanceLog->verification_notes
+        ]);
+    }
+
+    // Get count of pending RFID verifications for the current user's scope
+    public static function getPendingRfidCount()
+    {
+        $query = AttendanceLog::where('method', 'rfid')->where('verification_status', 'pending');
+
+        // Apply department restriction for non-super admins
+        if (auth()->check() && auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id) {
+            $query->whereHas('employee', function ($q) {
+                $q->where('department_id', auth()->user()->department_id);
+            });
+        }
+
+        return $query->count();
     }
 }
