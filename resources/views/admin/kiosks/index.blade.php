@@ -416,8 +416,6 @@
                         lastUpdateElement.textContent = `Last updated: ${updateTime}`;
                     }
                     
-                    // Show success feedback
-                    showNotification('Data updated successfully', 'success');
                     console.log('Data updated at:', data.timestamp);
                 } else {
                     throw new Error(data.message || 'Unknown error occurred');
