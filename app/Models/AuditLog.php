@@ -47,11 +47,16 @@ class AuditLog extends Model
     public function getChangesAttribute()
     {
         $changes = [];
-        if ($this->old_values && $this->new_values) {
-            foreach ($this->new_values as $key => $value) {
-                if (isset($this->old_values[$key]) && $this->old_values[$key] !== $value) {
+        $oldValues = $this->old_values;
+        $newValues = $this->new_values;
+        
+        if ($oldValues && $newValues) {
+            foreach ($newValues as $key => $value) {
+                $oldValue = $oldValues[$key] ?? null;
+                // Compare values, treating null explicitly
+                if ($oldValue !== $value) {
                     $changes[$key] = [
-                        'old' => $this->old_values[$key],
+                        'old' => $oldValue,
                         'new' => $value
                     ];
                 }

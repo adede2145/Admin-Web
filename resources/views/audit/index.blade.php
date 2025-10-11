@@ -49,16 +49,8 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Module</label>
-                    <select name="model_type" class="form-select">
-                        <option value="">All Modules</option>
-                        <option value="Employee" {{ request('model_type') == 'Employee' ? 'selected' : '' }}>Employee</option>
-                        <option value="AttendanceLog" {{ request('model_type') == 'AttendanceLog' ? 'selected' : '' }}>Attendance</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
                     <label class="form-label">&nbsp;</label>
-                    <div class="d-grid gap-2">
+                    <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-search me-2"></i>Filter
                         </button>
@@ -86,7 +78,7 @@
                             <th>Date & Time</th>
                             <th>Admin</th>
                             <th>Action</th>
-                            <th>Module</th>
+
                             <th>Changes</th>
                             <th>Actions</th>
                         </tr>
@@ -102,31 +94,44 @@
                                 </td>
                                 <td>
                                     <span class="badge bg-info">
-                                        {{ $log->admin->username }}
+                                        {{ $log->admin ? $log->admin->username : 'Unknown Admin' }}
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ $log->action == 'create' ? 'success' : ($log->action == 'edit' ? 'warning' : 'danger') }}">
+                                    <span class="badge bg-{{ $log->action == 'create' ? 'success' : ($log->action == 'edit' ? 'warning' : ($log->action == 'delete' ? 'danger' : 'secondary')) }}">
                                         {{ ucfirst($log->action) }}
                                     </span>
                                 </td>
                                 <td>
-                                    {{ $log->model_type }}
-                                </td>
-                                <td>
                                     @if($log->action == 'edit')
-                                        @foreach($log->changes as $field => $change)
-                                            <div class="small">
-                                                <strong>{{ ucwords(str_replace('_', ' ', $field)) }}:</strong>
-                                                <span class="text-danger">{{ $change['old'] }}</span>
-                                                <i class="bi bi-arrow-right mx-1"></i>
-                                                <span class="text-success">{{ $change['new'] }}</span>
-                                            </div>
-                                        @endforeach
+                                        @if($log->changes && count($log->changes) > 0)
+                                            @foreach($log->changes as $field => $change)
+                                                <div class="small">
+                                                    <strong>{{ $field == 'department_id' ? 'Department' : ucwords(str_replace('_', ' ', $field)) }}:</strong>
+                                                    @if($field == 'department_id')
+                                                        @php
+                                                            $oldDept = \App\Models\Department::find($change['old']);
+                                                            $newDept = \App\Models\Department::find($change['new']);
+                                                        @endphp
+                                                        <span class="text-danger">{{ $oldDept ? $oldDept->department_name : $change['old'] }}</span>
+                                                        <i class="bi bi-arrow-right mx-1"></i>
+                                                        <span class="text-success">{{ $newDept ? $newDept->department_name : $change['new'] }}</span>
+                                                    @else
+                                                    <span class="text-danger">{{ is_array($change['old']) ? json_encode($change['old']) : ($change['old'] ?? 'None') }}</span>
+                                                    <i class="bi bi-arrow-right mx-1"></i>
+                                                    <span class="text-success">{{ is_array($change['new']) ? json_encode($change['new']) : ($change['new'] ?? 'None') }}</span>
+                                                    @endif
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <span class="text-warning">Changes data not available</span>
+                                        @endif
                                     @elseif($log->action == 'create')
                                         <span class="text-success">New record created</span>
-                                    @else
+                                    @elseif($log->action == 'delete')
                                         <span class="text-danger">Record deleted</span>
+                                    @else
+                                        <span class="text-muted">Unknown action: {{ $log->action }}</span>
                                     @endif
                                 </td>
                                 <td>

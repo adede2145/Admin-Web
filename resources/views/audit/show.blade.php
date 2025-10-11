@@ -31,7 +31,7 @@
                         <dd class="col-sm-8">{{ $log->created_at->format('M d, Y h:i:s A') }}</dd>
 
                         <dt class="col-sm-4">Admin</dt>
-                        <dd class="col-sm-8">{{ $log->admin->name }}</dd>
+                        <dd class="col-sm-8">{{ $log->admin ? $log->admin->username : 'Unknown Admin' }}</dd>
 
                         <dt class="col-sm-4">Action</dt>
                         <dd class="col-sm-8">
@@ -61,26 +61,51 @@
                 </div>
                 <div class="card-body">
                     @if($log->action == 'edit')
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Field</th>
-                                        <th>Old Value</th>
-                                        <th>New Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($log->changes as $field => $change)
+                        @if($log->changes && count($log->changes) > 0)
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
                                         <tr>
-                                            <td>{{ ucwords(str_replace('_', ' ', $field)) }}</td>
-                                            <td class="text-danger">{{ $change['old'] }}</td>
-                                            <td class="text-success">{{ $change['new'] }}</td>
+                                            <th>Field</th>
+                                            <th>Old Value</th>
+                                            <th>New Value</th>
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($log->changes as $field => $change)
+                                            <tr>
+                                                <td>
+                                                    {{ $field == 'department_id' ? 'Department' : ucwords(str_replace('_', ' ', $field)) }}
+                                                </td>
+                                                <td class="text-danger">
+                                                    @if($field == 'department_id')
+                                                        @php $oldDept = \App\Models\Department::find($change['old']); @endphp
+                                                        {{ $oldDept ? $oldDept->department_name : $change['old'] }}
+                                                    @else
+                                                        {{ is_array($change['old']) ? json_encode($change['old']) : ($change['old'] ?? 'None') }}
+                                                    @endif
+                                                </td>
+                                                <td class="text-success">
+                                                    @if($field == 'department_id')
+                                                        @php $newDept = \App\Models\Department::find($change['new']); @endphp
+                                                        {{ $newDept ? $newDept->department_name : $change['new'] }}
+                                                    @else
+                                                        {{ is_array($change['new']) ? json_encode($change['new']) : ($change['new'] ?? 'None') }}
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="text-muted text-center py-3">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                No specific changes recorded or changes data is corrupted.
+                                <br><small>This might occur if the audit data was not properly stored.</small>
+                                <br><small class="text-info">Debug: Old Values: {{ is_array($log->old_values) ? json_encode($log->old_values) : ($log->old_values ?? 'NULL') }} | New Values: {{ is_array($log->new_values) ? json_encode($log->new_values) : ($log->new_values ?? 'NULL') }}</small>
+                            </div>
+                        @endif
                     @elseif($log->action == 'create')
                         <div class="table-responsive">
                             <table class="table">
@@ -94,7 +119,7 @@
                                     @foreach($log->new_values as $field => $value)
                                         <tr>
                                             <td>{{ ucwords(str_replace('_', ' ', $field)) }}</td>
-                                            <td>{{ $value }}</td>
+                                            <td>{{ is_array($value) ? json_encode($value) : $value }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -113,7 +138,7 @@
                                     @foreach($log->old_values as $field => $value)
                                         <tr>
                                             <td>{{ ucwords(str_replace('_', ' ', $field)) }}</td>
-                                            <td>{{ $value }}</td>
+                                            <td>{{ is_array($value) ? json_encode($value) : $value }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

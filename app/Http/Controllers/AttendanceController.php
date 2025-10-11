@@ -200,7 +200,7 @@ class AttendanceController extends Controller
         // Prepare attendance log data
         $logData = [
             'employee_id' => $request->employee_id,
-            'time_in' => now(),
+            'time_in' => now('Asia/Manila')->utc()->format('Y-m-d H:i:s'),
             'method' => $request->method,
             'kiosk_id' => $request->kiosk_id
         ];
@@ -219,7 +219,7 @@ class AttendanceController extends Controller
             if ($decodedPhoto !== false) {
                 $logData['photo_data'] = $decodedPhoto;
                 $logData['photo_content_type'] = $request->photo_content_type ?: 'image/jpeg';
-                $logData['photo_captured_at'] = now();
+                $logData['photo_captured_at'] = now('Asia/Manila')->utc()->format('Y-m-d H:i:s');
                 $logData['photo_filename'] = 'attendance_' . time() . '.jpg';
             }
         }
@@ -319,7 +319,7 @@ class AttendanceController extends Controller
                 'has_photo_data' => $request->has('photo_data'),
                 'photo_data_length' => $request->filled('photo_data') ? strlen($request->photo_data) : 0,
                 'photo_content_type' => $request->photo_content_type,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now('Asia/Manila')->toISOString()
             ]
         ];
 
@@ -1041,7 +1041,7 @@ class AttendanceController extends Controller
             'is_verified' => true,
             'verification_status' => 'verified',
             'verified_by' => auth()->user()->admin_id,
-            'verified_at' => now(),
+            'verified_at' => now('Asia/Manila'),
             'verification_notes' => null
         ]);
 
@@ -1097,7 +1097,7 @@ class AttendanceController extends Controller
             'is_verified' => false,
             'verification_status' => 'rejected',
             'verified_by' => auth()->user()->admin_id,
-            'verified_at' => now(),
+            'verified_at' => now('Asia/Manila'),
             'verification_notes' => $request->rejection_reason
         ]);
 

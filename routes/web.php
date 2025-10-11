@@ -134,6 +134,7 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
     // Kiosk Management
     Route::resource('kiosks', KioskController::class);
     Route::post('/kiosks/{kiosk}/toggle-status', [KioskController::class, 'toggleStatus'])->name('kiosks.toggle-status');
+    Route::get('/kiosks-analytics-api', [KioskController::class, 'getAnalyticsApi'])->name('kiosks.analytics.api');
 
     // Admin creation stats for line graph
     Route::get('/admin-panel/creation-stats', [AdminController::class, 'creationStats'])->name('admin.creationStats');
