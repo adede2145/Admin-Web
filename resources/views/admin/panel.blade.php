@@ -396,21 +396,13 @@
 <script type="application/json" id="employeeData">
     @if(isset($availableEmployees) && $availableEmployees->count() > 0)[
         @foreach($availableEmployees as $index => $emp) {
-            "employee_id": {
-                {
-                    $emp->employee_id
-                }
-            },
+            "employee_id": {{ $emp->employee_id }},
             "full_name": "{{ addslashes($emp->full_name) }}",
             "department": "{{ addslashes($emp->department->department_name ?? 'No Department') }}",
-            "department_id": {
-                {
-                    $emp->department_id ?? 'null'
-                }
-            },
-            "employment_type": "{{ ucfirst(str_replace('_', ' ', $emp->employment_type)) }}"
-        }
-        @if($index < $availableEmployees->count() - 1), @endif @endforeach
+            "department_id": {{ $emp->department_id ?? 'null' }},
+            "employment_type": "{{ addslashes(ucfirst(str_replace('_', ' ', $emp->employment_type))) }}"
+        }@if($index < $availableEmployees->count() - 1),@endif
+        @endforeach
     ]
     @else
         []
