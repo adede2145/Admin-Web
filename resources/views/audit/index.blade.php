@@ -80,7 +80,7 @@
                             <th>Action</th>
 
                             <th>Changes</th>
-                            <th>Actions</th>
+                            <th>View Details</th>
                         </tr>
                     </thead>
                     <tbody>

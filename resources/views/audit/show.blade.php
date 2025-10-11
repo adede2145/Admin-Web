@@ -46,8 +46,7 @@
                         <dt class="col-sm-4">Record ID</dt>
                         <dd class="col-sm-8">{{ $log->model_id }}</dd>
 
-                        <dt class="col-sm-4">IP Address</dt>
-                        <dd class="col-sm-8">{{ $log->ip_address }}</dd>
+                   
                     </dl>
                 </div>
             </div>
