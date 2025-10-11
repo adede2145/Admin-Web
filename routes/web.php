@@ -8,6 +8,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\DTRController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\KioskController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -129,6 +130,10 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
 
     // Department Management
     Route::resource('departments', DepartmentController::class);
+
+    // Kiosk Management
+    Route::resource('kiosks', KioskController::class);
+    Route::post('/kiosks/{kiosk}/toggle-status', [KioskController::class, 'toggleStatus'])->name('kiosks.toggle-status');
 
     // Admin creation stats for line graph
     Route::get('/admin-panel/creation-stats', [AdminController::class, 'creationStats'])->name('admin.creationStats');

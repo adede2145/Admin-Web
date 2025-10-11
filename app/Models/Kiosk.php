@@ -35,8 +35,8 @@ class Kiosk extends Model
     // Scope for online kiosks (seen within last 5 minutes)
     public function scopeOnline($query, $minutes = 5)
     {
-        $fiveMinutesAgo = now()->subMinutes($minutes);
-        $now = now();
+        $fiveMinutesAgo = now('Asia/Manila')->subMinutes($minutes);
+        $now = now('Asia/Manila');
 
         return $query->where('is_active', true)
             ->where('last_seen', '>=', $fiveMinutesAgo)
@@ -49,14 +49,14 @@ class Kiosk extends Model
         return $query->where('is_active', true)
             ->where(function ($q) use ($minutes) {
                 $q->whereNull('last_seen')
-                    ->orWhere('last_seen', '<', now()->subMinutes($minutes));
+                    ->orWhere('last_seen', '<', now('Asia/Manila')->subMinutes($minutes));
             });
     }
 
     // Method to update heartbeat
     public function updateHeartbeat()
     {
-        $this->update(['last_seen' => now()]);
+        $this->update(['last_seen' => now('Asia/Manila')]);
         return $this;
     }
 
@@ -71,8 +71,8 @@ class Kiosk extends Model
             return false;
         }
 
-        $now = now();
-        $lastSeen = $this->last_seen;
+        $now = now('Asia/Manila');
+        $lastSeen = $this->last_seen->setTimezone('Asia/Manila');
 
         // Check if last_seen is not in the future and within the time window
         return $lastSeen <= $now && $lastSeen->diffInMinutes($now) <= $minutes;
@@ -95,6 +95,8 @@ class Kiosk extends Model
             return 'Never';
         }
 
-        return $this->last_seen->diffForHumans();
+        // Convert to Manila timezone before calculating diff
+        $manilaTime = $this->last_seen->setTimezone('Asia/Manila');
+        return $manilaTime->diffForHumans();
     }
 }
