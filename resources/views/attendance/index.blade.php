@@ -1289,17 +1289,16 @@
             this.classList.remove('is-invalid');
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.photo-view-btn')) {
-                    const button = e.target.closest('.photo-view-btn');
-                    const logId = button.dataset.logId;
-                    const employeeName = button.dataset.employeeName;
-                    const timeIn = button.dataset.timeIn;
+        // Photo button click handler - moved outside of nested DOMContentLoaded
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.photo-view-btn')) {
+                const button = e.target.closest('.photo-view-btn');
+                const logId = button.dataset.logId;
+                const employeeName = button.dataset.employeeName;
+                const timeIn = button.dataset.timeIn;
 
-                    showAttendancePhoto(logId, employeeName, timeIn);
-                }
-            });
+                showAttendancePhoto(logId, employeeName, timeIn);
+            }
         });
     });
 </script>
