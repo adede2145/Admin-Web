@@ -138,20 +138,7 @@
                         </h6>
                     </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-primary">Toggle Status</h6>
-                        <p class="text-muted small mb-3">
-                            Activate or deactivate this kiosk. Inactive kiosks won't accept new attendance logs.
-                        </p>
-                        <form action="{{ route('kiosks.toggle-status', $kiosk) }}" method="POST" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn btn-{{ $kiosk->is_active ? 'warning' : 'success' }}">
-                                <i class="bi bi-{{ $kiosk->is_active ? 'pause' : 'play' }} me-1"></i>
-                                {{ $kiosk->is_active ? 'Deactivate' : 'Activate' }} Kiosk
-                            </button>
-                        </form>
-                    </div>
+                <div class="row justify-content-center">
                     <div class="col-md-6">
                         <h6 class="text-danger">Danger Zone</h6>
                         <p class="text-muted small mb-3">

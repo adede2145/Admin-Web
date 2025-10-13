@@ -245,13 +245,6 @@
                                                 <a href="{{ route('kiosks.edit', $kiosk) }}" class="btn btn-outline-primary btn-sm" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <form action="{{ route('kiosks.toggle-status', $kiosk) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-outline-{{ $kiosk->is_active ? 'warning' : 'success' }} btn-sm" 
-                                                            title="{{ $kiosk->is_active ? 'Deactivate' : 'Activate' }}">
-                                                        <i class="bi bi-{{ $kiosk->is_active ? 'pause' : 'play' }}"></i>
-                                                    </button>
-                                                </form>
                                                 <form action="{{ route('kiosks.destroy', $kiosk) }}" method="POST" class="d-inline" 
                                                       onsubmit="return confirm('Are you sure you want to delete this kiosk location?')">
                                                     @csrf

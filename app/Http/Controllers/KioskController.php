@@ -70,16 +70,6 @@ class KioskController extends Controller
             ->with('success', 'Kiosk location deleted successfully.');
     }
 
-    public function toggleStatus(Kiosk $kiosk)
-    {
-        $kiosk->update(['is_active' => !$kiosk->is_active]);
-        
-        $status = $kiosk->is_active ? 'activated' : 'deactivated';
-        
-        return redirect()->route('kiosks.index')
-            ->with('success', "Kiosk {$status} successfully.");
-    }
-
     /**
      * API endpoint for real-time kiosk analytics
      */
