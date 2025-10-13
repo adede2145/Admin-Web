@@ -90,7 +90,7 @@
                                             <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewAttendance{{ $employee->employee_id }}">
                                                 <i class="bi bi-clock"></i>
                                             </button>
-                                            <button class="btn btn-outline-danger" onclick="deleteEmployee({{ $employee->employee_id }})">
+                                            <button class="btn btn-danger btn-sm" onclick="deleteEmployee({{ $employee->employee_id }})">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -353,7 +353,16 @@
             }
         }
         function deleteEmployee(employeeId) {
-            if (confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+            // Store the employeeId for later use
+            document.getElementById('confirmDeleteEmployeeBtn').dataset.employeeId = employeeId;
+            
+            // Show the custom delete modal
+            const modal = new bootstrap.Modal(document.getElementById('deleteEmployeeModal'));
+            modal.show();
+        }
+
+        function confirmDeleteEmployee() {
+            const employeeId = document.getElementById('confirmDeleteEmployeeBtn').dataset.employeeId;
                 // Show loading notification
                 showNotification('info', 'Deleting employee...');
                 
@@ -736,6 +745,46 @@
                     <span id="infoMessage"></span>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Delete Employee Modal -->
+    <div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-labelledby="deleteEmployeeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
+                    <h5 class="modal-title" id="deleteEmployeeModalLabel">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Delete Employee
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                                <i class="bi bi-person-x text-danger" style="font-size: 2.5rem;"></i>
+                            </div>
+                        </div>
+                        <h5 class="text-danger mb-3">Confirm Employee Deletion</h5>
+                        <p class="text-muted mb-0">
+                            Are you sure you want to delete this employee record? 
+                            <br><strong class="text-danger">This action cannot be undone.</strong>
+                        </p>
+                    </div>
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <small>This will permanently remove the employee and all associated data from the system.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteEmployeeBtn" onclick="confirmDeleteEmployee()">
+                        <i class="bi bi-person-x me-1"></i>Delete Employee
+                    </button>
+                </div>
             </div>
         </div>
     </div>

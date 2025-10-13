@@ -200,8 +200,8 @@
         <div class="card-body">
             <form method="GET" class="row g-3 align-items-end" id="attendanceFiltersForm">
                 <!-- Date Range Filters -->
-                <div class="col-lg-2 col-md-3">
-                    <label class="form-label">
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-calendar-date me-1"></i>From Date
                     </label>
                     <input type="date"
@@ -212,8 +212,8 @@
                     <div class="form-text small">Default: 7 days ago</div>
                 </div>
 
-                <div class="col-lg-2 col-md-3">
-                    <label class="form-label">
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-calendar-check me-1"></i>To Date
                     </label>
                     <input type="date"
@@ -225,8 +225,8 @@
                 </div>
 
                 <!-- Employee Filter -->
-                <div class="col-lg-3 col-md-4">
-                    <label class="form-label">
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-person me-1"></i>Employee
                     </label>
                     @php
@@ -265,8 +265,8 @@
 
                 <!-- Department Filter (Super Admin Only) -->
                 @if(auth()->user()->role->role_name === 'super_admin')
-                <div class="col-lg-2 col-md-3">
-                    <label class="form-label">
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-building me-1"></i>Department
                     </label>
                     <select name="department_id" class="form-select" id="departmentFilter">
@@ -283,28 +283,28 @@
                 @endif
 
                 <!-- Method Filter -->
-                <div class="col-lg-2 col-md-3">
-                    <label class="form-label">
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-gear me-1"></i>Method
                     </label>
                     <select name="login_method" class="form-select">
                         <option value="">All Methods</option>
                         <option value="rfid" {{ request('login_method') == 'rfid' ? 'selected' : '' }}>
-                            <i class="bi bi-credit-card"></i> RFID
+                            RFID
                         </option>
                         <option value="fingerprint" {{ request('login_method') == 'fingerprint' ? 'selected' : '' }}>
-                            <i class="bi bi-fingerprint"></i> Fingerprint
+                            Fingerprint
                         </option>
                         <option value="manual" {{ request('login_method') == 'manual' ? 'selected' : '' }}>
-                            <i class="bi bi-person-gear"></i> Manual
+                            Manual
                         </option>
                     </select>
+                    <div class="form-text small" style="height: 16px; visibility: hidden;">placeholder</div>
                 </div>
 
-                <!-- RFID Status Filter (Only show if RFID method selected or super admin) -->
-                @if(auth()->user()->role->role_name === 'super_admin' || request('login_method') === 'rfid')
-                <div class="col-lg-2 col-md-3" id="rfidStatusFilter" @if(!(request('login_method')==='rfid' || auth()->user()->role->role_name === 'super_admin')) style="display: none;" @endif>
-                    <label class="form-label">
+                <!-- RFID Status Filter -->
+                <div class="col-lg-2 col-md-3 col-sm-6" id="rfidStatusFilter" @if(!(request('login_method')==='rfid' || auth()->user()->role->role_name === 'super_admin')) style="display: none;" @endif>
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-shield-check me-1"></i>RFID Status
                     </label>
                     <select name="rfid_status" class="form-select">
@@ -319,12 +319,12 @@
                             Rejected
                         </option>
                     </select>
+                    <div class="form-text small" style="height: 16px; visibility: hidden;">placeholder</div>
                 </div>
-                @endif
 
                 <!-- Quick Date Presets -->
-                <div class="col-lg-2 col-md-3">
-                    <label class="form-label">
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">
                         <i class="bi bi-lightning me-1"></i>Quick Filters
                     </label>
                     <select class="form-select" id="quickDateFilter">
@@ -340,14 +340,14 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="col-lg-1 col-md-2">
-                    <label class="form-label">&nbsp;</label>
+                <div class="col-lg-2 col-md-3 col-sm-6">
+                    <label class="form-label fw-semibold">&nbsp;</label>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-warning text-dark fw-semibold" id="applyFiltersBtn">
-                            <i class="bi bi-search me-2"></i>Apply
+                            <i class="bi bi-search me-1"></i>Apply
                         </button>
                         <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
                         </a>
                     </div>
                 </div>
@@ -1592,3 +1592,34 @@
 </div>
 
 @endsection
+
+<style>
+/* Ensure consistent alignment for filter elements */
+#attendanceFiltersForm .col-lg-2 {
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+}
+
+#attendanceFiltersForm .form-label {
+    min-height: 24px;
+    margin-bottom: 8px;
+}
+
+#attendanceFiltersForm .form-control,
+#attendanceFiltersForm .form-select {
+    flex: 1;
+    margin-bottom: 4px;
+}
+
+#attendanceFiltersForm .form-text {
+    min-height: 16px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+/* Ensure buttons are aligned properly */
+#attendanceFiltersForm .d-grid {
+    margin-top: auto;
+}
+</style>
