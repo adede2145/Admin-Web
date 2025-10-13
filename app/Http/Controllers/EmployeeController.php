@@ -67,6 +67,42 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Get employee summary data for AJAX requests
+     */
+    public function getSummary($id)
+    {
+        try {
+            $employee = Employee::with('department')->findOrFail($id);
+
+            // Check if user has access to this employee
+            if (
+                auth()->user()->role->role_name !== 'super_admin' &&
+                auth()->user()->department_id !== $employee->department_id
+            ) {
+                return response()->json(['error' => 'Access denied'], 403);
+            }
+
+            $stats = $this->calculateEmployeeStats($employee);
+
+            return response()->json([
+                'employee_id' => $employee->employee_id,
+                'full_name' => $employee->full_name,
+                'department' => $employee->department->department_name ?? 'N/A',
+                'photo_url' => route('employees.photo', $employee->employee_id),
+                'daysPresent' => $stats['daysPresent'],
+                'lateArrivals' => $stats['lateArrivals'],
+                'totalHours' => $stats['totalHours'],
+                'overtimeHours' => $stats['overtimeHours'],
+                'attendanceRate' => $stats['attendanceRate'],
+                'lastLog' => $stats['lastLog']
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in EmployeeController@getSummary: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to load employee data'], 500);
+        }
+    }
+
+    /**
      * Calculate employee attendance statistics
      */
     private function calculateEmployeeStats($employee)

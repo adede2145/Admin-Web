@@ -56,7 +56,7 @@
                                 </thead>
                                 <tbody>
                                     @forelse($employees as $employee)
-                                        <tr class="emp-row" data-href="{{ request()->fullUrlWithQuery(['employee_id' => $employee->employee_id]) }}">
+                                        <tr class="emp-row" data-employee-id="{{ $employee->employee_id }}" data-href="{{ request()->fullUrlWithQuery(['employee_id' => $employee->employee_id]) }}">
                                             <td>
                                                 <img src="{{ route('employees.photo', $employee->employee_id) }}" alt="{{ $employee->full_name }}" class="rounded-circle" style="width:40px;height:40px;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/40x40?text=%20';">
                                             </td>
@@ -152,9 +152,6 @@
                         </div>
                         <div class="text-muted small mb-2">Last Attendance</div>
                         <div class="mb-3">{{ $employeeStats['lastLog'] ? \Carbon\Carbon::parse($employeeStats['lastLog']->time_in)->format('M d, Y h:i A') : '—' }}</div>
-                        @if($selectedEmployee)
-                            <a href="{{ url('/attendance') }}?employee_id={{ $selectedEmployee->employee_id }}" class="btn btn-outline-dark btn-sm">View Attendance History</a>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -339,9 +336,116 @@
         document.querySelectorAll('.emp-row').forEach(function(r){
             r.addEventListener('click', function(e){
                 if (e.target.closest('button')) return;
-                window.location.href = this.getAttribute('data-href');
+                
+                const employeeId = this.dataset.employeeId || this.querySelector('code').textContent.replace('#', '');
+                console.log('Clicked employee row, ID:', employeeId);
+                selectEmployee(employeeId);
             });
         });
+
+        function selectEmployee(employeeId) {
+            console.log('Selecting employee:', employeeId);
+            
+            // Remove active class from all rows
+            document.querySelectorAll('.emp-row').forEach(row => {
+                row.classList.remove('table-active');
+            });
+            
+            // Add active class to selected row
+            const selectedRow = document.querySelector(`[data-employee-id="${employeeId}"]`);
+            if (selectedRow) {
+                selectedRow.classList.add('table-active');
+                console.log('Row highlighted');
+            }
+            
+            // Update URL without page refresh
+            const url = new URL(window.location);
+            url.searchParams.set('employee_id', employeeId);
+            window.history.pushState({}, '', url);
+            
+            // Simple approach - reload the page with the employee_id parameter
+            // This ensures the summary panel updates correctly
+            window.location.href = url.toString();
+        }
+
+        function updateEmployeeSummary(data) {
+            console.log('Updating employee summary with data:', data);
+            
+            // Find the summary card - it's in the right sidebar
+            const summaryCard = document.querySelector('.col-lg-3 .aa-card .card-body');
+            if (!summaryCard) {
+                console.error('Summary card not found');
+                return;
+            }
+
+            // Update employee photo
+            const photoImg = summaryCard.querySelector('img');
+            if (photoImg) {
+                photoImg.src = data.photo_url;
+                photoImg.alt = data.full_name;
+                console.log('Updated photo');
+            }
+
+            // Update employee name - it's the fw-bold fs-5 element
+            const nameElement = summaryCard.querySelector('.fw-bold.fs-5');
+            if (nameElement) {
+                nameElement.textContent = data.full_name;
+                console.log('Updated name to:', data.full_name);
+            }
+
+            // Update department - it's the text-muted small element right after the name
+            const deptElement = summaryCard.querySelector('.text-muted.small.mb-3');
+            if (deptElement) {
+                deptElement.textContent = data.department;
+                console.log('Updated department to:', data.department);
+            }
+
+            // Update statistics - these are in col-6 elements with display-6 fw-bold
+            const statsElements = summaryCard.querySelectorAll('.col-6 .display-6.fw-bold');
+            console.log('Found', statsElements.length, 'stats elements');
+            if (statsElements.length >= 4) {
+                statsElements[0].textContent = data.daysPresent; // Days Present
+                statsElements[1].textContent = data.lateArrivals; // Late Arrivals
+                statsElements[2].textContent = data.totalHours; // Total Hours
+                statsElements[3].textContent = data.overtimeHours; // Overtime
+                console.log('Updated stats');
+            }
+
+            // Update attendance rate - find the element that shows attendance rate
+            const attendanceRateElements = summaryCard.querySelectorAll('.fw-bold');
+            attendanceRateElements.forEach(element => {
+                if (element.textContent.includes('%')) {
+                    element.textContent = data.attendanceRate + '%';
+                    console.log('Updated attendance rate to:', data.attendanceRate + '%');
+                }
+            });
+
+            // Update last attendance - find the element that shows last attendance
+            const lastAttendanceElements = summaryCard.querySelectorAll('.text-muted');
+            lastAttendanceElements.forEach(element => {
+                if (element.textContent.includes('Last Attendance')) {
+                    const nextElement = element.nextElementSibling;
+                    if (nextElement) {
+                        nextElement.textContent = data.lastLog || '-';
+                        console.log('Updated last attendance');
+                    }
+                }
+            });
+
+        }
+
+        // Initialize selected employee highlighting on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedEmployeeId = urlParams.get('employee_id');
+            if (selectedEmployeeId) {
+                const selectedRow = document.querySelector(`[data-employee-id="${selectedEmployeeId}"]`);
+                if (selectedRow) {
+                    selectedRow.classList.add('table-active');
+                }
+            }
+        });
+
         function updatePreview(empId, input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -363,70 +467,91 @@
 
         function confirmDeleteEmployee() {
             const employeeId = document.getElementById('confirmDeleteEmployeeBtn').dataset.employeeId;
-                // Show loading notification
-                showNotification('info', 'Deleting employee...');
-                
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{{ url("/employees") }}/' + employeeId;
-                
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                
-                const methodField = document.createElement('input');
-                methodField.type = 'hidden';
-                methodField.name = '_method';
-                methodField.value = 'DELETE';
-                
-                form.appendChild(csrfToken);
-                form.appendChild(methodField);
-                document.body.appendChild(form);
-                
-                // Handle form submission with AJAX
-                const formData = new FormData(form);
-                
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken.value
-                    }
-                })
-                .then(response => response.text())
-                .then(html => {
-                    // Parse the response to extract messages
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    // Check for success message
-                    const successAlert = doc.querySelector('.alert-success');
-                    const errorAlert = doc.querySelector('.alert-danger');
-                    
-                    if (successAlert) {
-                        const message = successAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
-                        showNotification('success', message);
-                        
-                        // Reload page after short delay
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    } else if (errorAlert) {
-                        const message = errorAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
-                        showNotification('error', message);
-                    } else {
-                        showNotification('success', 'Employee deleted successfully!');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('error', 'An error occurred while deleting employee.');
-                });
+            if (!employeeId) {
+                showNotification('error', 'Employee ID not found');
+                return;
             }
+
+            // Hide the modal first
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteEmployeeModal'));
+            if (modal) {
+                modal.hide();
+            }
+
+            // Show loading notification
+            showNotification('info', 'Deleting employee...');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url("/employees") }}/' + employeeId;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+            
+            form.appendChild(csrfToken);
+            form.appendChild(methodField);
+            document.body.appendChild(form);
+            
+            // Handle form submission with AJAX
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken.value
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                // Parse the response to extract messages
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Check for success message
+                const successAlert = doc.querySelector('.alert-success');
+                const errorAlert = doc.querySelector('.alert-danger');
+                
+                if (successAlert) {
+                    const message = successAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
+                    showNotification('success', message);
+                    
+                    // Reload page after short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else if (errorAlert) {
+                    const message = errorAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
+                    showNotification('error', message);
+                } else {
+                    showNotification('success', 'Employee deleted successfully!');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('error', 'Failed to delete employee: ' + error.message);
+            })
+            .finally(() => {
+                // Clean up the form
+                if (document.body.contains(form)) {
+                    document.body.removeChild(form);
+                }
+            });
         }
 
         // Cool notification functions

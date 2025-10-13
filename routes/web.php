@@ -80,6 +80,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Employee Management
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
+    Route::get('/employees/{id}/summary', [EmployeeController::class, 'getSummary'])->name('employees.summary');
     Route::get('/employees/{id}/photo', [EmployeeController::class, 'photo'])->name('employees.photo');
     Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('employees.update');
     Route::delete('/employees/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
