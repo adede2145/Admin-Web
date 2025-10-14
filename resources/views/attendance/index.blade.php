@@ -1,4 +1,7 @@
 @extends('layouts.theme')
+
+@section('title', 'Attendance')
+
 @section('content')
 <style>
     .scroll-hide::-webkit-scrollbar {

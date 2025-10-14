@@ -1,4 +1,7 @@
 @extends('layouts.theme')
+
+@section('title', 'Reports')
+
 @section('content')
     <div class="container-fluid">
         <!-- Success/Error Messages -->

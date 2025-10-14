@@ -1,5 +1,7 @@
 @extends('layouts.theme')
 
+@section('title', 'Register Employee')
+
 @section('content')
 <style>
     .fingerprint-section {

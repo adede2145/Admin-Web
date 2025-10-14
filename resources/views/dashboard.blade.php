@@ -1,4 +1,7 @@
 @extends('layouts.theme')
+
+@section('title', 'Dashboard')
+
 @section('content')
 <style>
     .scroll-hide {
