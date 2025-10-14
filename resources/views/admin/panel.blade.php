@@ -1,4 +1,7 @@
 @extends('layouts.theme')
+
+@section('title', 'Admin Panel')
+
 @section('content')
 <div class="container-fluid">
     <!-- Header -->
