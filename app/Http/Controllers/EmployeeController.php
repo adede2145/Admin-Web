@@ -309,6 +309,98 @@ class EmployeeController extends Controller
         return back()->with('success', 'Employee deleted successfully!');
     }
 
+    /**
+     * Show fingerprint edit screen using the register page in edit mode
+     */
+    public function editFingerprints(int $id)
+    {
+        $employee = Employee::with('department')->findOrFail($id);
+
+        // Authorization: admin or superadmin, and department restriction for admins
+        if (!in_array(auth()->user()->role->role_name, ['admin', 'super_admin'])) {
+            abort(403);
+        }
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $employee->department_id
+        ) {
+            abort(403, 'You can only edit employees from your department.');
+        }
+
+        // Load existing templates
+        $templates = EmployeeFingerprintTemplate::where('employee_id', $employee->employee_id)
+            ->get()
+            ->keyBy('template_index');
+
+        // Reuse register view with edit mode
+        $mode = 'edit-fp';
+        return view('employees.register', compact('employee', 'templates', 'mode'));
+    }
+
+    /**
+     * Update employee fingerprint templates (primary/backup) only
+     */
+    public function updateFingerprints(Request $request, int $id)
+    {
+        $employee = Employee::findOrFail($id);
+
+        // Authorization: admin or superadmin, and department restriction for admins
+        if (!in_array(auth()->user()->role->role_name, ['admin', 'super_admin'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        if (
+            auth()->user()->role->role_name !== 'super_admin' &&
+            auth()->user()->department_id !== $employee->department_id
+        ) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $data = $request->validate([
+            'replace_primary' => 'sometimes|boolean',
+            'replace_backup' => 'sometimes|boolean',
+            'primary_template' => 'nullable|string',
+            'backup_template' => 'nullable|string',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            if (!empty($data['replace_primary'])) {
+                if (empty($data['primary_template'])) {
+                    return response()->json(['success' => false, 'message' => 'Primary template required'], 422);
+                }
+                EmployeeFingerprintTemplate::updateOrCreate(
+                    ['employee_id' => $employee->employee_id, 'template_index' => 1],
+                    [
+                        'template_data' => base64_decode($data['primary_template']),
+                        'finger_position' => 'index',
+                        'template_quality' => 85.0,
+                    ]
+                );
+            }
+
+            if (!empty($data['replace_backup'])) {
+                if (empty($data['backup_template'])) {
+                    return response()->json(['success' => false, 'message' => 'Backup template required'], 422);
+                }
+                EmployeeFingerprintTemplate::updateOrCreate(
+                    ['employee_id' => $employee->employee_id, 'template_index' => 2],
+                    [
+                        'template_data' => base64_decode($data['backup_template']),
+                        'finger_position' => 'thumb',
+                        'template_quality' => 85.0,
+                    ]
+                );
+            }
+
+            DB::commit();
+            return response()->json(['success' => true]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Fingerprint update failed: ' . $e->getMessage(), ['employee_id' => $id]);
+            return response()->json(['success' => false, 'message' => 'Update failed'], 500);
+        }
+    }
+
     // Serve employee photo from stored path (supports absolute kiosk paths)
     public function photo($id)
     {

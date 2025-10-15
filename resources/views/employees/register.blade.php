@@ -63,7 +63,8 @@
         <div class="card aa-card">
             <div class="card-header header-maroon d-flex justify-content-between align-items-center">
                 <div class="card-title m-0">
-                    <i class="bi bi-person-plus me-2"></i> Register Employee
+                    @php $editFp = (request('mode') === 'edit-fp') || (($mode ?? '') === 'edit-fp'); @endphp
+                    <i class="bi bi-person-plus me-2"></i> {{ $editFp ? 'Edit Employee Fingerprints' : 'Register Employee' }}
                 </div>
             </div>
             <div class="card-body">
@@ -84,28 +85,37 @@
                 $departments = ($isSuper || $isAdmin) ? \App\Models\Department::orderBy('department_name')->get() : collect();
                 @endphp
 
-                <form id="registerForm" action="{{ route('employees.store') }}" method="POST" enctype="multipart/form-data">
+                <form id="registerForm" action="{{ isset($editFp) && $editFp && isset($employee) ? route('employees.fingerprints.update', $employee->employee_id) : route('employees.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
+                    @if(isset($editFp) && $editFp && isset($employee))
+                        @method('PUT')
+                    @endif
+                    <span id="fpModeFlag" data-edit="{{ ($editFp ?? false) ? '1' : '0' }}" hidden></span>
+                    <span id="fpUrls" data-index-url="{{ route('employees.index') }}" hidden></span>
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label">Profile Image</label>
-                            <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/*">
+                            <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/*" {{ (isset($editFp) && $editFp) ? 'disabled' : '' }}>
                             <div class="mt-2">
-                                <img id="profilePreview" src="" alt="Preview" class="img-thumbnail d-none" style="max-width: 180px;">
+                                @if(isset($editFp) && $editFp && isset($employee))
+                                    <img id="profilePreview" src="{{ route('employees.photo', $employee->employee_id) }}" alt="Preview" class="img-thumbnail" style="max-width: 180px;">
+                                @else
+                                    <img id="profilePreview" src="" alt="Preview" class="img-thumbnail d-none" style="max-width: 180px;">
+                                @endif
                             </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Employee Name</label>
-                            <input type="text" class="form-control" id="empName" name="emp_name" placeholder="Full name" required>
+                            <input type="text" class="form-control" id="empName" name="emp_name" placeholder="Full name" value="{{ ($editFp ?? false) && isset($employee) ? $employee->full_name : '' }}" {{ (isset($editFp) && $editFp) ? 'readonly' : 'required' }}>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Employee ID</label>
-                            <input type="text" class="form-control" id="empId" name="emp_id" placeholder="ID/Code" required>
+                            <input type="text" class="form-control" id="empId" name="emp_id" placeholder="ID/Code" value="{{ ($editFp ?? false) && isset($employee) ? $employee->employee_id : '' }}" {{ (isset($editFp) && $editFp) ? 'readonly' : 'required' }}>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Department</label>
-                            @if($isSuper)
+                            @if($isSuper && !($editFp ?? false))
                             <select id="departmentId" name="department_id" class="form-select" required>
                                 <option value="">Select department</option>
                                 @foreach($departments as $dept)
@@ -114,26 +124,26 @@
                             </select>
                             @else
                             @php
-                            $deptName = optional(\App\Models\Department::find($userDeptId))->department_name;
+                            $deptName = isset($employee) ? optional($employee->department)->department_name : optional(\App\Models\Department::find($userDeptId))->department_name;
                             @endphp
                             <input type="text" class="form-control" value="{{ $deptName ?? 'My Department' }}" disabled>
-                            <input type="hidden" id="departmentId" name="department_id" value="{{ $userDeptId }}">
+                            <input type="hidden" id="departmentId" name="department_id" value="{{ ($editFp ?? false) && isset($employee) ? $employee->department_id : $userDeptId }}">
                             @endif
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Employment Type</label>
-                            <select id="employmentType" name="employment_type" class="form-select" required>
+                            <select id="employmentType" name="employment_type" class="form-select" {{ (isset($editFp) && $editFp) ? 'disabled' : 'required' }}>
                                 <option value="">Select employment type</option>
-                                <option value="full_time">Full Time</option>
-                                <option value="part_time">Part Time</option>
+                                <option value="full_time" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='full_time' ? 'selected' : '' }}>Full Time</option>
+                                <option value="part_time" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='part_time' ? 'selected' : '' }}>Part Time</option>
                             </select>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">RFID (fallback) <span id="rfidStatus" class="ms-2 small text-muted"></span></label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="rfidUid" name="rfid_uid" placeholder="Tap card or type UID" autocomplete="off">
+                                <input type="text" class="form-control" id="rfidUid" name="rfid_uid" placeholder="Tap card or type UID" autocomplete="off" value="{{ ($editFp ?? false) && isset($employee) ? ($employee->rfid_code ?? '') : '' }}" {{ (isset($editFp) && $editFp) ? 'readonly' : '' }}>
                                 <button class="btn btn-outline-primary" type="button" id="clearRfidBtn">Clear</button>
                             </div>
                             <div class="form-text">If your reader is keyboard-wedge, focus here and tap a card.</div>
@@ -148,8 +158,17 @@
                                     <i class="bi bi-1-circle me-1"></i> Primary Fingerprint (Index Finger)
                                 </h6>
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                    @if(($editFp ?? false))
+                                    <div class="form-check form-switch me-2">
+                                        <input class="form-check-input" type="checkbox" id="replacePrimaryToggle">
+                                        <label class="form-check-label" for="replacePrimaryToggle">Replace primary template</label>
+                                    </div>
+                                    @endif
                                     <button type="button" id="capturePrimaryBtn" class="btn btn-outline-primary btn-sm" disabled>
                                         <i class="bi bi-fingerprint me-1"></i> Scan Primary
+                                    </button>
+                                    <button type="button" id="cancelPrimaryBtn" class="btn btn-outline-danger btn-sm d-none">
+                                        <i class="bi bi-x-circle me-1"></i> Cancel
                                     </button>
                                     <span id="primaryStatus" class="text-muted">Waiting for Device Bridge...</span>
                                 </div>
@@ -171,15 +190,24 @@
                             </div>
 
                             <!-- Backup Fingerprint Section -->
-                            <div class="border rounded p-3 bg-light" id="backupSection" style="opacity: 0.5;">
+                            <div class="border rounded p-3 bg-light" id="backupSection" @if(($editFp ?? false)) @else style="opacity: 0.5;" @endif>
                                 <h6 class="text-secondary mb-2">
                                     <i class="bi bi-2-circle me-1"></i> Backup Fingerprint (Thumb)
                                 </h6>
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                    @if(($editFp ?? false))
+                                    <div class="form-check form-switch me-2">
+                                        <input class="form-check-input" type="checkbox" id="replaceBackupToggle">
+                                        <label class="form-check-label" for="replaceBackupToggle">Replace backup template</label>
+                                    </div>
+                                    @endif
                                     <button type="button" id="captureBackupBtn" class="btn btn-outline-secondary btn-sm" disabled>
                                         <i class="bi bi-fingerprint me-1"></i> Scan Backup
                                     </button>
-                                    <span id="backupStatus" class="text-muted">Complete primary fingerprint first</span>
+                                    <button type="button" id="cancelBackupBtn" class="btn btn-outline-danger btn-sm d-none">
+                                        <i class="bi bi-x-circle me-1"></i> Cancel
+                                    </button>
+                                    <span id="backupStatus" class="text-muted">@if(($editFp ?? false)) Replacement disabled @else Complete primary fingerprint first @endif</span>
                                 </div>
                                 <!-- Scanning Progress for Backup -->
                                 <div id="backupProgress" class="d-none progress-wrapper">
@@ -206,9 +234,9 @@
 
                         <div class="col-12">
                             <button id="registerBtn" class="btn btn-primary" disabled>
-                                <i class="bi bi-check2-circle me-1"></i> Register
+                                <i class="bi bi-check2-circle me-1"></i> {{ ($editFp ?? false) ? 'Update Fingerprints' : 'Register' }}
                             </button>
-                            <span id="registerHint" class="ms-2 text-muted">Register is disabled until primary fingerprint is captured and required fields are filled.</span>
+                            <span id="registerHint" class="ms-2 text-muted"></span>
                         </div>
                     </div>
                 </form>
@@ -220,9 +248,11 @@
 
 <script type="module">
     const bridgeBase = 'http://127.0.0.1:18420';
+    const employeesIndexUrl = document.getElementById('fpUrls')?.getAttribute('data-index-url');
     const deviceStatus = document.getElementById('deviceStatus');
     const registerBtn = document.getElementById('registerBtn');
     const registerHint = document.getElementById('registerHint');
+    const editFpMode = document.getElementById('fpModeFlag')?.getAttribute('data-edit') === '1';
 
     // Primary fingerprint elements
     const capturePrimaryBtn = document.getElementById('capturePrimaryBtn');
@@ -234,6 +264,8 @@
 
     // Backup fingerprint elements
     const captureBackupBtn = document.getElementById('captureBackupBtn');
+    const cancelPrimaryBtn = document.getElementById('cancelPrimaryBtn');
+    const cancelBackupBtn = document.getElementById('cancelBackupBtn');
     const backupStatus = document.getElementById('backupStatus');
     const backupTemplate = document.getElementById('backupTemplate');
     const backupProgress = document.getElementById('backupProgress');
@@ -249,6 +281,10 @@
     // State tracking
     let deviceConnected = false;
     let enrollmentInProgress = false;
+    let primarySessionId = null;
+    let backupSessionId = null;
+    let primaryPollTimer = null;
+    let backupPollTimer = null;
     let fingerprintDeviceModel = '';
     
     // Request throttling and optimization
@@ -275,17 +311,26 @@
         const empType = (document.getElementById('employmentType')?.value || '').trim();
         const hasPrimaryFp = !!primaryTemplate.value;
 
-        const ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
+        // In edit mode: allow submission when at least one selected replacement has data
+        let ok;
+        if (editFpMode) {
+            const replacePrimary = document.getElementById('replacePrimaryToggle')?.checked;
+            const replaceBackup = document.getElementById('replaceBackupToggle')?.checked;
+            const hasAny = (replacePrimary && !!primaryTemplate.value) || (replaceBackup && !!backupTemplate.value);
+            ok = hasAny;
+        } else {
+            ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
+        }
         registerBtn.disabled = !ok;
 
         if (ok) {
-            registerHint.textContent = 'Ready to submit. Click Register button to proceed.';
+            registerHint.textContent = editFpMode ? 'Ready to update fingerprints.' : 'Ready to submit. Click Register button to proceed.';
             registerHint.className = 'ms-2 text-success';
         } else if (!hasPrimaryFp) {
-            registerHint.textContent = 'Primary fingerprint is required.';
+            registerHint.textContent = editFpMode ? 'Toggle and capture at least one fingerprint.' : 'Primary fingerprint is required.';
             registerHint.className = 'ms-2 text-muted';
         } else if (!rfid) {
-            registerHint.textContent = 'RFID scan is required.';
+            registerHint.textContent = editFpMode ? '' : 'RFID scan is required.';
             registerHint.className = 'ms-2 text-muted';
         } else {
             registerHint.textContent = 'Please fill all required fields.';
@@ -315,7 +360,48 @@
     function updateUIBasedOnDeviceStatus() {
         console.log('Updating UI - Device connected:', deviceConnected, 'Model:', fingerprintDeviceModel);
 
-        if (deviceConnected && !enrollmentInProgress) {
+        // Edit mode: do not enforce primary-first rule, do not fade backup
+        if (editFpMode) {
+            deviceStatus.textContent = deviceConnected ? `${fingerprintDeviceModel} detected and ready.` : 'Fingerprint device not detected.';
+            deviceStatus.className = deviceConnected ? 'text-success status-text' : 'text-danger status-text';
+
+            const replacePrimaryToggle = document.getElementById('replacePrimaryToggle');
+            const replaceBackupToggle = document.getElementById('replaceBackupToggle');
+
+            // Primary button logic (independent)
+            if (replacePrimaryToggle?.checked && deviceConnected && !enrollmentInProgress) {
+                capturePrimaryBtn.disabled = false;
+                primaryStatus.textContent = 'Ready to scan index finger';
+                primaryStatus.className = 'text-success';
+            } else if (!deviceConnected) {
+                capturePrimaryBtn.disabled = true;
+                primaryStatus.textContent = 'Device not available';
+                primaryStatus.className = 'text-danger';
+            } else {
+                capturePrimaryBtn.disabled = true;
+                primaryStatus.textContent = 'Replacement disabled';
+                primaryStatus.className = 'text-muted';
+            }
+
+            // Backup button logic (independent, never fade section)
+            if (replaceBackupToggle?.checked && deviceConnected && !enrollmentInProgress) {
+                captureBackupBtn.disabled = false;
+                backupStatus.textContent = 'Ready to scan thumb';
+                backupStatus.className = 'text-success';
+            } else if (!deviceConnected) {
+                captureBackupBtn.disabled = true;
+                backupStatus.textContent = 'Device not available';
+                backupStatus.className = 'text-danger';
+            } else {
+                captureBackupBtn.disabled = true;
+                backupStatus.textContent = 'Replacement disabled';
+                backupStatus.className = 'text-muted';
+            }
+
+            // Ensure no fade on backup section in edit mode
+            if (backupSection) backupSection.style.opacity = '1';
+
+        } else if (deviceConnected && !enrollmentInProgress) {
             // Device is available and not currently enrolling
             deviceStatus.textContent = `${fingerprintDeviceModel} detected and ready.`;
             deviceStatus.className = 'text-success status-text';
@@ -331,7 +417,7 @@
                 primaryStatus.className = 'text-success fw-bold';
             }
 
-            // Update backup fingerprint button
+            // Update backup fingerprint button (register mode requires primary first)
             if (primaryTemplate.value && !backupTemplate.value) {
                 captureBackupBtn.disabled = false;
                 backupStatus.textContent = 'Ready to scan thumb (optional)';
@@ -365,6 +451,22 @@
             // Currently enrolling - keep buttons disabled
             capturePrimaryBtn.disabled = true;
             captureBackupBtn.disabled = true;
+        }
+
+        // Show/hide cancel button depending on in-progress state
+        if (cancelPrimaryBtn) {
+            if (enrollmentInProgress && primarySessionId) {
+                cancelPrimaryBtn.classList.remove('d-none');
+            } else {
+                cancelPrimaryBtn.classList.add('d-none');
+            }
+        }
+        if (cancelBackupBtn) {
+            if (enrollmentInProgress && backupSessionId) {
+                cancelBackupBtn.classList.remove('d-none');
+            } else {
+                cancelBackupBtn.classList.add('d-none');
+            }
         }
 
         updateFingerprintStatus();
@@ -504,6 +606,16 @@
             sessionId = startData.sessionId;
             if (!sessionId) throw new Error('No sessionId from Device Bridge');
 
+            // Save session per stream and show cancel button
+            if (isPrimary) {
+                primarySessionId = sessionId;
+                if (cancelPrimaryBtn) cancelPrimaryBtn.classList.remove('d-none');
+            } else {
+                backupSessionId = sessionId;
+                if (cancelBackupBtn) cancelBackupBtn.classList.remove('d-none');
+            }
+            updateUIBasedOnDeviceStatus();
+
             const pollIntervalMs = 1000; // Reduced from 300ms to 1 second
             const maxDurationMs = 35000;
             const startedAt = Date.now();
@@ -591,6 +703,13 @@
 
                             clearInterval(pollTimer);
                             pollTimer = null;
+                            // Clear saved session id on success
+                            if (isPrimary) {
+                                primarySessionId = null;
+                            } else {
+                                backupSessionId = null;
+                            }
+                            updateUIBasedOnDeviceStatus();
                             return resolve();
                         }
                     } catch (err) {
@@ -599,6 +718,12 @@
                         reject(err);
                     }
                 }, pollIntervalMs);
+                // Keep a reference per stream for cancel
+                if (isPrimary) {
+                    primaryPollTimer = pollTimer;
+                } else {
+                    backupPollTimer = pollTimer;
+                }
             });
 
             showNotification(
@@ -636,6 +761,61 @@
         }
     }
 
+    async function cancelEnrollment(isPrimary = true) {
+        if (!enrollmentInProgress) return;
+        const sid = isPrimary ? primarySessionId : backupSessionId;
+        if (!sid) return;
+
+        // Clear polling
+        try {
+            if (isPrimary && primaryPollTimer) {
+                clearInterval(primaryPollTimer);
+                primaryPollTimer = null;
+            }
+            if (!isPrimary && backupPollTimer) {
+                clearInterval(backupPollTimer);
+                backupPollTimer = null;
+            }
+        } catch {}
+
+        // Fire-and-forget cancel to Bridge
+        try {
+            await fetch(`${bridgeBase}/api/fingerprint/enroll/cancel/${sid}`, {
+                method: 'POST',
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(3000)
+            });
+        } catch (e) {
+            console.warn('Cancel request failed or timed out', e);
+        }
+
+        // Reset UI for the chosen stream only
+        const statusElement = isPrimary ? primaryStatus : backupStatus;
+        const progressElement = isPrimary ? primaryProgress : backupProgress;
+        const progressBarElement = isPrimary ? primaryProgressBar : backupProgressBar;
+        const instructionElement = isPrimary ? primaryInstruction : backupInstruction;
+        const templateElement = isPrimary ? primaryTemplate : backupTemplate;
+
+        templateElement.value = '';
+        progressBarElement.style.width = '0%';
+        progressElement.classList.add('d-none');
+        statusElement.textContent = isPrimary ? 'Scan cancelled' : 'Scan cancelled';
+        statusElement.className = 'text-muted';
+        instructionElement.textContent = isPrimary ? 'Place your index finger on the scanner...' : 'Place your thumb on the scanner...';
+
+        // Clear session id and state
+        if (isPrimary) {
+            primarySessionId = null;
+            if (cancelPrimaryBtn) cancelPrimaryBtn.classList.add('d-none');
+        } else {
+            backupSessionId = null;
+            if (cancelBackupBtn) cancelBackupBtn.classList.add('d-none');
+        }
+        enrollmentInProgress = false;
+        updateUIBasedOnDeviceStatus();
+    }
+
     function showNotification(title, message, type = 'info') {
         // Create notification element
         const notification = document.createElement('div');
@@ -668,6 +848,49 @@
     // Event listeners - Real-time fingerprint enrollment with progress tracking
     capturePrimaryBtn?.addEventListener('click', () => enrollFingerprint(true));
     captureBackupBtn?.addEventListener('click', () => enrollFingerprint(false));
+    cancelPrimaryBtn?.addEventListener('click', () => cancelEnrollment(true));
+    cancelBackupBtn?.addEventListener('click', () => cancelEnrollment(false));
+
+    // ESC key cancels whichever enrollment is active
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && enrollmentInProgress) {
+            if (primarySessionId) {
+                cancelEnrollment(true);
+            } else if (backupSessionId) {
+                cancelEnrollment(false);
+            }
+        }
+    });
+
+    // Edit mode toggles: control enabling capture buttons and include flags on submit
+    if (editFpMode) {
+        const replacePrimaryToggle = document.getElementById('replacePrimaryToggle');
+        const replaceBackupToggle = document.getElementById('replaceBackupToggle');
+
+        const syncToggleState = () => {
+            if (replacePrimaryToggle) {
+                capturePrimaryBtn.disabled = !(deviceConnected && replacePrimaryToggle.checked);
+                if (!replacePrimaryToggle.checked) {
+                    primaryTemplate.value = '';
+                    primaryStatus.textContent = 'Replacement disabled';
+                    primaryStatus.className = 'text-muted';
+                }
+            }
+            if (replaceBackupToggle) {
+                captureBackupBtn.disabled = !(deviceConnected && replaceBackupToggle.checked);
+                if (!replaceBackupToggle.checked) {
+                    backupTemplate.value = '';
+                    backupStatus.textContent = 'Replacement disabled';
+                    backupStatus.className = 'text-muted';
+                }
+            }
+            updateRegisterEnabled();
+        };
+
+        replacePrimaryToggle?.addEventListener('change', syncToggleState);
+        replaceBackupToggle?.addEventListener('change', syncToggleState);
+        document.addEventListener('bridge-status-change', syncToggleState);
+    }
 
     // Optional: auto-focus RFID input to capture keyboard-wedge readers
     rfidInput?.addEventListener('focus', () => {
@@ -777,12 +1000,12 @@
         setTimeout(() => rfidInput.focus(), 100);
     }
 
-    // Prevent form submit for this placeholder page
+    // Prevent form submit for this page (Ajax submit)
     document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         if (registerBtn.disabled) {
-            showNotification('Registration Error', 'Please complete all required fields first.', 'error');
+            showNotification(editFpMode ? 'Update Error' : 'Registration Error', 'Please complete required fields first.', 'error');
             return;
         }
 
@@ -809,8 +1032,16 @@
                 }
             }
 
+            // Add toggle flags when in edit mode
+            if (editFpMode) {
+        const rpEl = document.getElementById('replacePrimaryToggle');
+        const rbEl = document.getElementById('replaceBackupToggle');
+        if (rpEl) formData.set('replace_primary', rpEl.checked ? '1' : '');
+        if (rbEl) formData.set('replace_backup', rbEl.checked ? '1' : '');
+            }
+
             const response = await fetch(document.getElementById('registerForm').action, {
-                method: 'POST',
+                method: document.querySelector('#registerForm input[name="_method"][value="PUT"]') ? 'POST' : 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -822,29 +1053,28 @@
 
             if (response.ok && result.success) {
                 showNotification(
-                    'Registration Successful!',
-                    `Employee ${result.employee.name} has been registered successfully.`,
+                    editFpMode ? 'Fingerprints Updated!' : 'Registration Successful!',
+                    editFpMode ? 'Templates updated successfully.' : `Employee ${result.employee.name} has been registered successfully.`,
                     'success'
                 );
 
-                // Reset form after successful registration
-                setTimeout(() => {
-                    document.getElementById('registerForm').reset();
-                    primaryTemplate.value = '';
-                    backupTemplate.value = '';
-                    profilePreview.classList.add('d-none');
-                    profilePreview.src = '';
-
-                    // Reset RFID status
-                    rfidStatus.textContent = '';
-                    rfidStatus.className = 'text-muted small';
-
-                    // Reset fingerprint sections and update UI
-                    updateUIBasedOnDeviceStatus();
-
-                    // Focus RFID input for next registration
-                    setTimeout(() => rfidInput?.focus(), 100);
-                }, 2000);
+                // After success, redirect back to employees list in edit mode
+                if (editFpMode) {
+                    setTimeout(() => { window.location.href = employeesIndexUrl; }, 1500);
+                } else {
+                    // Reset form after successful registration
+                    setTimeout(() => {
+                        document.getElementById('registerForm').reset();
+                        primaryTemplate.value = '';
+                        backupTemplate.value = '';
+                        profilePreview.classList.add('d-none');
+                        profilePreview.src = '';
+                        rfidStatus.textContent = '';
+                        rfidStatus.className = 'text-muted small';
+                        updateUIBasedOnDeviceStatus();
+                        setTimeout(() => rfidInput?.focus(), 100);
+                    }, 2000);
+                }
 
             } else {
                 // Handle validation errors
@@ -865,11 +1095,7 @@
 
             // No special-case clearing; user can correct and resubmit
 
-            showNotification(
-                'Registration Failed',
-                errorMessage,
-                'error'
-            );
+            showNotification(editFpMode ? 'Update Failed' : 'Registration Failed', errorMessage, 'error');
         } finally {
             // Restore button state
             setTimeout(() => {

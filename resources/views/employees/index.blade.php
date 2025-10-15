@@ -166,7 +166,7 @@
     <div class="modal fade" id="editEmployee{{ $employee->employee_id }}" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                    <div class="modal-header">
                     <h5 class="modal-title">Edit Employee</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -213,7 +213,10 @@
                             <input type="text" class="form-control" value="{{ $employee->rfid_code ?? '' }}" readonly>
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer d-flex justify-content-between align-items-center">
+                        <a href="{{ route('employees.fingerprints.edit', $employee->employee_id) }}" class="btn btn-outline-success">
+                            <i class="bi bi-fingerprint me-1"></i> Edit Fingerprints
+                        </a>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Update Employee</button>
                     </div>

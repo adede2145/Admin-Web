@@ -85,6 +85,12 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('employees.update');
     Route::delete('/employees/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
 
+    // Fingerprint editing (Admin or Super Admin only)
+    Route::middleware(['admin_or_superadmin'])->group(function () {
+        Route::get('/employees/{id}/fingerprints/edit', [EmployeeController::class, 'editFingerprints'])->name('employees.fingerprints.edit');
+        Route::put('/employees/{id}/fingerprints', [EmployeeController::class, 'updateFingerprints'])->name('employees.fingerprints.update');
+    });
+
     // Attendance CRUD operations
     Route::put('/attendance/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
     Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
