@@ -112,16 +112,16 @@
         </div>
 
         <!-- Charts Row -->
-        <div class="row mb-4">
+        <div class="row mb-4 align-items-stretch">
             <!-- Activity Chart -->
             <div class="col-xl-8 col-lg-7">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 fw-bold text-primary">Kiosk Activity (Last 30 Days)</h6>
+                <div class="card shadow mb-4 h-100">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between header-maroon">
+                        <h6 class="m-0 fw-bold text-white">Kiosk Activity (Last 30 Days)</h6>
                     </div>
-                    <div class="card-body">
-                        <div class="chart-area">
-                            <canvas id="activityChart"></canvas>
+                    <div class="card-body d-flex flex-column h-100">
+                        <div class="chart-area flex-grow-1 d-flex align-items-center justify-content-center" style="height:100%;max-height:400px;">
+                            <canvas id="activityChart" style="width:100%;height:100%"></canvas>
                         </div>
                     </div>
                 </div>
@@ -129,11 +129,11 @@
 
             <!-- Top Performing Kiosks -->
             <div class="col-xl-4 col-lg-5">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 fw-bold text-primary">Top Performing Kiosks</h6>
+                <div class="card shadow mb-4 h-100">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between header-maroon">
+                        <h6 class="m-0 fw-bold text-white">Top Performing Kiosks</h6>
                     </div>
-                    <div class="card-body top-kiosks-container">
+                    <div class="card-body top-kiosks-container d-flex flex-column h-100">
                         @if(count($analytics['top_kiosks']) > 0)
                             @foreach($analytics['top_kiosks'] as $kiosk)
                                 <div class="d-flex align-items-center mb-3">
@@ -163,8 +163,8 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 fw-bold text-primary">Kiosk Uptime Statistics</h6>
+                    <div class="card-header py-3 header-maroon">
+                        <h6 class="m-0 fw-bold text-white">Kiosk Uptime Statistics</h6>
                     </div>
                     <div class="card-body">
                         <div class="row uptime-stats-container">
@@ -193,9 +193,9 @@
 
         <!-- Kiosks Management Section -->
         <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 fw-bold text-primary">Kiosk Locations</h6>
-                <a href="{{ route('kiosks.create') }}" class="btn btn-primary btn-sm">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between header-maroon">
+                <h6 class="m-0 fw-bold text-white">Kiosk Locations</h6>
+                <a href="{{ route('kiosks.create') }}" class="btn btn-warning btn-sm text-dark fw-semibold">
                     <i class="bi bi-plus-circle me-1"></i>Add New Kiosk
                 </a>
             </div>

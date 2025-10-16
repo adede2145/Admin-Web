@@ -186,12 +186,12 @@
 
     <!-- Filters -->
     <div class="aa-card mb-3 filter-card">
-        <div class="card-header bg-light">
+        <div class="card-header header-maroon">
             <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
+                <h6 class="mb-0 text-white fw-bold">
                     <i class="bi bi-funnel me-2"></i>Filter Attendance Records
                 </h6>
-                <small class="text-muted">
+                <small class="text-white-50 ms-2">
                     @if(auth()->user()->role->role_name === 'super_admin')
                     System-wide access
                     @else
@@ -685,9 +685,9 @@
 <div class="modal fade" id="editAttendance{{ $log->log_id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Attendance Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
+                <h5 class="modal-title text-white mb-0">Edit Attendance Record</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ route('attendance.update', $log->log_id) }}" method="POST">
                 @csrf
@@ -1366,11 +1366,11 @@
 <div class="modal fade" id="photoModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
+            <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
+                <h5 class="modal-title text-white mb-0">
                     <i class="bi bi-camera-fill me-2"></i>RFID Scan Photo & Verification
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body text-center">
                 <div id="photoLoadingSpinner" class="d-none">

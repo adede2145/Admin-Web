@@ -105,6 +105,7 @@
         </aside>
         <main class="aa-content">
         <div class="container-fluid py-3">
+            @include('layouts.toast')
             {{ $slot ?? '' }}
             @yield('content')
         </div>

@@ -3,6 +3,7 @@
 @section('title', 'Dashboard')
 
 @section('content')
+@include('layouts.toast-js')
 <style>
     .scroll-hide {
         max-height: 520px;

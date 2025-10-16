@@ -1,25 +1,12 @@
 @extends('layouts.theme')
 @section('content')
     <div class="container-fluid">
-        <!-- Success/Error Messages -->
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
+        <!-- Success/Error Messages REMOVED (handled by toasts)-->
+        {{-- Alerts removed --}}
         <!-- Report Header -->
         <div class="aa-card mb-4">
-            <div class="card-header header-yellow d-flex justify-content-between align-items-center">
-                <h3 class="fw-bold mb-0">
+            <div class="card-header header-maroon d-flex justify-content-between align-items-center">
+                <h3 class="fw-bold mb-0 text-white">
                     <i class="bi bi-file-earmark-text me-2 fs-4"></i>{{ $report->report_title }}
                 </h3>
                 <div class="dropdown">
@@ -74,8 +61,8 @@
 
         <!-- Employee Summaries -->
         <div class="aa-card mb-4">
-            <div class="card-header header-yellow">
-                <h5 class="mb-0">
+            <div class="card-header header-maroon">
+                <h5 class="mb-0 text-white">
                     <i class="bi bi-people me-2"></i>Employee Summaries
                 </h5>
             </div>
@@ -237,8 +224,8 @@
 
         <!-- Report Summary -->
         <div class="aa-card mb-4">
-            <div class="card-header header-yellow">
-                <h5 class="mb-0">
+            <div class="card-header header-maroon">
+                <h5 class="mb-0 text-white">
                     <i class="bi bi-graph-up me-2"></i>Report Summary
                 </h5>
             </div>
@@ -272,6 +259,7 @@
             </div>
         </div>
     </div>
+    @include('layouts.toast-js')
     <script>
         document.addEventListener('click', function (event) {
             const target = event.target.closest('.remove-override-btn');
