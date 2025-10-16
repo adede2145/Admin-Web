@@ -42,9 +42,47 @@ class EmployeeController extends Controller
                 $departments = Department::where('department_id', auth()->user()->department_id)->get();
             }
 
-            // Calculate employee statistics
+            // Determine which employee to show in the summary pane
             $firstEmployee = collect($employees->items())->first();
-            $selectedEmployeeId = request('employee_id') ?: optional($firstEmployee)->employee_id;
+            $selectedEmployeeId = request('employee_id');
+
+            if (!$selectedEmployeeId && request()->filled('search')) {
+                $search = trim(request('search'));
+
+                // Prefer exact ID match when the search looks numeric
+                if (ctype_digit($search)) {
+                    $candidate = Employee::query()
+                        ->when(
+                            auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id,
+                            function ($q) { $q->where('department_id', auth()->user()->department_id); }
+                        )
+                        ->where('employee_id', (int) $search)
+                        ->first();
+                    if ($candidate) {
+                        $selectedEmployeeId = $candidate->employee_id;
+                    }
+                }
+
+                // Fallback: prefer exact full name match (case-insensitive)
+                if (!$selectedEmployeeId) {
+                    $candidate = Employee::query()
+                        ->when(
+                            auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id,
+                            function ($q) { $q->where('department_id', auth()->user()->department_id); }
+                        )
+                        ->whereRaw('LOWER(full_name) = ?', [mb_strtolower($search)])
+                        ->first();
+                    if ($candidate) {
+                        $selectedEmployeeId = $candidate->employee_id;
+                    }
+                }
+            }
+
+            // If still not determined, default to first employee in the (filtered) list
+            if (!$selectedEmployeeId) {
+                $selectedEmployeeId = optional($firstEmployee)->employee_id;
+            }
+
             $selectedEmployee = $selectedEmployeeId ? Employee::with('department')->find($selectedEmployeeId) : null;
 
             // Verify user has access to the selected employee

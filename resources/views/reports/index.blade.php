@@ -143,9 +143,6 @@
         <!-- Report Types Tiles (all trigger modal) -->
         <div class="row mb-4">
             @foreach($reportTypes as $key => $name)
-                @if($key === 'custom')
-                    @continue
-                @endif
                 <div class="col-md-4 mb-3">
                     <div class="aa-card h-100">
                         <div class="card-body p-4 d-flex align-items-center">
@@ -170,12 +167,12 @@
             @endforeach
         </div>
 
-        <!-- Custom Report Builder Modal -->
+        <!-- Report Builder Modal (custom removed) -->
         <div class="modal fade" id="reportBuilderModal" tabindex="-1" aria-labelledby="reportBuilderModalLabel" aria-hidden="true">
           <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
               <div class="modal-header header-maroon">
-                <h4 class="modal-title" id="reportBuilderModalLabel"><i class="bi bi-gear me-2"></i>Custom Report Builder</h4>
+                <h4 class="modal-title" id="reportBuilderModalLabel"><i class="bi bi-gear me-2"></i>Build Report</h4>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body p-3">
@@ -188,9 +185,6 @@
                         <select name="report_type" class="form-select" required id="modalReportType">
                           <option value="">Select Report Type</option>
                           @foreach($reportTypes as $key => $name)
-                            @if($key === 'custom')
-                              @continue
-                            @endif
                             <option value="{{ $key }}">{{ $name }}</option>
                           @endforeach
                         </select>

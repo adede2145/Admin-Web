@@ -24,21 +24,8 @@
             </div>
         </div>
 
-        <!-- Success / Error Messages -->
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                <i class="bi bi-check-circle me-2"></i>
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        <!-- Success/Error Messages REMOVED (use toast notification)-->
+        {{-- Alerts removed --}}
 
         <!-- Analytics Cards -->
         <div class="row mb-4">
@@ -245,14 +232,9 @@
                                                 <a href="{{ route('kiosks.edit', $kiosk) }}" class="btn btn-outline-primary btn-sm" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <form action="{{ route('kiosks.destroy', $kiosk) }}" method="POST" class="d-inline" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this kiosk location?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="btn btn-outline-danger btn-sm delete-kiosk-btn" data-kiosk-id="{{ $kiosk->kiosk_id }}" data-kiosk-location="{{ $kiosk->location }}" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -274,6 +256,79 @@
         </div>
     </div>
 
+    <!-- Toast Notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+        <!-- Success Toast -->
+        <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="successMessage"></div>
+        </div>
+
+        <!-- Error Toast -->
+        <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-white">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="errorMessage"></div>
+        </div>
+
+        <!-- Info Toast -->
+        <div id="infoToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-info text-white">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong class="me-auto">Info</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="infoMessage"></div>
+        </div>
+    </div>
+
+    <!-- Custom Delete Kiosk Modal -->
+    <div class="modal fade" id="deleteKioskModal" tabindex="-1" aria-labelledby="deleteKioskModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
+                    <h5 class="modal-title" id="deleteKioskModalLabel">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Delete Kiosk
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                                <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                            </div>
+                        </div>
+                        <h5 class="text-danger mb-3">Confirm Deletion</h5>
+                        <p class="text-muted mb-0" id="deleteKioskMessage">
+                            Are you sure you want to delete this kiosk? 
+                            <br><strong class="text-danger">This action cannot be undone.</strong>
+                        </p>
+                    </div>
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <small id="deleteKioskWarning">This will permanently remove the kiosk location from the system and may affect attendance logs.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteKioskBtn" onclick="confirmDeleteKiosk()">
+                        <i class="bi bi-trash me-1"></i>Delete Kiosk
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -285,6 +340,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeChart();
             startRealTimeUpdates();
+            initializeDeleteKioskModal();
         });
 
         // Initialize Activity Chart
@@ -423,26 +479,85 @@
             }
         }
 
-        // Show notification
+        // Show notification (Updated to use toast notifications)
         function showNotification(message, type = 'info') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            notification.innerHTML = `
-                <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
+            const toastEl = document.getElementById(type + 'Toast');
+            const messageEl = document.getElementById(type + 'Message');
             
-            document.body.appendChild(notification);
+            if (!toastEl || !messageEl) return;
             
-            // Auto-remove after 3 seconds
+            messageEl.textContent = message;
+            
+            const toast = new bootstrap.Toast(toastEl, {
+                autohide: true,
+                delay: 5000
+            });
+            
+            toast.show();
+            
+            // Add animation effect
+            toastEl.style.transform = 'translateX(100%)';
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
+                toastEl.style.transition = 'transform 0.3s ease-in-out';
+                toastEl.style.transform = 'translateX(0)';
+            }, 100);
+        }
+
+        // Delete Kiosk Modal Functions
+        function initializeDeleteKioskModal() {
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.delete-kiosk-btn')) {
+                    e.preventDefault();
+                    const kioskId = e.target.closest('.delete-kiosk-btn').dataset.kioskId;
+                    const kioskLocation = e.target.closest('.delete-kiosk-btn').dataset.kioskLocation;
+                    deleteKiosk(kioskId, kioskLocation);
                 }
-            }, 3000);
+            });
+        }
+
+        function deleteKiosk(kioskId, kioskLocation) {
+            // Store the kioskId for later use
+            document.getElementById('confirmDeleteKioskBtn').dataset.kioskId = kioskId;
+            
+            // Update modal content with kiosk-specific information
+            document.getElementById('deleteKioskMessage').innerHTML = 
+                `Are you sure you want to delete "<strong>${kioskLocation}</strong>"?<br><strong class="text-danger">This action cannot be undone.</strong>`;
+            
+            document.getElementById('deleteKioskWarning').textContent = 
+                `This will permanently remove the kiosk location from the system and may affect attendance logs.`;
+            
+            // Show the custom delete modal
+            const modal = new bootstrap.Modal(document.getElementById('deleteKioskModal'));
+            modal.show();
+        }
+
+        function confirmDeleteKiosk() {
+            const kioskId = document.getElementById('confirmDeleteKioskBtn').dataset.kioskId;
+            
+            try {
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("kiosks.destroy", ":kioskId") }}'.replace(':kioskId', kioskId);
+
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+
+                form.appendChild(csrfToken);
+                form.appendChild(methodField);
+                document.body.appendChild(form);
+                form.submit();
+            } catch (error) {
+                console.error('Error deleting kiosk:', error);
+                alert('An error occurred while trying to delete the kiosk. Please try again.');
+            }
         }
 
         // Update analytics cards
@@ -630,5 +745,25 @@
                 clearInterval(updateInterval);
             }
         });
+
+        // Show notifications based on session messages
+        @if(session('success'))
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('{{ session('success') }}', 'success');
+            });
+        @endif
+        
+        @if(session('error'))
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('{{ session('error') }}', 'error');
+            });
+        @endif
+        
+        @if(session('info'))
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('{{ session('info') }}', 'info');
+            });
+        @endif
     </script>
+@include('layouts.toast-js')
 @endsection

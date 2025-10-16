@@ -383,10 +383,9 @@ class AttendanceController extends Controller
             $dtrService = new \App\Services\DTRService();
             $dtrReport = $dtrService->generateDTRReport($request, auth()->user());
 
-            // Redirect back to attendance page with success message
-            return redirect()->route('attendance.index')
-                ->with('success', 'DTR report generated successfully! Report ID: ' . $dtrReport->report_id)
-                ->with('generated_report_id', $dtrReport->report_id);
+            // Redirect to the generated DTR report details page so user sees the summary immediately
+            return redirect()->route('dtr.details', $dtrReport->report_id)
+                ->with('success', 'DTR report generated successfully!');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to generate DTR report: ' . $e->getMessage());
         }

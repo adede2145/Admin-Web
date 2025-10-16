@@ -31,8 +31,7 @@ class ReportController extends Controller
             'employee_performance' => 'Employee Performance',
             'department_comparison' => 'Department Comparison',
             'overtime_analysis' => 'Overtime Analysis',
-            'absenteeism_report' => 'Absenteeism Report',
-            'custom_report' => 'Custom Report'
+            'absenteeism_report' => 'Absenteeism Report'
         ];
 
         return view('reports.index', compact('departments', 'reportTypes'));
@@ -60,6 +59,35 @@ class ReportController extends Controller
         try {
             $reportData = $this->generateReportData($request);
             
+            // Persist a lightweight record so it appears in Recent Reports
+            try {
+                $totalEmployees = null;
+                if (($reportData['type'] ?? null) === 'employee_performance') {
+                    $totalEmployees = is_countable($reportData['data'] ?? null) ? count($reportData['data']) : null;
+                } elseif (($reportData['type'] ?? null) === 'attendance_summary') {
+                    $totalEmployees = $reportData['summary']['unique_employees'] ?? null;
+                }
+
+                DTRReport::create([
+                    'admin_id' => auth()->id(),
+                    'department_id' => $request->department_id ?: (auth()->user()->department_id ?? null),
+                    // The dtr_reports table only supports ['weekly','monthly','custom']
+                    'report_type' => 'custom',
+                    'report_title' => $reportData['title'] ?? 'Generated Report',
+                    'start_date' => $request->start_date,
+                    'end_date' => $request->end_date,
+                    'generated_on' => now(),
+                    'total_employees' => $totalEmployees,
+                    'total_days' => Carbon::parse($request->start_date)->diffInDays(Carbon::parse($request->end_date)) + 1,
+                    'total_hours' => $reportData['summary']['total_hours'] ?? ($reportData['summary']['total_overtime_hours'] ?? 0),
+                    'status' => 'generated',
+                    'notes' => 'Created via Reports page'
+                ]);
+            } catch (\Throwable $e) {
+                // Non-fatal: logging only; UI should still proceed
+                \Log::warning('Failed to persist recent report entry: ' . $e->getMessage());
+            }
+
             // Store report data in session for export functionality
             session(['current_report_data' => $reportData]);
             
@@ -164,7 +192,17 @@ class ReportController extends Controller
         $employeeStats = [];
         
         foreach ($attendanceData->groupBy('employee_id') as $employeeId => $records) {
-            $employee = $records->first()->employee;
+            if (empty($employeeId)) {
+                // Skip malformed logs with no employee
+                continue;
+            }
+
+            $firstRecord = $records->first();
+            $employee = $firstRecord->employee ?: Employee::find($employeeId);
+            if (!$employee) {
+                // If employee record is missing, skip this group to avoid null access
+                continue;
+            }
             $totalHours = 0;
             $totalOvertime = 0;
             $presentDays = 0;
@@ -183,7 +221,7 @@ class ReportController extends Controller
             $employeeStats[] = [
                 'employee_id' => $employee->employee_id,
                 'employee_name' => $employee->full_name,
-                'department' => $employee->department->department_name,
+                'department' => optional($employee->department)->department_name ?? 'N/A',
                 'total_hours' => $totalHours,
                 'overtime_hours' => $totalOvertime,
                 'present_days' => $presentDays,
@@ -323,10 +361,33 @@ class ReportController extends Controller
     // Generate absenteeism report
     private function generateAbsenteeismReport($baseQuery, $startDate, $endDate)
     {
-        $attendanceData = $baseQuery->get();
-        
+        // Build employee list (respect department filter if applied on the base query)
+        $employeesQuery = Employee::with('department');
+
+        // If the base query was department-scoped, infer department_id from it when available
+        // Prefer explicit request department if present
+        $departmentId = request('department_id');
+        if (!empty($departmentId)) {
+            $employeesQuery->where('department_id', $departmentId);
+        } elseif (auth()->user()->role->role_name !== 'super_admin') {
+            $employeesQuery->where('department_id', auth()->user()->department_id);
+        }
+
+        $employees = $employeesQuery->get();
+
+        // Compute business days (exclude weekends)
+        $period = new \DatePeriod($startDate, new \DateInterval('P1D'), $endDate->copy()->addDay());
+        $workdays = 0;
+        foreach ($period as $date) {
+            $w = (int)$date->format('w');
+            if ($w === 0 || $w === 6) { // Sunday or Saturday
+                continue;
+            }
+            $workdays++;
+        }
+
         $absenteeismStats = [
-            'total_workdays' => $startDate->diffInDays($endDate) + 1,
+            'total_workdays' => $workdays,
             'total_absences' => 0,
             'employees_with_absences' => 0,
             'absence_rate' => 0,
@@ -334,35 +395,38 @@ class ReportController extends Controller
         ];
 
         $employeeAbsences = [];
-        $expectedWorkdays = $startDate->diffInDays($endDate) + 1;
 
-        foreach ($attendanceData->groupBy('employee_id') as $employeeId => $records) {
-            $employee = $records->first()->employee;
-            $actualWorkdays = $records->count();
-            $absences = $expectedWorkdays - $actualWorkdays;
+        foreach ($employees as $employee) {
+            $actualWorkdays = AttendanceLog::where('employee_id', $employee->employee_id)
+                ->whereBetween('time_in', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
+                ->whereNotNull('time_in')
+                ->selectRaw('DATE(time_in) as d')
+                ->groupBy('d')
+                ->get()
+                ->count();
 
+            $absences = max(0, $workdays - $actualWorkdays);
             if ($absences > 0) {
                 $absenteeismStats['total_absences'] += $absences;
                 $employeeAbsences[] = [
                     'employee_name' => $employee->full_name ?? 'N/A',
-                    'department' => $employee->department->department_name ?? 'N/A',
+                    'department' => optional($employee->department)->department_name ?? 'N/A',
                     'absences' => $absences,
-                    'attendance_rate' => round(($actualWorkdays / $expectedWorkdays) * 100, 2)
+                    'attendance_rate' => $workdays > 0 ? round(($actualWorkdays / $workdays) * 100, 2) : 0
                 ];
             }
         }
 
         $absenteeismStats['employees_with_absences'] = count($employeeAbsences);
-        $absenteeismStats['absence_rate'] = $expectedWorkdays > 0 
-            ? round(($absenteeismStats['total_absences'] / ($expectedWorkdays * $attendanceData->unique('employee_id')->count())) * 100, 2) 
+        $absenteeismStats['absence_rate'] = ($workdays > 0 && $employees->count() > 0)
+            ? round(($absenteeismStats['total_absences'] / ($workdays * $employees->count())) * 100, 2)
             : 0;
 
-        // Find employee with most absences
         if (!empty($employeeAbsences)) {
             $mostAbsences = max(array_column($employeeAbsences, 'absences'));
-            foreach ($employeeAbsences as $employee) {
-                if ($employee['absences'] == $mostAbsences) {
-                    $absenteeismStats['most_absent_employee'] = $employee;
+            foreach ($employeeAbsences as $emp) {
+                if ($emp['absences'] == $mostAbsences) {
+                    $absenteeismStats['most_absent_employee'] = $emp;
                     break;
                 }
             }

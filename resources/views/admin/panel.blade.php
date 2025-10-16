@@ -332,13 +332,9 @@
                                 <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editAdminModal_{{ $admin->admin_id }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <form action="{{ route('admin.users.destroy', $admin->admin_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this admin?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-admin-btn" data-admin-id="{{ $admin->admin_id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                                 @else
                                 <span class="text-muted">Protected</span>
                                 @endif
@@ -377,6 +373,46 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Delete Admin Modal -->
+<div class="modal fade" id="deleteAdminModal" tabindex="-1" aria-labelledby="deleteAdminModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
+                <h5 class="modal-title" id="deleteAdminModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Admin
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-danger mb-3">Confirm Deletion</h5>
+                    <p class="text-muted mb-0">
+                        Are you sure you want to delete this admin? 
+                        <br><strong class="text-danger">This action cannot be undone.</strong>
+                    </p>
+                </div>
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small>This will permanently remove admin access from the system.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAdminBtn" onclick="confirmDeleteAdmin()">
+                    <i class="bi bi-trash me-1"></i>Delete Admin
+                </button>
             </div>
         </div>
     </div>
@@ -433,7 +469,57 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         initializeEmployeeSearch();
+        initializeDeleteAdminModal();
     });
+
+    // Add event listener for delete admin buttons
+    function initializeDeleteAdminModal() {
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.delete-admin-btn')) {
+                e.preventDefault();
+                const adminId = e.target.closest('.delete-admin-btn').dataset.adminId;
+                deleteAdmin(adminId);
+            }
+        });
+    }
+
+    function deleteAdmin(adminId) {
+        // Store the adminId for later use
+        document.getElementById('confirmDeleteAdminBtn').dataset.adminId = adminId;
+        
+        // Show the custom delete modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteAdminModal'));
+        modal.show();
+    }
+
+    function confirmDeleteAdmin() {
+        const adminId = document.getElementById('confirmDeleteAdminBtn').dataset.adminId;
+        
+        try {
+            // Create a form and submit it
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("admin.users.destroy", ":adminId") }}'.replace(':adminId', adminId);
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+
+            form.appendChild(csrfToken);
+            form.appendChild(methodField);
+            document.body.appendChild(form);
+            form.submit();
+        } catch (error) {
+            console.error('Error deleting admin:', error);
+            alert('An error occurred while trying to delete the admin. Please try again.');
+        }
+    }
 
     function initializeEmployeeSearch() {
         const searchInput = document.getElementById('employee_search');

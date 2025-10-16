@@ -20,33 +20,8 @@
             <span class="badge bg-primary fs-5">Super Admin</span>
         </div>
 
-        <!-- Success / Error Messages -->
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                <i class="bi bi-check-circle me-2"></i>
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @if($errors->any())
-            <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                <strong>Validation Error:</strong>
-                <ul class="mb-0 mt-2">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        <!-- Success/Error Messages REMOVED (use toast notification)-->
+        {{-- Alerts removed --}}
 
         <div class="row align-items-stretch">
             <!-- Create Department Form -->
@@ -206,13 +181,9 @@
                                                 title="Edit Department">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <form action="{{ route('departments.destroy', $department->department_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this department? This action cannot be undone.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" {{ $department->employees_count > 0 ? 'disabled title="Cannot delete department with employees"' : '' }}>
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-department-btn" data-department-id="{{ $department->department_id }}" data-department-name="{{ $department->department_name }}" data-employees-count="{{ $department->employees_count }}" {{ $department->employees_count > 0 ? 'disabled title="Cannot delete department with employees"' : '' }}>
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
 
@@ -279,6 +250,79 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Custom Delete Department Modal -->
+    <div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
+                    <h5 class="modal-title" id="deleteDepartmentModalLabel">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Delete Department
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                                <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                            </div>
+                        </div>
+                        <h5 class="text-danger mb-3">Confirm Deletion</h5>
+                        <p class="text-muted mb-0" id="deleteDepartmentMessage">
+                            Are you sure you want to delete this department? 
+                            <br><strong class="text-danger">This action cannot be undone.</strong>
+                        </p>
+                    </div>
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <small id="deleteDepartmentWarning">This will permanently remove the department from the system.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteDepartmentBtn" onclick="confirmDeleteDepartment()">
+                        <i class="bi bi-trash me-1"></i>Delete Department
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+        <!-- Success Toast -->
+        <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="successMessage"></div>
+        </div>
+
+        <!-- Error Toast -->
+        <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-white">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="errorMessage"></div>
+        </div>
+
+        <!-- Info Toast -->
+        <div id="infoToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-info text-white">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong class="me-auto">Info</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="infoMessage"></div>
         </div>
     </div>
 
@@ -486,6 +530,9 @@
             if (modalHandlersAttached) return;
             modalHandlersAttached = true;
             
+            // Initialize delete department modal
+            initializeDeleteDepartmentModal();
+            
             // Remove any existing click handlers to prevent conflicts
             document.querySelectorAll('.edit-dept-btn').forEach(function(btn) {
                 // Clone button to remove all event listeners
@@ -684,6 +731,64 @@
         // Make function globally available
         window.validateAndSubmit = validateAndSubmit;
         
+        // Delete Department Modal Functions
+        function initializeDeleteDepartmentModal() {
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.delete-department-btn')) {
+                    e.preventDefault();
+                    const departmentId = e.target.closest('.delete-department-btn').dataset.departmentId;
+                    const departmentName = e.target.closest('.delete-department-btn').dataset.departmentName;
+                    const employeesCount = e.target.closest('.delete-department-btn').dataset.employeesCount;
+                    deleteDepartment(departmentId, departmentName, employeesCount);
+                }
+            });
+        }
+
+        function deleteDepartment(departmentId, departmentName, employeesCount) {
+            // Store the departmentId for later use
+            document.getElementById('confirmDeleteDepartmentBtn').dataset.departmentId = departmentId;
+            
+            // Update modal content with department-specific information
+            document.getElementById('deleteDepartmentMessage').innerHTML = 
+                `Are you sure you want to delete "<strong>${departmentName}</strong>"?<br><strong class="text-danger">This action cannot be undone.</strong>`;
+            
+            document.getElementById('deleteDepartmentWarning').textContent = 
+                `This will permanently remove the department from the system. Current employees: ${employeesCount}`;
+            
+            // Show the custom delete modal
+            const modal = new bootstrap.Modal(document.getElementById('deleteDepartmentModal'));
+            modal.show();
+        }
+
+        function confirmDeleteDepartment() {
+            const departmentId = document.getElementById('confirmDeleteDepartmentBtn').dataset.departmentId;
+            
+            try {
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("departments.destroy", ":departmentId") }}'.replace(':departmentId', departmentId);
+
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+
+                form.appendChild(csrfToken);
+                form.appendChild(methodField);
+                document.body.appendChild(form);
+                form.submit();
+            } catch (error) {
+                console.error('Error deleting department:', error);
+                alert('An error occurred while trying to delete the department. Please try again.');
+            }
+        }
+        
         // Test function to verify everything is working
         function testDepartmentFunctions() {
             console.log('Testing department functions...');
@@ -696,5 +801,49 @@
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(testDepartmentFunctions, 1000);
         });
+        
+        // Cool notification functions
+        function showNotification(type, message) {
+            const toastEl = document.getElementById(type + 'Toast');
+            const messageEl = document.getElementById(type + 'Message');
+            
+            if (!toastEl || !messageEl) return;
+            
+            messageEl.textContent = message;
+            
+            const toast = new bootstrap.Toast(toastEl, {
+                autohide: true,
+                delay: 5000
+            });
+            
+            toast.show();
+            
+            // Add animation effect
+            toastEl.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                toastEl.style.transition = 'transform 0.3s ease-in-out';
+                toastEl.style.transform = 'translateX(0)';
+            }, 100);
+        }
+
+        // Show notifications based on session messages
+        @if(session('success'))
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('success', '{{ session('success') }}');
+            });
+        @endif
+        
+        @if(session('error'))
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('error', '{{ session('error') }}');
+            });
+        @endif
+        
+        @if(session('info'))
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('info', '{{ session('info') }}');
+            });
+        @endif
     </script>
+@include('layouts.toast-js')
 @endsection

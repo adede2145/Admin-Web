@@ -170,7 +170,7 @@
                     <h5 class="modal-title">Edit Employee</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ route('employees.update', $employee->employee_id) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('employees.update', $employee->employee_id) }}" method="POST" enctype="multipart/form-data" class="employee-edit-form">
                     @csrf
                     @method('PUT')
                     <div class="modal-body">
@@ -603,10 +603,10 @@
             });
         @endif
 
-        // Handle all form submissions with AJAX for better UX
+        // Handle employee edit forms with AJAX for better UX
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle employee edit forms
-            document.querySelectorAll('form[action*="employees"]').forEach(form => {
+            // Only target edit forms, not the search form or delete helpers
+            document.querySelectorAll('form.employee-edit-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
                     
