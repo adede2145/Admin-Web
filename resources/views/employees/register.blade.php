@@ -247,7 +247,17 @@
 </div>
 
 <script type="module">
-    const bridgeBase = 'http://127.0.0.1:18420';
+    let bridgeBase = 'http://127.0.0.1:18420';
+    async function resolveBridgeBase() {
+        const candidates = [18420,18421,18422,18423,18424].map(p=>`http://127.0.0.1:${p}`);
+        for (const base of candidates) {
+            try {
+                const r = await fetch(`${base}/api/health/ping`, { cache: 'no-store', signal: AbortSignal.timeout(1500) });
+                if (r.ok) { bridgeBase = base; return base; }
+            } catch (_) { /* try next */ }
+        }
+        return candidates[0];
+    }
     const employeesIndexUrl = document.getElementById('fpUrls')?.getAttribute('data-index-url');
     const deviceStatus = document.getElementById('deviceStatus');
     const registerBtn = document.getElementById('registerBtn');
