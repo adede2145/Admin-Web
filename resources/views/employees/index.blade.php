@@ -164,61 +164,138 @@
     <!-- Edit Employee Modals -->
     @foreach($employees as $employee)
     <div class="modal fade" id="editEmployee{{ $employee->employee_id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                    <div class="modal-header">
-                    <h5 class="modal-title">Edit Employee</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                    <h5 class="modal-title fw-bold d-flex align-items-center">
+                        <i class="bi bi-person-lines-fill me-2 fs-5"></i>Edit Employee #{{ $employee->employee_id }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
                 </div>
                 <form action="{{ route('employees.update', $employee->employee_id) }}" method="POST" enctype="multipart/form-data" class="employee-edit-form">
                     @csrf
                     @method('PUT')
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Employee ID</label>
-                            <input type="text" class="form-control" value="#{{ $employee->employee_id }}" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Photo</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <img id="preview_{{ $employee->employee_id }}" src="{{ route('employees.photo', $employee->employee_id) }}" alt="Preview" class="rounded" style="width:80px;height:80px;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80?text=No+Photo';">
-                                <input type="file" name="photo" id="fileInput_{{ $employee->employee_id }}" accept="image/*" class="form-control" onchange="updatePreview({{ $employee->employee_id }}, this)">
+                    <div class="modal-body p-4" style="background: #fafbfc;">
+                        <div class="row g-4">
+                            <!-- Employee ID (Read-only) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-person-badge me-2 fs-6"></i>Employee ID
+                                </label>
+                                <input type="text" class="form-control form-control-lg border-2" 
+                                       value="#{{ $employee->employee_id }}" readonly
+                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
                             </div>
-                            <div class="form-text">Choose an image to update the employee photo.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" name="full_name" class="form-control" value="{{ $employee->full_name ?? '' }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Employment Type</label>
-                            <select name="employment_type" class="form-select" required>
-                                <option value="full_time" {{ $employee->employment_type === 'full_time' ? 'selected' : '' }}>Full Time</option>
-                                <option value="part_time" {{ $employee->employment_type === 'part_time' ? 'selected' : '' }}>Part Time</option>
-                                <option value="cos" {{ $employee->employment_type === 'cos' ? 'selected' : '' }}>COS</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Department</label>
-                            <select name="department_id" class="form-select" required>
-                                @foreach($departments as $dept)
-                                    <option value="{{ $dept->department_id }}" {{ $employee->department_id == $dept->department_id ? 'selected' : '' }}>
-                                        {{ $dept->department_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">RFID Code</label>
-                            <input type="text" class="form-control" value="{{ $employee->rfid_code ?? '' }}" readonly>
+
+                            <!-- Employment Type -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-briefcase me-2 fs-6"></i>Employment Type
+                                </label>
+                                <select name="employment_type" class="form-select form-select-lg border-2" required
+                                        style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                        onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                        onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                    <option value="full_time" {{ $employee->employment_type === 'full_time' ? 'selected' : '' }}>Full Time</option>
+                                    <option value="part_time" {{ $employee->employment_type === 'part_time' ? 'selected' : '' }}>Part Time</option>
+                                    <option value="cos" {{ $employee->employment_type === 'cos' ? 'selected' : '' }}>COS</option>
+                                </select>
+                            </div>
+
+                            <!-- Full Name -->
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-person-circle me-2 fs-6"></i>Full Name
+                                </label>
+                                <input type="text" name="full_name" class="form-control form-control-lg border-2" 
+                                       value="{{ $employee->full_name ?? '' }}" required
+                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                       onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                       onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                            </div>
+
+                            <!-- Department -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-building me-2 fs-6"></i>Department
+                                </label>
+                                <select name="department_id" class="form-select form-select-lg border-2" required
+                                        style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                        onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                        onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                    @foreach($departments as $dept)
+                                        <option value="{{ $dept->department_id }}" {{ $employee->department_id == $dept->department_id ? 'selected' : '' }}>
+                                            {{ $dept->department_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- RFID Code (Read-only) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-credit-card me-2 fs-6"></i>RFID Code
+                                </label>
+                                <input type="text" class="form-control form-control-lg border-2" 
+                                       value="{{ $employee->rfid_code ?? '' }}" readonly
+                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                            </div>
+
+                            <!-- Photo Upload Section -->
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold d-flex align-items-center mb-3" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-camera me-2 fs-6"></i>Profile Photo
+                                </label>
+                                <div class="d-flex align-items-center gap-4 p-3" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; border-style: dashed;">
+                                    <div class="position-relative">
+                                        <img id="preview_{{ $employee->employee_id }}" 
+                                             src="{{ route('employees.photo', $employee->employee_id) }}" 
+                                             alt="Preview" 
+                                             class="rounded-circle border-3 border-white shadow-sm" 
+                                             style="width: 100px; height: 100px; object-fit: cover;" 
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100?text=No+Photo';">
+                                        <div class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1" style="width: 32px; height: 32px;">
+                                            <i class="bi bi-camera text-white d-flex align-items-center justify-content-center" style="font-size: 14px;"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <input type="file" name="photo" id="fileInput_{{ $employee->employee_id }}" 
+                                               accept="image/*" class="form-control form-control-lg border-2" 
+                                               onchange="updatePreview({{ $employee->employee_id }}, this)"
+                                               style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                               onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                               onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                        <div class="form-text d-flex align-items-center mt-2" style="color: #6c757d; font-size: 0.875rem;">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            Choose an image to update the employee photo. Recommended: Square format, max 2MB.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer d-flex justify-content-between align-items-center">
-                        <a href="{{ route('employees.fingerprints.edit', $employee->employee_id) }}" class="btn btn-outline-success">
-                            <i class="bi bi-fingerprint me-1"></i> Edit Fingerprints
+                    <div class="modal-footer border-0 p-4" style="background: white;">
+                        <a href="{{ route('employees.fingerprints.edit', $employee->employee_id) }}" 
+                           class="btn btn-lg px-4 fw-semibold"
+                           style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);"
+                           onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(40, 167, 69, 0.4)'"
+                           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(40, 167, 69, 0.3)'">
+                            <i class="bi bi-fingerprint me-2"></i>Edit Fingerprints
                         </a>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Employee</button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-lg px-4" data-bs-dismiss="modal"
+                                    style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                    onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                    onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                                    style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                                <i class="bi bi-check-circle me-2"></i>Update Employee
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -227,58 +304,134 @@
 
     <!-- View Attendance Modal -->
     <div class="modal fade" id="viewAttendance{{ $employee->employee_id }}" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Attendance History - {{ $employee->full_name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                    <h5 class="modal-title fw-bold d-flex align-items-center">
+                        <i class="bi bi-clock-history me-2 fs-5"></i>Attendance History - {{ $employee->full_name }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4" style="background: #fafbfc;">
+                    <div class="mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); border-left: 4px solid #2196f3;">
+                                    <i class="bi bi-calendar-check fs-4 me-3" style="color: #1976d2;"></i>
+                                    <div>
+                                        <div class="fw-semibold" style="color: #1565c0;">Total Records</div>
+                                        <div class="fs-5 fw-bold" style="color: #0d47a1;">{{ $employee->attendanceLogs()->count() }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7); border-left: 4px solid #9c27b0;">
+                                    <i class="bi bi-clock fs-4 me-3" style="color: #7b1fa2;"></i>
+                                    <div>
+                                        <div class="fw-semibold" style="color: #6a1b9a;">Recent Activity</div>
+                                        <div class="fs-6" style="color: #4a148c;">{{ $employee->attendanceLogs()->latest('time_in')->first() ? \Carbon\Carbon::parse($employee->attendanceLogs()->latest('time_in')->first()->time_in)->diffForHumans() : 'No records' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center p-3 rounded-3" style="background: linear-gradient(135deg, #e8f5e8, #c8e6c9); border-left: 4px solid #4caf50;">
+                                    <i class="bi bi-person-check fs-4 me-3" style="color: #388e3c;"></i>
+                                    <div>
+                                        <div class="fw-semibold" style="color: #2e7d32;">Employee ID</div>
+                                        <div class="fs-6 fw-bold" style="color: #1b5e20;">#{{ $employee->employee_id }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
+                        <table class="table table-hover align-middle" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <thead style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Time In</th>
-                                    <th>Time Out</th>
-                                    <th>Method</th>
-                                    <th>Actions</th>
+                                    <th class="fw-semibold py-3 px-4" style="color: var(--aa-maroon); border: none;">
+                                        <i class="bi bi-calendar3 me-2"></i>Date
+                                    </th>
+                                    <th class="fw-semibold py-3 px-4" style="color: var(--aa-maroon); border: none;">
+                                        <i class="bi bi-arrow-right-circle me-2"></i>Time In
+                                    </th>
+                                    <th class="fw-semibold py-3 px-4" style="color: var(--aa-maroon); border: none;">
+                                        <i class="bi bi-arrow-left-circle me-2"></i>Time Out
+                                    </th>
+                                    <th class="fw-semibold py-3 px-4" style="color: var(--aa-maroon); border: none;">
+                                        <i class="bi bi-gear me-2"></i>Method
+                                    </th>
+                                    <th class="fw-semibold py-3 px-4 text-center" style="color: var(--aa-maroon); border: none;">
+                                        <i class="bi bi-tools me-2"></i>Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($employee->attendanceLogs()->latest('time_in')->take(10)->get() as $log)
-                                    <tr>
-                                        <td>{{ \Carbon\Carbon::parse($log->time_in)->format('M d, Y') }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($log->time_in)->format('h:i A') }}</td>
-                                        <td>
+                                    <tr style="transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='white'">
+                                        <td class="py-3 px-4 fw-medium" style="border: none;">
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-calendar-date me-2" style="color: #6c757d;"></i>
+                                                {{ \Carbon\Carbon::parse($log->time_in)->format('M d, Y') }}
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4" style="border: none;">
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill">
+                                                <i class="bi bi-clock me-1"></i>
+                                                {{ \Carbon\Carbon::parse($log->time_in)->format('h:i A') }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4" style="border: none;">
                                             @if($log->time_out)
-                                                {{ \Carbon\Carbon::parse($log->time_out)->format('h:i A') }}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill">
+                                                    <i class="bi bi-clock me-1"></i>
+                                                    {{ \Carbon\Carbon::parse($log->time_out)->format('h:i A') }}
+                                                </span>
                                             @else
-                                                <span class="badge bg-warning">Not Set</span>
+                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-2 rounded-pill">
+                                                    <i class="bi bi-exclamation-triangle me-1"></i>Not Set
+                                                </span>
                                             @endif
                                         </td>
-                                        <td>
-                                            <span class="badge bg-{{ $log->method === 'rfid' ? 'primary' : 'success' }}">
+                                        <td class="py-3 px-4" style="border: none;">
+                                            <span class="badge {{ $log->method === 'rfid' ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' }} px-3 py-2 rounded-pill">
+                                                <i class="bi bi-{{ $log->method === 'rfid' ? 'credit-card' : 'fingerprint' }} me-1"></i>
                                                 {{ ucfirst($log->method) }}
                                             </span>
                                         </td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editAttendance{{ $log->log_id }}">
-                                                <i class="bi bi-pencil"></i>
+                                        <td class="py-3 px-4 text-center" style="border: none;">
+                                            <button class="btn btn-sm px-3 py-2 rounded-pill" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editAttendance{{ $log->log_id }}"
+                                                    style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white; border: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(86, 0, 0, 0.2);"
+                                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(86, 0, 0, 0.3)'"
+                                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(86, 0, 0, 0.2)'">
+                                                <i class="bi bi-pencil-square me-1"></i>Edit
                                             </button>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">No attendance records found</td>
+                                        <td colspan="5" class="text-center py-5" style="border: none;">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
+                                                <h6 class="text-muted mb-2">No attendance records found</h6>
+                                                <small class="text-muted">This employee hasn't logged any attendance yet.</small>
+                                            </div>
+                                        </td>
                                     </tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="modal-footer border-0 p-4" style="background: white;">
+                    <button type="button" class="btn btn-lg px-4 fw-semibold" data-bs-dismiss="modal"
+                            style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white; border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                        <i class="bi bi-check-circle me-2"></i>Close
+                    </button>
                 </div>
             </div>
         </div>
@@ -289,47 +442,97 @@
     @foreach($employees as $employee)
         @foreach($employee->attendanceLogs()->latest('time_in')->take(10)->get() as $log)
         <div class="modal fade" id="editAttendance{{ $log->log_id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Edit Attendance Record</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                    <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                        <h5 class="modal-title fw-bold d-flex align-items-center">
+                            <i class="bi bi-pencil-square me-2 fs-5"></i>Edit Attendance Record
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
                     </div>
                     <form action="{{ route('attendance.update', $log->log_id) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Employee</label>
-                                <input type="text" class="form-control" value="{{ $employee->full_name ?? 'N/A' }}" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Date</label>
-                                <input type="date" name="date" class="form-control" 
-                                       value="{{ \Carbon\Carbon::parse($log->time_in)->format('Y-m-d') }}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Time In</label>
-                                <input type="time" name="time_in" class="form-control" 
-                                       value="{{ \Carbon\Carbon::parse($log->time_in)->format('H:i') }}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Time Out</label>
-                                <input type="time" name="time_out" class="form-control" 
-                                       value="{{ $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('H:i') : '' }}">
-                                <div class="form-text">Leave empty if employee hasn't timed out yet</div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Method</label>
-                                <select name="method" class="form-select" required>
-                                    <option value="rfid" {{ $log->method === 'rfid' ? 'selected' : '' }}>RFID</option>
-                                    <option value="fingerprint" {{ $log->method === 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
-                                </select>
+                        <div class="modal-body p-4" style="background: #fafbfc;">
+                            <div class="row g-4">
+                                <!-- Employee (Read-only) -->
+                                <div class="col-md-12">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-person-circle me-2 fs-6"></i>Employee
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg border-2" 
+                                           value="{{ $employee->full_name ?? 'N/A' }}" readonly
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                                </div>
+
+                                <!-- Date -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-calendar3 me-2 fs-6"></i>Date
+                                    </label>
+                                    <input type="date" name="date" class="form-control form-control-lg border-2" 
+                                           value="{{ \Carbon\Carbon::parse($log->time_in)->format('Y-m-d') }}" required
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                </div>
+
+                                <!-- Method -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-gear me-2 fs-6"></i>Method
+                                    </label>
+                                    <select name="method" class="form-select form-select-lg border-2" required
+                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                        <option value="rfid" {{ $log->method === 'rfid' ? 'selected' : '' }}>RFID</option>
+                                        <option value="fingerprint" {{ $log->method === 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
+                                    </select>
+                                </div>
+
+                                <!-- Time In -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-arrow-right-circle me-2 fs-6"></i>Time In
+                                    </label>
+                                    <input type="time" name="time_in" class="form-control form-control-lg border-2" 
+                                           value="{{ \Carbon\Carbon::parse($log->time_in)->format('H:i') }}" required
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                </div>
+
+                                <!-- Time Out -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-arrow-left-circle me-2 fs-6"></i>Time Out
+                                    </label>
+                                    <input type="time" name="time_out" class="form-control form-control-lg border-2" 
+                                           value="{{ $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('H:i') : '' }}"
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                    <div class="form-text d-flex align-items-center mt-2" style="color: #6c757d; font-size: 0.875rem;">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Leave empty if employee hasn't timed out yet
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Update Record</button>
+                        <div class="modal-footer border-0 p-4" style="background: white;">
+                            <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
+                                    style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                    onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                    onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                                    style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                                <i class="bi bi-check-circle me-2"></i>Update Record
+                            </button>
                         </div>
                     </form>
                 </div>

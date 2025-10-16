@@ -1,4 +1,5 @@
 @extends('layouts.theme')
+@section('title', 'Departments')
 @section('content')
     {{-- Security check: Only super admins can access this page --}}
     @if(!auth()->check() || !auth()->user()->role || auth()->user()->role->role_name !== 'super_admin')

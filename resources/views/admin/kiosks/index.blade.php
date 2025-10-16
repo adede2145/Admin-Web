@@ -1,4 +1,5 @@
 @extends('layouts.theme')
+@section('title', 'Kiosks')
 @section('content')
 
     <div class="container-fluid">

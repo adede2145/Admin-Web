@@ -342,29 +342,56 @@
                         </tr>
                         <!-- Edit Admin Modal -->
                         <div class="modal fade" id="editAdminModal_{{ $admin->admin_id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Admin #{{ $admin->admin_id }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                                    <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                                        <h5 class="modal-title fw-bold d-flex align-items-center">
+                                            <i class="bi bi-person-gear me-2 fs-5"></i>Edit Admin #{{ $admin->admin_id }}
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
                                     </div>
                                     <form action="{{ route('admin.users.update', $admin->admin_id) }}" method="POST">
                                         @csrf
                                         @method('PUT')
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Username</label>
-                                                <input type="text" name="username" class="form-control" value="{{ $admin->username }}" required>
+                                        <div class="modal-body p-4" style="background: #fafbfc;">
+                                            <div class="mb-4">
+                                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                                    <i class="bi bi-person-circle me-2 fs-6"></i>Username
+                                                </label>
+                                                <input type="text" name="username" class="form-control form-control-lg border-2" 
+                                                       value="{{ $admin->username }}" required
+                                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                                       onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                                       onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label">New Password (optional)</label>
-                                                <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
-                                                <div class="form-text">Min 6 chars. Leave blank to keep existing password.</div>
+                                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                                    <i class="bi bi-shield-lock me-2 fs-6"></i>New Password <span class="text-muted fw-normal">(optional)</span>
+                                                </label>
+                                                <input type="password" name="password" class="form-control form-control-lg border-2" 
+                                                       placeholder="Leave blank to keep current"
+                                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                                       onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                                       onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                                <div class="form-text d-flex align-items-center mt-2" style="color: #6c757d; font-size: 0.875rem;">
+                                                    <i class="bi bi-info-circle me-2"></i>
+                                                    Min 6 characters. Leave blank to keep existing password.
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                                        <div class="modal-footer border-0 p-4" style="background: white;">
+                                            <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
+                                                    style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                                    onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                                    onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                                                <i class="bi bi-x-circle me-2"></i>Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                                                    style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                                            </button>
                                         </div>
                                     </form>
                                 </div>

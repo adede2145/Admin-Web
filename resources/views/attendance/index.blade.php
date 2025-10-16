@@ -683,48 +683,98 @@
 <!-- Edit Attendance Modals -->
 @foreach($attendanceLogs as $log)
 <div class="modal fade" id="editAttendance{{ $log->log_id }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
-                <h5 class="modal-title text-white mb-0">Edit Attendance Record</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                <h5 class="modal-title fw-bold d-flex align-items-center">
+                    <i class="bi bi-pencil-square me-2 fs-5"></i>Edit Attendance Record
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
             </div>
             <form action="{{ route('attendance.update', $log->log_id) }}" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Employee</label>
-                        <input type="text" class="form-control" value="{{ $log->employee->full_name ?? 'N/A' }}" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Date</label>
-                        <input type="date" name="date" class="form-control"
-                            value="{{ \Carbon\Carbon::parse($log->time_in)->format('Y-m-d') }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Time In</label>
-                        <input type="time" name="time_in" class="form-control"
-                            value="{{ \Carbon\Carbon::parse($log->time_in)->format('H:i') }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Time Out</label>
-                        <input type="time" name="time_out" class="form-control"
-                            value="{{ $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('H:i') : '' }}">
-                        <div class="form-text">Leave empty if employee hasn't timed out yet</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Method</label>
-                        <select name="method" class="form-select" required>
-                            <option value="rfid" {{ $log->method === 'rfid' ? 'selected' : '' }}>RFID</option>
-                            <option value="fingerprint" {{ $log->method === 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
-                            <option value="manual" {{ $log->method === 'manual' ? 'selected' : '' }}>Manual</option>
-                        </select>
+                <div class="modal-body p-4" style="background: #fafbfc;">
+                    <div class="row g-4">
+                        <!-- Employee (Read-only) -->
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-person-circle me-2 fs-6"></i>Employee
+                            </label>
+                            <input type="text" class="form-control form-control-lg border-2" 
+                                   value="{{ $log->employee->full_name ?? 'N/A' }}" readonly
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                        </div>
+
+                        <!-- Date -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-calendar3 me-2 fs-6"></i>Date
+                            </label>
+                            <input type="date" name="date" class="form-control form-control-lg border-2"
+                                   value="{{ \Carbon\Carbon::parse($log->time_in)->format('Y-m-d') }}" required
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                   onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                   onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                        </div>
+
+                        <!-- Method -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-gear me-2 fs-6"></i>Method
+                            </label>
+                            <select name="method" class="form-select form-select-lg border-2" required
+                                    style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                    onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                    onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                <option value="rfid" {{ $log->method === 'rfid' ? 'selected' : '' }}>RFID</option>
+                                <option value="fingerprint" {{ $log->method === 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
+                                <option value="manual" {{ $log->method === 'manual' ? 'selected' : '' }}>Manual</option>
+                            </select>
+                        </div>
+
+                        <!-- Time In -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-arrow-right-circle me-2 fs-6"></i>Time In
+                            </label>
+                            <input type="time" name="time_in" class="form-control form-control-lg border-2"
+                                   value="{{ \Carbon\Carbon::parse($log->time_in)->format('H:i') }}" required
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                   onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                   onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                        </div>
+
+                        <!-- Time Out -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-arrow-left-circle me-2 fs-6"></i>Time Out
+                            </label>
+                            <input type="time" name="time_out" class="form-control form-control-lg border-2"
+                                   value="{{ $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('H:i') : '' }}"
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                   onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                   onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                            <div class="form-text d-flex align-items-center mt-2" style="color: #6c757d; font-size: 0.875rem;">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Leave empty if employee hasn't timed out yet
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Record</button>
+                <div class="modal-footer border-0 p-4" style="background: white;">
+                    <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
+                            style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                            onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                            onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                            style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                        <i class="bi bi-check-circle me-2"></i>Update Record
+                    </button>
                 </div>
             </form>
         </div>
@@ -999,13 +1049,18 @@
         if (e.target.closest('.delete-attendance-btn')) {
             e.preventDefault();
             const logId = e.target.closest('.delete-attendance-btn').dataset.logId;
+            console.log('Delete button clicked, logId:', logId); // Debug log
             deleteAttendance(logId);
         }
     });
 
     function deleteAttendance(logId) {
+        console.log('deleteAttendance called with logId:', logId); // Debug log
+        
         // Store the logId for later use
         document.getElementById('confirmDeleteBtn').dataset.logId = logId;
+        
+        console.log('Stored logId in confirmDeleteBtn:', document.getElementById('confirmDeleteBtn').dataset.logId); // Debug log
         
         // Show the custom delete modal
         const modal = new bootstrap.Modal(document.getElementById('deleteAttendanceModal'));
@@ -1014,12 +1069,21 @@
 
     function confirmDeleteAttendance() {
         const logId = document.getElementById('confirmDeleteBtn').dataset.logId;
+        console.log('confirmDeleteAttendance called with logId:', logId); // Debug log
+        
+        if (!logId) {
+            console.error('No logId found in confirmDeleteBtn dataset');
+            alert('Error: No attendance record ID found. Please try again.');
+            return;
+        }
         
         try {
             // Create a form and submit it
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ route("attendance.destroy", ":logId") }}'.replace(':logId', logId);
+            
+            console.log('Form action URL:', form.action); // Debug log
 
             const csrfToken = document.createElement('input');
             csrfToken.type = 'hidden';
@@ -1034,6 +1098,8 @@
             form.appendChild(csrfToken);
             form.appendChild(methodField);
             document.body.appendChild(form);
+            
+            console.log('Submitting delete form for logId:', logId); // Debug log
             form.submit();
         } catch (error) {
             console.error('Error deleting attendance record:', error);
@@ -1087,10 +1153,20 @@
 
     // Cool notification functions
     function showNotification(type, message) {
+        console.log('Showing notification:', type, message); // Debug log
+        
         const toastEl = document.getElementById(type + 'Toast');
         const messageEl = document.getElementById(type + 'Message');
 
-        if (!toastEl || !messageEl) return;
+        if (!toastEl) {
+            console.error('Toast element not found:', type + 'Toast');
+            return;
+        }
+        
+        if (!messageEl) {
+            console.error('Message element not found:', type + 'Message');
+            return;
+        }
 
         messageEl.textContent = message;
 
@@ -1107,20 +1183,67 @@
             toastEl.style.transition = 'transform 0.3s ease-in-out';
             toastEl.style.transform = 'translateX(0)';
         }, 100);
+        
+        console.log('Notification shown successfully');
     }
 
     // Show notifications based on session messages
-    const flashSuccessMessage = bladePayload?.dataset.success || '';
-    const flashErrorMessage = bladePayload?.dataset.error || '';
-    if (flashSuccessMessage) {
-        document.addEventListener('DOMContentLoaded', function() {
-            showNotification('success', flashSuccessMessage);
+    document.addEventListener('DOMContentLoaded', function() {
+        const bladePayload = document.getElementById('bladePayload');
+        console.log('BladePayload element:', bladePayload); // Debug log
+        console.log('BladePayload dataset:', bladePayload?.dataset); // Debug log
+        
+        const flashSuccessMessage = bladePayload?.dataset.success || '';
+        const flashErrorMessage = bladePayload?.dataset.error || '';
+        
+        console.log('Flash messages - Success:', flashSuccessMessage, 'Error:', flashErrorMessage); // Debug log
+        
+        if (flashSuccessMessage) {
+            // Small delay to ensure page is fully loaded
+            setTimeout(() => {
+                showNotification('success', flashSuccessMessage);
+            }, 500);
+        }
+        
+        if (flashErrorMessage) {
+            // Small delay to ensure page is fully loaded
+            setTimeout(() => {
+                showNotification('error', flashErrorMessage);
+            }, 500);
+        }
+        
+        // Test delete button functionality
+        testDeleteButtons();
+    });
+    
+    // Test function to verify delete buttons are working
+    function testDeleteButtons() {
+        const deleteButtons = document.querySelectorAll('.delete-attendance-btn');
+        console.log('Found delete buttons:', deleteButtons.length); // Debug log
+        
+        deleteButtons.forEach((btn, index) => {
+            const logId = btn.dataset.logId;
+            console.log(`Delete button ${index + 1}: logId = ${logId}`); // Debug log
+            
+            if (!logId) {
+                console.warn(`Delete button ${index + 1} has no logId data attribute`);
+            }
         });
-    }
-    if (flashErrorMessage) {
-        document.addEventListener('DOMContentLoaded', function() {
-            showNotification('error', flashErrorMessage);
-        });
+        
+        // Check if modal elements exist
+        const deleteModal = document.getElementById('deleteAttendanceModal');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        console.log('Delete modal exists:', !!deleteModal); // Debug log
+        console.log('Confirm button exists:', !!confirmBtn); // Debug log
+        
+        if (!deleteModal) {
+            console.error('Delete modal not found!');
+        }
+        
+        if (!confirmBtn) {
+            console.error('Confirm delete button not found!');
+        }
     }
 
     // Photo viewing functions with RFID verification
