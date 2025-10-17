@@ -1325,6 +1325,77 @@
             .then(response => response.text())
             .then(html => {
                 document.getElementById('dtrHistoryModalBody').innerHTML = html;
+                // Re-initialize delete button handlers after content is loaded
+                initializeDTRDeleteButtons();
+                // Convert pagination links for AJAX handling
+                const paginationContainer = document.getElementById('dtrPaginationContainer');
+                if (paginationContainer) {
+                    const paginationLinks = paginationContainer.querySelectorAll('.pagination a');
+                    
+                    // Define the onclick handler function
+                    function handlePaginationClick(originalHref) {
+                        return function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            
+                            console.log('Direct onclick handler triggered for:', originalHref);
+                            
+                            // Show loading state
+                            const modalBody = document.getElementById('dtrHistoryModalBody');
+                            const originalContent = modalBody.innerHTML;
+                            modalBody.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-maroon" role="status"></div><div class="mt-2">Loading page...</div></div>';
+                            
+                            fetch(originalHref)
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error('Network response was not ok');
+                                    }
+                                    return response.text();
+                                })
+                                .then(html => {
+                                    modalBody.innerHTML = html;
+                                    // Re-initialize any event handlers that might be needed
+                                    if (typeof initializeDTRDeleteButtons === 'function') {
+                                        initializeDTRDeleteButtons();
+                                    }
+                                    // Convert pagination links for AJAX handling (recursive)
+                                    const newPaginationContainer = document.getElementById('dtrPaginationContainer');
+                                    if (newPaginationContainer) {
+                                        const newPaginationLinks = newPaginationContainer.querySelectorAll('.pagination a');
+                                        newPaginationLinks.forEach(function(newLink) {
+                                            if (newLink.href && !newLink.dataset.url) {
+                                                const newOriginalHref = newLink.href;
+                                                newLink.href = 'javascript:void(0)';
+                                                newLink.dataset.url = newOriginalHref;
+                                                newLink.style.cursor = 'pointer';
+                                                newLink.onclick = handlePaginationClick(newOriginalHref);
+                                            }
+                                        });
+                                    }
+                                    console.log('DTR Pagination loaded successfully via direct onclick');
+                                })
+                                .catch(error => {
+                                    console.error('Error loading pagination:', error);
+                                    modalBody.innerHTML = originalContent;
+                                    alert('Error loading page. Please try again.');
+                                });
+                            
+                            return false;
+                        };
+                    }
+                    
+                    paginationLinks.forEach(function(link) {
+                        if (link.href && !link.dataset.url) {
+                            const originalHref = link.href;
+                            link.href = 'javascript:void(0)';
+                            link.dataset.url = originalHref;
+                            link.style.cursor = 'pointer';
+                            link.onclick = handlePaginationClick(originalHref);
+                        }
+                    });
+                    console.log('Initial modal pagination links converted:', paginationLinks.length);
+                }
             });
         modal.show();
     });
@@ -1402,6 +1473,9 @@
         
         // Test delete button functionality
         testDeleteButtons();
+        
+        // Initialize DTR delete buttons (for when modal is loaded)
+        initializeDTRDeleteButtons();
     });
     
     // Test function to verify delete buttons are working
@@ -1431,6 +1505,89 @@
         
         if (!confirmBtn) {
             console.error('Confirm delete button not found!');
+        }
+    }
+    
+    // DTR Delete Functions
+    function initializeDTRDeleteButtons() {
+        // Remove any existing event listeners to prevent duplicates
+        document.querySelectorAll('.delete-dtr-report-btn').forEach(btn => {
+            btn.removeEventListener('click', handleDTRDeleteClick);
+        });
+        
+        // Add event listeners to DTR delete buttons
+        document.querySelectorAll('.delete-dtr-report-btn').forEach(btn => {
+            btn.addEventListener('click', handleDTRDeleteClick);
+        });
+        
+        console.log('Initialized DTR delete buttons:', document.querySelectorAll('.delete-dtr-report-btn').length);
+    }
+    
+    function handleDTRDeleteClick(e) {
+        e.preventDefault();
+        const reportId = e.target.closest('.delete-dtr-report-btn').dataset.reportId;
+        const reportType = e.target.closest('.delete-dtr-report-btn').dataset.reportType;
+        const generatedOn = e.target.closest('.delete-dtr-report-btn').dataset.generatedOn;
+        
+        console.log('DTR delete button clicked:', { reportId, reportType, generatedOn });
+        deleteDTRReport(reportId, reportType, generatedOn);
+    }
+    
+    function deleteDTRReport(reportId, reportType, generatedOn) {
+        console.log('deleteDTRReport called:', { reportId, reportType, generatedOn });
+        
+        // Store the reportId for later use
+        document.getElementById('confirmDeleteDTRReportBtn').dataset.reportId = reportId;
+        
+        // Update modal content with report-specific information
+        document.getElementById('deleteDTRReportMessage').innerHTML = 
+            `Are you sure you want to delete this <strong>${reportType}</strong> DTR report?<br><strong class="text-danger">This action cannot be undone.</strong>`;
+        
+        document.getElementById('deleteDTRReportWarning').textContent = 
+            `This will permanently remove the DTR report from the system. Generated on: ${generatedOn}`;
+        
+        // Show the custom delete modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteDTRReportModal'));
+        modal.show();
+    }
+    
+    function confirmDeleteDTRReport() {
+        const reportId = document.getElementById('confirmDeleteDTRReportBtn').dataset.reportId;
+        console.log('confirmDeleteDTRReport called with reportId:', reportId);
+        
+        if (!reportId) {
+            console.error('No reportId found in confirmDeleteDTRReportBtn dataset');
+            alert('Error: No DTR report ID found. Please try again.');
+            return;
+        }
+        
+        try {
+            // Create a form and submit it
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("dtr.delete", ":reportId") }}'.replace(':reportId', reportId);
+            
+            console.log('Form action URL:', form.action);
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+
+            form.appendChild(csrfToken);
+            form.appendChild(methodField);
+            document.body.appendChild(form);
+            
+            console.log('Submitting delete form for reportId:', reportId);
+            form.submit();
+        } catch (error) {
+            console.error('Error deleting DTR report:', error);
+            alert('An error occurred while trying to delete the DTR report. Please try again.');
         }
     }
 
@@ -1899,6 +2056,46 @@
                 </button>
                 <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteAttendance()">
                     <i class="bi bi-trash me-1"></i>Delete Record
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Delete DTR Report Modal -->
+<div class="modal fade" id="deleteDTRReportModal" tabindex="-1" aria-labelledby="deleteDTRReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
+                <h5 class="modal-title" id="deleteDTRReportModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete DTR Report
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-danger mb-3">Confirm Deletion</h5>
+                    <p class="text-muted mb-0" id="deleteDTRReportMessage">
+                        Are you sure you want to delete this DTR report? 
+                        <br><strong class="text-danger">This action cannot be undone.</strong>
+                    </p>
+                </div>
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small id="deleteDTRReportWarning">This will permanently remove the DTR report from the system.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteDTRReportBtn" onclick="confirmDeleteDTRReport()">
+                    <i class="bi bi-trash me-1"></i>Delete Report
                 </button>
             </div>
         </div>

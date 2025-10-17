@@ -151,13 +151,9 @@
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 @if($report->status === 'generated')
-                                <form method="POST" action="{{ route('dtr.delete', $report->report_id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this DTR report? This action cannot be undone.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Report">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-danger btn-sm delete-dtr-report-btn" data-report-id="{{ $report->report_id }}" data-report-type="{{ $report->report_type }}" data-generated-on="{{ $report->formatted_generated_on }}" title="Delete Report">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                                 @endif
                             </div>
                         </td>
@@ -185,9 +181,70 @@
             @endif
         </div>
         @if($reports->hasPages())
-            <div>
+            <div id="dtrPaginationContainer">
                 {{ $reports->onEachSide(1)->appends(request()->query())->links('pagination::bootstrap-5') }}
             </div>
+            <script>
+                // Convert pagination links to use JavaScript instead of href - run immediately
+                (function convertPaginationLinks() {
+                    const paginationContainer = document.getElementById('dtrPaginationContainer');
+                    if (paginationContainer) {
+                        const paginationLinks = paginationContainer.querySelectorAll('.pagination a');
+                        
+                        // Define the onclick handler function
+                        function handlePaginationClick(originalHref) {
+                            return function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                
+                                console.log('Direct onclick handler triggered for:', originalHref);
+                                
+                                // Show loading state
+                                const modalBody = document.getElementById('dtrHistoryModalBody');
+                                const originalContent = modalBody.innerHTML;
+                                modalBody.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-maroon" role="status"></div><div class="mt-2">Loading page...</div></div>';
+                                
+                                fetch(originalHref)
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            throw new Error('Network response was not ok');
+                                        }
+                                        return response.text();
+                                    })
+                                    .then(html => {
+                                        modalBody.innerHTML = html;
+                                        // Re-initialize any event handlers that might be needed
+                                        if (typeof initializeDTRDeleteButtons === 'function') {
+                                            initializeDTRDeleteButtons();
+                                        }
+                                        // Convert pagination links for AJAX handling
+                                        convertPaginationLinks(); // Recursive call to convert new links
+                                        console.log('DTR Pagination loaded successfully via direct onclick');
+                                    })
+                                    .catch(error => {
+                                        console.error('Error loading pagination:', error);
+                                        modalBody.innerHTML = originalContent;
+                                        alert('Error loading page. Please try again.');
+                                    });
+                                
+                                return false;
+                            };
+                        }
+                        
+                        paginationLinks.forEach(function(link) {
+                            if (link.href && !link.dataset.url) {
+                                const originalHref = link.href;
+                                link.href = 'javascript:void(0)';
+                                link.dataset.url = originalHref;
+                                link.style.cursor = 'pointer';
+                                // Add onclick handler as backup
+                                link.onclick = handlePaginationClick(originalHref);
+                            }
+                        });
+                    }
+                })();
+            </script>
         @endif
     </div>
 </div>
@@ -203,6 +260,23 @@ if (dtrHistoryFilterForm) {
             .then(response => response.text())
             .then(html => {
                 document.getElementById('dtrHistoryModalBody').innerHTML = html;
+                // Re-initialize delete button handlers after content is loaded
+                if (typeof initializeDTRDeleteButtons === 'function') {
+                    initializeDTRDeleteButtons();
+                }
+                // Convert pagination links for AJAX handling
+                const paginationContainer = document.getElementById('dtrPaginationContainer');
+                if (paginationContainer) {
+                    const paginationLinks = paginationContainer.querySelectorAll('.pagination a');
+                    paginationLinks.forEach(function(link) {
+                        if (link.href && !link.dataset.url) {
+                            const originalHref = link.href;
+                            link.href = 'javascript:void(0)';
+                            link.dataset.url = originalHref;
+                            link.style.cursor = 'pointer';
+                        }
+                    });
+                }
             });
     };
     document.getElementById('dtrHistoryResetBtn').onclick = function() {
@@ -210,6 +284,23 @@ if (dtrHistoryFilterForm) {
             .then(response => response.text())
             .then(html => {
                 document.getElementById('dtrHistoryModalBody').innerHTML = html;
+                // Re-initialize delete button handlers after content is loaded
+                if (typeof initializeDTRDeleteButtons === 'function') {
+                    initializeDTRDeleteButtons();
+                }
+                // Convert pagination links for AJAX handling
+                const paginationContainer = document.getElementById('dtrPaginationContainer');
+                if (paginationContainer) {
+                    const paginationLinks = paginationContainer.querySelectorAll('.pagination a');
+                    paginationLinks.forEach(function(link) {
+                        if (link.href && !link.dataset.url) {
+                            const originalHref = link.href;
+                            link.href = 'javascript:void(0)';
+                            link.dataset.url = originalHref;
+                            link.style.cursor = 'pointer';
+                        }
+                    });
+                }
             });
     };
 }
@@ -225,16 +316,62 @@ if (dtrHistoryFilterForm) {
     });
 })();
 
-// Handle pagination clicks in modal
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.pagination a')) {
-        e.preventDefault();
-        const url = e.target.closest('a').href;
+// Handle pagination clicks in modal - use more specific targeting with immediate execution
+(function() {
+    console.log('Setting up DTR pagination event listener');
+    
+    document.addEventListener('click', function(e) {
+        // Check if click is within the DTR pagination container
+        const paginationLink = e.target.closest('#dtrPaginationContainer .pagination a');
+        if (paginationLink) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const link = paginationLink;
+            const url = link.dataset.url || link.href;
+            console.log('DTR Pagination clicked:', url); // Debug log
+            console.log('Modal pagination working - staying within modal instead of redirecting');
+        
+        // Show loading state
+        const modalBody = document.getElementById('dtrHistoryModalBody');
+        const originalContent = modalBody.innerHTML;
+        modalBody.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-maroon" role="status"></div><div class="mt-2">Loading page...</div></div>';
+        
         fetch(url)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
             .then(html => {
-                document.getElementById('dtrHistoryModalBody').innerHTML = html;
+                modalBody.innerHTML = html;
+                // Re-initialize any event handlers that might be needed
+                if (typeof initializeDTRDeleteButtons === 'function') {
+                    initializeDTRDeleteButtons();
+                }
+                // Convert pagination links for AJAX handling
+                const paginationContainer = document.getElementById('dtrPaginationContainer');
+                if (paginationContainer) {
+                    const paginationLinks = paginationContainer.querySelectorAll('.pagination a');
+                    paginationLinks.forEach(function(link) {
+                        if (link.href && !link.dataset.url) {
+                            const originalHref = link.href;
+                            link.href = 'javascript:void(0)';
+                            link.dataset.url = originalHref;
+                            link.style.cursor = 'pointer';
+                        }
+                    });
+                }
+                console.log('DTR Pagination loaded successfully');
+            })
+            .catch(error => {
+                console.error('Error loading pagination:', error);
+                modalBody.innerHTML = originalContent;
+                alert('Error loading page. Please try again.');
             });
-    }
-});
+        }
+    });
+})();
 </script>

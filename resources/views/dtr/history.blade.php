@@ -148,13 +148,9 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     @if($report->status === 'generated')
-                                    <form method="POST" action="{{ route('dtr.delete', $report->report_id) }}" style="display: inline;" class="delete-report-form" data-report-id="{{ $report->report_id }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Report">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-outline-danger btn-sm delete-dtr-report-btn" data-report-id="{{ $report->report_id }}" data-report-type="{{ $report->report_type }}" data-generated-on="{{ $report->formatted_generated_on }}" title="Delete Report">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                     @endif
                                 </div>
                             </td>
@@ -247,21 +243,135 @@
 </script>
 @endif
 
+<!-- Custom Delete DTR Report Modal -->
+<div class="modal fade" id="deleteDTRReportModal" tabindex="-1" aria-labelledby="deleteDTRReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
+                <h5 class="modal-title" id="deleteDTRReportModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete DTR Report
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-danger mb-3">Confirm Deletion</h5>
+                    <p class="text-muted mb-0" id="deleteDTRReportMessage">
+                        Are you sure you want to delete this DTR report? 
+                        <br><strong class="text-danger">This action cannot be undone.</strong>
+                    </p>
+                </div>
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small id="deleteDTRReportWarning">This will permanently remove the DTR report from the system.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteDTRReportBtn" onclick="confirmDeleteDTRReport()">
+                    <i class="bi bi-trash me-1"></i>Delete Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Delete report confirmation
-        const deleteForms = document.querySelectorAll('.delete-report-form');
-        deleteForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const reportId = this.dataset.reportId;
-                if (confirm('Are you sure you want to delete this DTR report? This action cannot be undone.')) {
-                    this.submit();
-                }
-            });
-        });
+        // Initialize DTR delete buttons
+        initializeDTRDeleteButtons();
     });
+    
+    // DTR Delete Functions
+    function initializeDTRDeleteButtons() {
+        // Remove any existing event listeners to prevent duplicates
+        document.querySelectorAll('.delete-dtr-report-btn').forEach(btn => {
+            btn.removeEventListener('click', handleDTRDeleteClick);
+        });
+        
+        // Add event listeners to DTR delete buttons
+        document.querySelectorAll('.delete-dtr-report-btn').forEach(btn => {
+            btn.addEventListener('click', handleDTRDeleteClick);
+        });
+        
+        console.log('Initialized DTR delete buttons:', document.querySelectorAll('.delete-dtr-report-btn').length);
+    }
+    
+    function handleDTRDeleteClick(e) {
+        e.preventDefault();
+        const reportId = e.target.closest('.delete-dtr-report-btn').dataset.reportId;
+        const reportType = e.target.closest('.delete-dtr-report-btn').dataset.reportType;
+        const generatedOn = e.target.closest('.delete-dtr-report-btn').dataset.generatedOn;
+        
+        console.log('DTR delete button clicked:', { reportId, reportType, generatedOn });
+        deleteDTRReport(reportId, reportType, generatedOn);
+    }
+    
+    function deleteDTRReport(reportId, reportType, generatedOn) {
+        console.log('deleteDTRReport called:', { reportId, reportType, generatedOn });
+        
+        // Store the reportId for later use
+        document.getElementById('confirmDeleteDTRReportBtn').dataset.reportId = reportId;
+        
+        // Update modal content with report-specific information
+        document.getElementById('deleteDTRReportMessage').innerHTML = 
+            `Are you sure you want to delete this <strong>${reportType}</strong> DTR report?<br><strong class="text-danger">This action cannot be undone.</strong>`;
+        
+        document.getElementById('deleteDTRReportWarning').textContent = 
+            `This will permanently remove the DTR report from the system. Generated on: ${generatedOn}`;
+        
+        // Show the custom delete modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteDTRReportModal'));
+        modal.show();
+    }
+    
+    function confirmDeleteDTRReport() {
+        const reportId = document.getElementById('confirmDeleteDTRReportBtn').dataset.reportId;
+        console.log('confirmDeleteDTRReport called with reportId:', reportId);
+        
+        if (!reportId) {
+            console.error('No reportId found in confirmDeleteDTRReportBtn dataset');
+            alert('Error: No DTR report ID found. Please try again.');
+            return;
+        }
+        
+        try {
+            // Create a form and submit it
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("dtr.delete", ":reportId") }}'.replace(':reportId', reportId);
+            
+            console.log('Form action URL:', form.action);
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+
+            form.appendChild(csrfToken);
+            form.appendChild(methodField);
+            document.body.appendChild(form);
+            
+            console.log('Submitting delete form for reportId:', reportId);
+            form.submit();
+        } catch (error) {
+            console.error('Error deleting DTR report:', error);
+            alert('An error occurred while trying to delete the DTR report. Please try again.');
+        }
+    }
 
     function downloadPDF(reportId) {
         // Redirect to download route

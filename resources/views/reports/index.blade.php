@@ -249,58 +249,253 @@
           </div>
         </div>
 
-        <!-- Recent Reports -->
-        <div class="aa-card">
-            <div class="card-header header-maroon">
-                <h4 class="card-title mb-0">
-                    <i class="bi bi-clock-history me-2"></i>Recent Reports
-                </h4>
+        <!-- DTR quick actions styles -->
+        <style>
+            .aa-fab-container { position: fixed; right: 24px; bottom: 24px; z-index: 1050; display: flex; gap: 12px; align-items: center; }
+            .aa-fab-btn { border: none; border-radius: 9999px; padding: 0.85rem 1.15rem; font-weight: 700; letter-spacing: .2px; box-shadow: 0 10px 24px rgba(0,0,0,.18); transform: translateY(0); transition: transform .15s ease, box-shadow .2s ease, filter .2s ease; }
+            .aa-fab-btn i { font-size: 1rem; }
+            .aa-fab-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(0,0,0,.24); filter: brightness(1.03); }
+            .aa-fab-btn:active { transform: translateY(0); box-shadow: 0 8px 18px rgba(0,0,0,.18); }
+            .aa-fab-history { color:#fff; background: linear-gradient(135deg, #dc3545, #a5111f); }
+            .aa-fab-generate { color:#2e1f00; background: linear-gradient(135deg, #ffcf33, #ffb300); }
+            /* Attention animations */
+            @keyframes aaWiggle { 0% { transform: translateY(0) rotate(0); } 8% { transform: translateY(-2px) rotate(-2deg); } 16% { transform: translateY(0) rotate(2deg); } 24% { transform: translateY(-2px) rotate(-1.5deg); } 32% { transform: translateY(0) rotate(1.5deg); } 40% { transform: translateY(-1px) rotate(-1deg); } 48% { transform: translateY(0) rotate(0.8deg); } 56% { transform: translateY(-1px) rotate(-0.6deg); } 64% { transform: translateY(0) rotate(0.4deg); } 100% { transform: translateY(0) rotate(0); } }
+            @keyframes aaGlowPulse { 0% { box-shadow: 0 10px 24px rgba(0,0,0,.18), 0 0 0 0 rgba(247, 201, 72, 0.0); } 50% { box-shadow: 0 14px 32px rgba(0,0,0,.24), 0 0 18px 6px rgba(255, 191, 0, 0.35); } 100% { box-shadow: 0 10px 24px rgba(0,0,0,.18), 0 0 0 0 rgba(247, 201, 72, 0.0); } }
+            .aa-attention-wiggle { animation: aaWiggle 3.5s ease-in-out infinite; animation-delay: .8s; }
+            .aa-attention-glow { animation: aaGlowPulse 2.8s ease-in-out infinite; }
+            .aa-fab-btn:hover { animation-play-state: paused; }
+            @media (prefers-reduced-motion: reduce) { .aa-attention-wiggle, .aa-attention-glow { animation: none; } }
+            @media (max-width: 768px){ .aa-fab-container { right: 16px; bottom: 16px; gap: 8px; } .aa-fab-btn { padding: .7rem .95rem; font-weight: 600; } .aa-fab-btn span { display:none; } }
+        </style>
+
+        <!-- DTR quick actions (floating) -->
+        <div class="aa-fab-container">
+            <button type="button" class="aa-fab-btn aa-fab-history aa-attention-wiggle" id="openDTRHistoryModal" title="View DTR History">
+                <i class="bi bi-clock-history me-2"></i><span>DTR History</span>
+            </button>
+            <button class="aa-fab-btn aa-fab-generate aa-attention-glow" data-bs-toggle="modal" data-bs-target="#generateDTRModal" title="Generate DTR Report">
+                <i class="bi bi-file-earmark-text me-2"></i><span>Generate DTR Report</span>
+            </button>
+        </div>
+
+        <!-- Generate DTR Modal (copied from attendance) -->
+        <div class="modal fade" id="generateDTRModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                    <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                        <h5 class="modal-title fw-bold d-flex align-items-center mb-0">
+                            <i class="bi bi-file-earmark-text me-2 fs-5"></i>Generate DTR Report
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
+                    </div>
+                    <form action="{{ route('attendance.dtr') }}" method="POST" data-dtr-form="true">
+                        @csrf
+                        <div class="modal-body p-4" style="background: #fafbfc;">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-gear me-2 fs-6"></i>Report Type
+                                    </label>
+                                    <select name="report_type" class="form-select form-select-lg border-2" required
+                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                        <option value="weekly">Weekly Report</option>
+                                        <option value="monthly">Monthly Report</option>
+                                        <option value="custom">Custom Period</option>
+                                    </select>
+                                </div>
+
+                                @if(auth()->user()->role->role_name === 'super_admin')
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-building me-2 fs-6"></i>Department
+                                    </label>
+                                    <select name="department_id" class="form-select form-select-lg border-2" id="dtrDepartmentSelect"
+                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                        <option value="">All Departments</option>
+                                        @foreach($departments as $dept)
+                                        <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @else
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-building me-2 fs-6"></i>Department
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg border-2" value="{{ auth()->user()->department->department_name ?? 'N/A' }}" readonly
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                                    <input type="hidden" name="department_id" value="{{ auth()->user()->department_id }}">
+                                    <div class="form-text">You can only generate reports for your department</div>
+                                </div>
+                                @endif
+
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-people me-2 fs-6"></i>Employees to include
+                                    </label>
+                                    <div class="border rounded p-3" style="max-height:220px;overflow:auto; background: #fff; border-color: #dee2e6 !important;">
+                                        <div class="form-check mb-3 p-2" style="background: #f8f9fa; border-radius: 6px;">
+                                            <input class="form-check-input" type="checkbox" id="empSelectAll">
+                                            <label class="form-check-label fw-semibold" for="empSelectAll" style="color: var(--aa-maroon);">
+                                                <i class="bi bi-check-all me-2"></i>Select All Employees
+                                            </label>
+                                        </div>
+                                        @foreach(($employeesForDTR ?? []) as $emp)
+                                        <div class="form-check mb-2 p-2" style="border-left: 3px solid #e9ecef; padding-left: 10px;">
+                                            <input class="form-check-input emp-item" type="checkbox" name="employee_ids[]" value="{{ $emp->employee_id }}" id="emp_{{ $emp->employee_id }}">
+                                            <label class="form-check-label" for="emp_{{ $emp->employee_id }}" style="font-size: 0.95rem;">
+                                                <strong>{{ $emp->full_name }}</strong> 
+                                                <span class="text-muted ms-1">({{ $emp->department->department_name ?? 'N/A' }})</span>
+                                            </label>
+                                        </div>
+                                        @endforeach
+                                        @if(($employeesForDTR ?? [])->isEmpty())
+                                        <div class="text-center p-3 text-muted">
+                                            <i class="bi bi-exclamation-triangle me-2"></i>
+                                            No employees found for DTR generation.
+                                        </div>
+                                        @endif
+                                    </div>
+                                    <div class="form-text">Leave empty to include all employees in the selected department.</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-calendar-date me-2 fs-6"></i>Start Date
+                                    </label>
+                                    <input type="date" name="start_date" class="form-control form-control-lg border-2" value="{{ now()->startOfMonth()->toDateString() }}" required
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                    <div class="form-text">Defaults to the first day of this month</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-calendar-check me-2 fs-6"></i>End Date
+                                    </label>
+                                    <input type="date" name="end_date" class="form-control form-control-lg border-2" value="{{ now()->toDateString() }}" required
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                    <div class="form-text">Defaults to today</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 p-4" style="background: white;">
+                            <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
+                                    style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                    onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                    onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                                    style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                                <i class="bi bi-file-earmark-text me-2"></i>Generate Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead style="background: none;">
-                            <tr>
-                                <th style="color: var(--aa-maroon); padding: 0.75rem 1.25rem;"><i class="bi bi-hash me-1"></i>Report ID</th>
-                                <th style="color: var(--aa-maroon); padding: 0.75rem 1.25rem;"><i class="bi bi-card-text me-1"></i>Title</th>
-                                <th style="color: var(--aa-maroon); padding: 0.75rem 1.25rem;"><i class="bi bi-building me-1"></i>Department</th>
-                                <th style="color: var(--aa-maroon); padding: 0.75rem 1.25rem;"><i class="bi bi-file-earmark-bar-graph me-1"></i>Type</th>
-                                <th style="color: var(--aa-maroon); padding: 0.75rem 1.25rem;"><i class="bi bi-calendar-event me-1"></i>Generated</th>
-                                <th style="color: var(--aa-maroon); padding: 0.75rem 1.25rem;"><i class="bi bi-gear me-1"></i>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse(\App\Models\DTRReport::with(['admin', 'department'])->orderBy('generated_on', 'desc')->take(5)->get() as $report)
-                                <tr>
-                                    <td style="padding: 0.75rem 1.25rem; text-align: center;"><code class="text-primary">#{{ $report->report_id }}</code></td>
-                                    <td style="padding: 0.75rem 1.25rem; text-align: left;">{{ $report->report_title }}</td>
-                                    <td style="padding: 0.75rem 1.25rem; text-align: center;"><span class="badge bg-info">{{ $report->department->department_name ?? 'N/A' }}</span></td>
-                                    <td style="padding: 0.75rem 1.25rem; text-align: center;"><span class="badge bg-secondary">{{ ucfirst($report->report_type) }}</span></td>
-                                    <td style="padding: 0.75rem 1.25rem; text-align: center;">{{ $report->generated_on->format('M d, Y H:i') }}</td>
-                                    <td style="padding: 0.75rem 1.25rem; text-align: center;">
-                                        <a href="{{ route('dtr.details', $report->report_id) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        <i class="bi bi-inbox display-4 d-block mb-2"></i>
-                                        No reports generated yet
-                                        <br>
-                                        <small>Generate your first report using the builder above</small>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+        </div>
+
+        <!-- DTR History Modal -->
+        <div class="modal fade" id="dtrHistoryModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-body" id="dtrHistoryModalBody">
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-maroon" role="status"></div>
+                            <div class="mt-3">Loading DTR history...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // DTR History modal loader with AJAX pagination (mirrors attendance)
+        document.getElementById('openDTRHistoryModal')?.addEventListener('click', function() {
+            var modal = new bootstrap.Modal(document.getElementById('dtrHistoryModal'));
+            const modalBody = document.getElementById('dtrHistoryModalBody');
+            modalBody.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-maroon" role="status"></div><div class="mt-3">Loading DTR history...</div></div>';
+
+            function convertPaginationLinks(container) {
+                if (!container) return;
+                const links = container.querySelectorAll('.pagination a');
+
+                function handlePaginationClick(originalHref) {
+                    return function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+
+                        const originalContent = modalBody.innerHTML;
+                        modalBody.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-maroon" role="status"></div><div class="mt-2">Loading page...</div></div>';
+
+                        fetch(originalHref)
+                            .then(response => { if (!response.ok) throw new Error('Network error'); return response.text(); })
+                            .then(html => {
+                                modalBody.innerHTML = html;
+                                if (typeof initializeDTRDeleteButtons === 'function') {
+                                    initializeDTRDeleteButtons();
+                                }
+                                convertPaginationLinks(document.getElementById('dtrPaginationContainer'));
+                            })
+                            .catch(error => {
+                                console.error('Error loading pagination:', error);
+                                modalBody.innerHTML = originalContent;
+                                alert('Error loading page. Please try again.');
+                            });
+                        return false;
+                    };
+                }
+
+                links.forEach(function(link) {
+                    if (link.href && !link.dataset.url) {
+                        const href = link.href;
+                        link.href = 'javascript:void(0)';
+                        link.dataset.url = href;
+                        link.style.cursor = 'pointer';
+                        link.onclick = handlePaginationClick(href);
+                    }
+                });
+            }
+
+            fetch("{{ route('dtr.history.modal') }}")
+                .then(response => response.text())
+                .then(html => {
+                    modalBody.innerHTML = html;
+                    if (typeof initializeDTRDeleteButtons === 'function') {
+                        initializeDTRDeleteButtons();
+                    }
+                    convertPaginationLinks(document.getElementById('dtrPaginationContainer'));
+                })
+                .catch(() => {
+                    modalBody.innerHTML = '<div class="text-center p-5 text-danger">Failed to load history.</div>';
+                });
+            modal.show();
+        });
+
+        // Match attendance modal helpers
+        document.getElementById('empSelectAll')?.addEventListener('change', function(e) {
+            document.querySelectorAll('.emp-item').forEach(cb => { cb.checked = e.target.checked; });
+        });
+        document.getElementById('dtrDepartmentSelect')?.addEventListener('change', function() {
+            const deptId = this.value;
+            document.querySelectorAll('.emp-item').forEach(cb => {
+                const label = document.querySelector('label[for="' + cb.id + '"]');
+                const text = label ? label.textContent : '';
+                const show = !deptId || (text.includes('(') ? text.includes('(' + this.options[this.selectedIndex].text + ')') : true);
+                cb.closest('.form-check').style.display = show ? '' : 'none';
+            });
+        });
         function selectReportType(type) {
             // Set the report type in the modal
             document.getElementById('modalReportType').value = type;

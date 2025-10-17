@@ -54,8 +54,8 @@
                                     Filter by Department
                                 </span>
                             </label>
-                            <select id="filter_department" class="form-select">
-                                <option value="all">All Departments</option>
+                            <select id="filter_department" class="form-select" required>
+                                <option value="">Select Department</option>
                                 @foreach($departments as $dept)
                                 <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
                                 @endforeach
@@ -83,7 +83,7 @@
                                     style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
                             </div>
                             <div class="form-text">
-                                <span id="available_count">{{ $availableEmployees->count() }}</span> employees available (not already admins)
+                                <span id="available_count">0</span> employees available (not already admins)
                             </div>
                         </div>
 
@@ -559,14 +559,15 @@
         if (!searchInput || !searchResults || !employeeDataElement) return;
 
         const allEmployees = JSON.parse(employeeDataElement.textContent);
-        let filteredEmployees = allEmployees;
+        let filteredEmployees = []; // Start with empty array since no department is selected
         let selectedEmployee = null;
 
         // Department filter change handler
         departmentFilter.addEventListener('change', function() {
             const deptId = this.value;
-            if (deptId === 'all') {
-                filteredEmployees = allEmployees;
+            if (deptId === '') {
+                // No department selected - show no employees
+                filteredEmployees = [];
             } else {
                 filteredEmployees = allEmployees.filter(emp => emp.department_id == deptId);
             }
@@ -606,9 +607,9 @@
             }
         });
 
-        // Focus to show recent searches or all if empty
+        // Focus to show recent searches or filtered employees if empty
         searchInput.addEventListener('focus', function() {
-            if (this.value.length === 0) {
+            if (this.value.length === 0 && filteredEmployees.length > 0) {
                 displaySearchResults(filteredEmployees.slice(0, 8), '');
             }
         });

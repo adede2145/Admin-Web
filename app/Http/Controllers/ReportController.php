@@ -26,6 +26,16 @@ class ReportController extends Controller
     public function index()
     {
         $departments = Department::all();
+        // Employees list for DTR modal (scoped by role/department similar to attendance)
+        $employeesForDTR = Employee::when(
+            auth()->user()->role->role_name !== 'super_admin',
+            function ($q) {
+                $q->where('department_id', auth()->user()->department_id);
+            }
+        )
+        ->orderBy('full_name')
+        ->get();
+
         $reportTypes = [
             'attendance_summary' => 'Attendance Summary',
             'employee_performance' => 'Employee Performance',
@@ -34,7 +44,7 @@ class ReportController extends Controller
             'absenteeism_report' => 'Absenteeism Report'
         ];
 
-        return view('reports.index', compact('departments', 'reportTypes'));
+        return view('reports.index', compact('departments', 'reportTypes', 'employeesForDTR'));
     }
 
     // Generate custom report
@@ -59,34 +69,7 @@ class ReportController extends Controller
         try {
             $reportData = $this->generateReportData($request);
             
-            // Persist a lightweight record so it appears in Recent Reports
-            try {
-                $totalEmployees = null;
-                if (($reportData['type'] ?? null) === 'employee_performance') {
-                    $totalEmployees = is_countable($reportData['data'] ?? null) ? count($reportData['data']) : null;
-                } elseif (($reportData['type'] ?? null) === 'attendance_summary') {
-                    $totalEmployees = $reportData['summary']['unique_employees'] ?? null;
-                }
-
-                DTRReport::create([
-                    'admin_id' => auth()->id(),
-                    'department_id' => $request->department_id ?: (auth()->user()->department_id ?? null),
-                    // The dtr_reports table only supports ['weekly','monthly','custom']
-                    'report_type' => 'custom',
-                    'report_title' => $reportData['title'] ?? 'Generated Report',
-                    'start_date' => $request->start_date,
-                    'end_date' => $request->end_date,
-                    'generated_on' => now(),
-                    'total_employees' => $totalEmployees,
-                    'total_days' => Carbon::parse($request->start_date)->diffInDays(Carbon::parse($request->end_date)) + 1,
-                    'total_hours' => $reportData['summary']['total_hours'] ?? ($reportData['summary']['total_overtime_hours'] ?? 0),
-                    'status' => 'generated',
-                    'notes' => 'Created via Reports page'
-                ]);
-            } catch (\Throwable $e) {
-                // Non-fatal: logging only; UI should still proceed
-                \Log::warning('Failed to persist recent report entry: ' . $e->getMessage());
-            }
+            // Custom reports are not logged to Recent Reports to avoid clutter
 
             // Store report data in session for export functionality
             session(['current_report_data' => $reportData]);
