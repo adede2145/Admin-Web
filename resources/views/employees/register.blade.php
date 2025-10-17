@@ -167,9 +167,6 @@
                                     <button type="button" id="capturePrimaryBtn" class="btn btn-outline-primary btn-sm" disabled>
                                         <i class="bi bi-fingerprint me-1"></i> Scan Primary
                                     </button>
-                                    <button type="button" id="cancelPrimaryBtn" class="btn btn-outline-danger btn-sm d-none">
-                                        <i class="bi bi-x-circle me-1"></i> Cancel
-                                    </button>
                                     <span id="primaryStatus" class="text-muted">Waiting for Device Bridge...</span>
                                 </div>
                                 <!-- Scanning Progress for Primary -->
@@ -203,9 +200,6 @@
                                     @endif
                                     <button type="button" id="captureBackupBtn" class="btn btn-outline-secondary btn-sm" disabled>
                                         <i class="bi bi-fingerprint me-1"></i> Scan Backup
-                                    </button>
-                                    <button type="button" id="cancelBackupBtn" class="btn btn-outline-danger btn-sm d-none">
-                                        <i class="bi bi-x-circle me-1"></i> Cancel
                                     </button>
                                     <span id="backupStatus" class="text-muted">@if(($editFp ?? false)) Replacement disabled @else Complete primary fingerprint first @endif</span>
                                 </div>
@@ -274,8 +268,6 @@
 
     // Backup fingerprint elements
     const captureBackupBtn = document.getElementById('captureBackupBtn');
-    const cancelPrimaryBtn = document.getElementById('cancelPrimaryBtn');
-    const cancelBackupBtn = document.getElementById('cancelBackupBtn');
     const backupStatus = document.getElementById('backupStatus');
     const backupTemplate = document.getElementById('backupTemplate');
     const backupProgress = document.getElementById('backupProgress');
@@ -296,6 +288,9 @@
     let primaryPollTimer = null;
     let backupPollTimer = null;
     let fingerprintDeviceModel = '';
+    // Track if last state was an explicit cancel so we don't overwrite the message
+    let primaryWasCancelled = false;
+    let backupWasCancelled = false;
     
     // Request throttling and optimization
     let lastBridgeCheck = 0;
@@ -381,8 +376,10 @@
             // Primary button logic (independent)
             if (replacePrimaryToggle?.checked && deviceConnected && !enrollmentInProgress) {
                 capturePrimaryBtn.disabled = false;
-                primaryStatus.textContent = 'Ready to scan index finger';
-                primaryStatus.className = 'text-success';
+                if (!primaryWasCancelled) {
+                    primaryStatus.textContent = 'Ready to scan index finger';
+                }
+                primaryStatus.className = primaryWasCancelled ? 'text-warning' : 'text-success';
             } else if (!deviceConnected) {
                 capturePrimaryBtn.disabled = true;
                 primaryStatus.textContent = 'Device not available';
@@ -396,8 +393,10 @@
             // Backup button logic (independent, never fade section)
             if (replaceBackupToggle?.checked && deviceConnected && !enrollmentInProgress) {
                 captureBackupBtn.disabled = false;
-                backupStatus.textContent = 'Ready to scan thumb';
-                backupStatus.className = 'text-success';
+                if (!backupWasCancelled) {
+                    backupStatus.textContent = 'Ready to scan thumb';
+                }
+                backupStatus.className = backupWasCancelled ? 'text-warning' : 'text-success';
             } else if (!deviceConnected) {
                 captureBackupBtn.disabled = true;
                 backupStatus.textContent = 'Device not available';
@@ -419,24 +418,30 @@
             // Update primary fingerprint button
             if (!primaryTemplate.value) {
                 capturePrimaryBtn.disabled = false;
-                primaryStatus.textContent = 'Ready to scan index finger';
-                primaryStatus.className = 'text-success';
+                if (!primaryWasCancelled) {
+                    primaryStatus.textContent = 'Ready to scan index finger';
+                }
+                primaryStatus.className = primaryWasCancelled ? 'text-warning' : 'text-success';
             } else {
                 capturePrimaryBtn.disabled = true;
                 primaryStatus.textContent = 'Primary fingerprint captured ✓';
                 primaryStatus.className = 'text-success fw-bold';
+                primaryWasCancelled = false;
             }
 
             // Update backup fingerprint button (register mode requires primary first)
             if (primaryTemplate.value && !backupTemplate.value) {
                 captureBackupBtn.disabled = false;
-                backupStatus.textContent = 'Ready to scan thumb (optional)';
-                backupStatus.className = 'text-success';
+                if (!backupWasCancelled) {
+                    backupStatus.textContent = 'Ready to scan thumb (optional)';
+                }
+                backupStatus.className = backupWasCancelled ? 'text-warning' : 'text-success';
                 backupSection.style.opacity = '1';
             } else if (backupTemplate.value) {
                 captureBackupBtn.disabled = true;
                 backupStatus.textContent = 'Backup fingerprint captured ✓';
                 backupStatus.className = 'text-success fw-bold';
+                backupWasCancelled = false;
             } else {
                 captureBackupBtn.disabled = true;
                 backupStatus.textContent = 'Complete primary fingerprint first';
@@ -464,20 +469,7 @@
         }
 
         // Show/hide cancel button depending on in-progress state
-        if (cancelPrimaryBtn) {
-            if (enrollmentInProgress && primarySessionId) {
-                cancelPrimaryBtn.classList.remove('d-none');
-            } else {
-                cancelPrimaryBtn.classList.add('d-none');
-            }
-        }
-        if (cancelBackupBtn) {
-            if (enrollmentInProgress && backupSessionId) {
-                cancelBackupBtn.classList.remove('d-none');
-            } else {
-                cancelBackupBtn.classList.add('d-none');
-            }
-        }
+        // Cancel buttons removed - handled by device bridge
 
         updateFingerprintStatus();
         updateRegisterEnabled();
@@ -585,6 +577,12 @@
         const fingerType = isPrimary ? 'index finger' : 'thumb';
 
         enrollmentInProgress = true;
+        // Clear any previous cancelled marker for this stream when starting a new enrollment
+        if (isPrimary) {
+            primaryWasCancelled = false;
+        } else {
+            backupWasCancelled = false;
+        }
         updateUIBasedOnDeviceStatus();
 
         progressElement.classList.remove('d-none');
@@ -597,6 +595,7 @@
         let pollTimer = null;
         let lastProgress = 0; // Track last progress to prevent resets
         let scanCount = 0; // Track number of scans completed
+        let enrollmentSuccessful = false; // Track if enrollment actually completed successfully
 
         try {
             instructionElement.textContent = `Place your ${fingerType} on the scanner...`;
@@ -616,13 +615,11 @@
             sessionId = startData.sessionId;
             if (!sessionId) throw new Error('No sessionId from Device Bridge');
 
-            // Save session per stream and show cancel button
+            // Save session per stream
             if (isPrimary) {
                 primarySessionId = sessionId;
-                if (cancelPrimaryBtn) cancelPrimaryBtn.classList.remove('d-none');
             } else {
                 backupSessionId = sessionId;
-                if (cancelBackupBtn) cancelBackupBtn.classList.remove('d-none');
             }
             updateUIBasedOnDeviceStatus();
 
@@ -667,6 +664,16 @@
 
                         statusElement.textContent = prog.message || (prog.phase === 'processing' ? 'Processing...' : 'Scanning...');
                         
+                        // Check for cancellation from device bridge
+                        if (prog.cancelled || (prog.message && prog.message.toLowerCase().includes('cancelled'))) {
+                            clearInterval(pollTimer);
+                            pollTimer = null;
+                            enrollmentSuccessful = false; // Mark as not successful
+                            // Reflect cancellation from bridge without reverting to ready state
+                            cancelEnrollment(isPrimary, prog.message || 'Enrollment cancelled', true);
+                            return resolve(); // Resolve to prevent error handling
+                        }
+                        
                         // Track scan completion
                         if (prog.phase === 'processing' && scansLeft !== null) {
                             const currentScanCount = 4 - scansLeft;
@@ -710,14 +717,17 @@
                             progressBarElement.style.width = '100%';
                             statusElement.textContent = `${isPrimary ? 'Primary' : 'Backup'} fingerprint captured successfully!`;
                             statusElement.className = 'text-success fw-bold';
+                            enrollmentSuccessful = true; // Mark as successful
 
                             clearInterval(pollTimer);
                             pollTimer = null;
                             // Clear saved session id on success
                             if (isPrimary) {
                                 primarySessionId = null;
+                                primaryWasCancelled = false;
                             } else {
                                 backupSessionId = null;
+                                backupWasCancelled = false;
                             }
                             updateUIBasedOnDeviceStatus();
                             return resolve();
@@ -736,11 +746,14 @@
                 }
             });
 
-            showNotification(
-                isPrimary ? 'Primary Fingerprint Captured!' : 'Backup Fingerprint Captured!',
-                isPrimary ? 'You can now scan a backup fingerprint or continue.' : 'Both fingerprints have been captured successfully!',
-                'success'
-            );
+            // Only show success notification if enrollment actually completed successfully
+            if (enrollmentSuccessful) {
+                showNotification(
+                    isPrimary ? 'Primary Fingerprint Captured!' : 'Backup Fingerprint Captured!',
+                    isPrimary ? 'You can now scan a backup fingerprint or continue.' : 'Both fingerprints have been captured successfully!',
+                    'success'
+                );
+            }
         } catch (error) {
             console.error('Enrollment error:', error);
             progressBarElement.style.width = '0%';
@@ -771,7 +784,7 @@
         }
     }
 
-    async function cancelEnrollment(isPrimary = true) {
+    async function cancelEnrollment(isPrimary = true, message = 'Enrollment cancelled', keepCancelledMessage = false) {
         if (!enrollmentInProgress) return;
         const sid = isPrimary ? primarySessionId : backupSessionId;
         if (!sid) return;
@@ -810,17 +823,34 @@
         templateElement.value = '';
         progressBarElement.style.width = '0%';
         progressElement.classList.add('d-none');
-        statusElement.textContent = isPrimary ? 'Scan cancelled' : 'Scan cancelled';
-        statusElement.className = 'text-muted';
-        instructionElement.textContent = isPrimary ? 'Place your index finger on the scanner...' : 'Place your thumb on the scanner...';
+        
+        // Respect bridge-side cancellation: keep the cancelled message visible if requested
+        if (keepCancelledMessage) {
+            statusElement.textContent = message || 'Enrollment cancelled';
+            statusElement.className = 'text-warning';
+            if (isPrimary) {
+                primaryWasCancelled = true;
+            } else {
+                backupWasCancelled = true;
+            }
+        } else {
+            if (deviceConnected) {
+                statusElement.textContent = 'Ready to scan';
+                statusElement.className = 'text-success';
+            } else {
+                statusElement.textContent = 'Device not available';
+                statusElement.className = 'text-danger';
+            }
+        }
+        instructionElement.textContent = keepCancelledMessage
+            ? 'Enrollment cancelled in Bridge app.'
+            : (isPrimary ? 'Place your index finger on the scanner...' : 'Place your thumb on the scanner...');
 
         // Clear session id and state
         if (isPrimary) {
             primarySessionId = null;
-            if (cancelPrimaryBtn) cancelPrimaryBtn.classList.add('d-none');
         } else {
             backupSessionId = null;
-            if (cancelBackupBtn) cancelBackupBtn.classList.add('d-none');
         }
         enrollmentInProgress = false;
         updateUIBasedOnDeviceStatus();
@@ -858,19 +888,9 @@
     // Event listeners - Real-time fingerprint enrollment with progress tracking
     capturePrimaryBtn?.addEventListener('click', () => enrollFingerprint(true));
     captureBackupBtn?.addEventListener('click', () => enrollFingerprint(false));
-    cancelPrimaryBtn?.addEventListener('click', () => cancelEnrollment(true));
-    cancelBackupBtn?.addEventListener('click', () => cancelEnrollment(false));
 
-    // ESC key cancels whichever enrollment is active
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && enrollmentInProgress) {
-            if (primarySessionId) {
-                cancelEnrollment(true);
-            } else if (backupSessionId) {
-                cancelEnrollment(false);
-            }
-        }
-    });
+    // ESC key cancels whichever enrollment is active (handled by device bridge)
+    // ESC key handling removed - now handled by device bridge
 
     // Edit mode toggles: control enabling capture buttons and include flags on submit
     if (editFpMode) {
