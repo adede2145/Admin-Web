@@ -38,8 +38,9 @@
                             <i class="bi bi-list-ul me-2"></i>Employee List
                         </h4>
                         <form action="{{ route('employees.index') }}" method="GET" class="d-flex align-items-center justify-content-center" style="max-width: 450px; margin: 0 auto;">
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employees..." value="{{ request('search') }}" style="width: 320px;">
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employees..." value="{{ request('search') }}" style="width: 320px; height: 38px;">
                             <button type="submit" class="btn btn-sm ms-2 px-3" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a;"><i class="bi bi-search me-1"></i>Search</button>
+                            <button type="button" class="btn btn-sm ms-2 px-3" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a;" onclick="this.form.search.value=''; this.form.submit();"><i class="bi bi-x-circle me-1"></i>Clear</button>
                         </form>
                     </div>
                 </div>
