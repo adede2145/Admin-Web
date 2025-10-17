@@ -17,13 +17,13 @@
 
     .filter-card .card-body {
         background: #ffffff;
-        padding: 0.001rem 1.5rem 1rem 1.5rem;
+        padding: 1rem 1.5rem;
     }
 
     .filter-card .form-control,
     .filter-card .form-select {
         border-radius: 10px;
-        padding: 1.4rem 1.3rem 1rem 1.3rem;
+        padding: 0.6rem 0.9rem;
     }
 
     .filter-card .row {
@@ -37,6 +37,31 @@
     .filter-card .form-label {
         font-weight: 600;
         color: #495057;
+    }
+
+    /* Inline Filters Layout */
+    .filters-inline {
+        display: flex;
+        flex-wrap: wrap; /* allow wrapping instead of horizontal scroll */
+        gap: 12px 16px;
+        align-items: flex-end;
+        overflow: visible; /* prevent scrollbars */
+        padding-bottom: 4px;
+    }
+    .filters-inline .filter-item {
+        flex: 1 1 220px; /* grow/shrink with a sensible base */
+        min-width: 200px;
+    }
+    /* Toolbar row shouldn't stretch tall */
+    .filters-inline .filter-toolbar-row { flex: 0 0 100%; }
+    .filters-inline .quick-filter-group { width: auto; }
+    .filters-inline .quick-select { width: 260px; }
+    @media (max-width: 1200px) {
+        .filters-inline .filter-item { flex-basis: 260px; }
+    }
+    @media (max-width: 992px) {
+        .filters-inline { gap: 10px 12px; }
+        .filters-inline .filter-item { flex-basis: 300px; }
     }
 
     /* Enhanced Table Styling */
@@ -157,6 +182,10 @@
         font-size: 0.8rem;
         font-weight: 500;
     }
+
+    /* Center pagination controls consistently (including after AJAX refresh) */
+    #paginationContainer nav { display: flex; justify-content: center; }
+    #paginationContainer .pagination { justify-content: center; }
 </style>
 <div class="container-fluid">
 
@@ -201,9 +230,9 @@
             </div>
         </div>
         <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end" id="attendanceFiltersForm">
+            <form method="GET" class="filters-inline" id="attendanceFiltersForm">
                 <!-- Date Range Filters -->
-                <div class="col-lg-2 col-md-3 col-sm-6">
+                <div class="filter-item">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-calendar-date me-1"></i>From Date
                     </label>
@@ -215,7 +244,7 @@
                     <div class="form-text small">Default: 7 days ago</div>
                 </div>
 
-                <div class="col-lg-2 col-md-3 col-sm-6">
+                <div class="filter-item">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-calendar-check me-1"></i>To Date
                     </label>
@@ -228,7 +257,7 @@
                 </div>
 
                 <!-- Employee Filter -->
-                <div class="col-lg-2 col-md-3 col-sm-6">
+                <div class="filter-item">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-person me-1"></i>Employee
                     </label>
@@ -268,7 +297,7 @@
 
                 <!-- Department Filter (Super Admin Only) -->
                 @if(auth()->user()->role->role_name === 'super_admin')
-                <div class="col-lg-2 col-md-3 col-sm-6">
+                <div class="filter-item">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-building me-1"></i>Department
                     </label>
@@ -286,7 +315,7 @@
                 @endif
 
                 <!-- Method Filter -->
-                <div class="col-lg-2 col-md-3 col-sm-6">
+                <div class="filter-item">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-gear me-1"></i>Method
                     </label>
@@ -306,7 +335,7 @@
                 </div>
 
                 <!-- RFID Status Filter -->
-                <div class="col-lg-2 col-md-3 col-sm-6" id="rfidStatusFilter" @if(!(request('login_method')==='rfid' || auth()->user()->role->role_name === 'super_admin')) style="display: none;" @endif>
+                <div class="filter-item" id="rfidStatusFilter" @if(!(request('login_method')==='rfid' || auth()->user()->role->role_name === 'super_admin')) style="display: none;" @endif>
                     <label class="form-label fw-semibold">
                         <i class="bi bi-shield-check me-1"></i>RFID Status
                     </label>
@@ -325,33 +354,35 @@
                     <div class="form-text small" style="height: 16px; visibility: hidden;">placeholder</div>
                 </div>
 
-                <!-- Quick Date Presets -->
-                <div class="col-lg-2 col-md-3 col-sm-6">
-                    <label class="form-label fw-semibold">
-                        <i class="bi bi-lightning me-1"></i>Quick Filters
-                    </label>
-                    <select class="form-select" id="quickDateFilter">
-                        <option value="">Custom Range</option>
-                        <option value="today">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="this_week">This Week</option>
-                        <option value="last_week">Last Week</option>
-                        <option value="this_month">This Month</option>
-                        <option value="last_30_days">Last 30 Days</option>
-                    </select>
-                    <div class="form-text small">Quick date ranges</div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="col-lg-2 col-md-3 col-sm-6">
-                    <label class="form-label fw-semibold">&nbsp;</label>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-warning text-dark fw-semibold" id="applyFiltersBtn">
-                            <i class="bi bi-search me-1"></i>Apply
-                        </button>
-                        <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
+                <!-- Centered Quick Filters + Actions Toolbar Row -->
+                <div class="filter-item filter-toolbar-row" style="flex-basis: 100%;">
+                    <div class="d-flex justify-content-center w-100">
+                        <div class="quick-filter-group text-center">
+                            <div class="quick-inline d-flex justify-content-center align-items-center gap-2">
+                                <div class="quick-texts text-end" style="min-width: 160px;">
+                                    <div class="fw-semibold" style="line-height: 1.1;">
+                                        <i class="bi bi-lightning me-1"></i>Quick Filters
+                                    </div>
+                                </div>
+                                <select class="form-select quick-select" id="quickDateFilter">
+                                    <option value="">Custom Range</option>
+                                    <option value="today">Today</option>
+                                    <option value="yesterday">Yesterday</option>
+                                    <option value="this_week">This Week</option>
+                                    <option value="last_week">Last Week</option>
+                                    <option value="this_month">This Month</option>
+                                    <option value="last_30_days">Last 30 Days</option>
+                                </select>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-warning text-dark fw-semibold" id="applyFiltersBtn">
+                                        <i class="bi bi-search me-1"></i>Apply
+                                    </button>
+                                    <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -591,75 +622,115 @@
 
 <!-- Generate DTR Modal -->
 <div class="modal fade" id="generateDTRModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
-                <h5 class="modal-title text-white mb-0">
-                    <i class="bi bi-file-earmark-text me-2"></i>Generate DTR Report
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                <h5 class="modal-title fw-bold d-flex align-items-center mb-0">
+                    <i class="bi bi-file-earmark-text me-2 fs-5"></i>Generate DTR Report
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
             </div>
             <form action="{{ route('attendance.dtr') }}" method="POST">
                 @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Report Type</label>
-                        <select name="report_type" class="form-select" required>
-                            <option value="weekly">Weekly Report</option>
-                            <option value="monthly">Monthly Report</option>
-                            <option value="custom">Custom Period</option>
-                        </select>
-                    </div>
-                    @if(auth()->user()->role->role_name === 'super_admin')
-                    <div class="mb-3">
-                        <label class="form-label">Department</label>
-                        <select name="department_id" class="form-select" id="dtrDepartmentSelect">
-                            <option value="">All Departments</option>
-                            @foreach($departments as $dept)
-                            <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @else
-                    <div class="mb-3">
-                        <label class="form-label">Department</label>
-                        <input type="text" class="form-control" value="{{ auth()->user()->department->department_name ?? 'N/A' }}" readonly>
-                        <input type="hidden" name="department_id" value="{{ auth()->user()->department_id }}">
-                        <div class="form-text">You can only generate reports for your department</div>
-                    </div>
-                    @endif
-                    <div class="mb-3">
-                        <label class="form-label">Employees to include</label>
-                        <div class="border rounded p-2" style="max-height:220px;overflow:auto;">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="empSelectAll">
-                                <label class="form-check-label" for="empSelectAll">Select All</label>
-                            </div>
-                            @foreach(($employeesForDTR ?? []) as $emp)
-                            <div class="form-check">
-                                <input class="form-check-input emp-item" type="checkbox" name="employee_ids[]" value="{{ $emp->employee_id }}" id="emp_{{ $emp->employee_id }}">
-                                <label class="form-check-label" for="emp_{{ $emp->employee_id }}">
-                                    {{ $emp->full_name }} <span class="text-muted">({{ $emp->department->department_name ?? 'N/A' }})</span>
-                                </label>
-                            </div>
-                            @endforeach
+                <div class="modal-body p-4" style="background: #fafbfc;">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-gear me-2 fs-6"></i>Report Type
+                            </label>
+                            <select name="report_type" class="form-select form-select-lg border-2" required
+                                    style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                    onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                    onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                <option value="weekly">Weekly Report</option>
+                                <option value="monthly">Monthly Report</option>
+                                <option value="custom">Custom Period</option>
+                            </select>
                         </div>
-                        <div class="form-text">Leave empty to include all employees in the selected department.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ now()->startOfMonth()->toDateString() }}" required>
-                        <div class="form-text">Defaults to the first day of this month</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ now()->toDateString() }}" required>
-                        <div class="form-text">Defaults to today</div>
+
+                        @if(auth()->user()->role->role_name === 'super_admin')
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-building me-2 fs-6"></i>Department
+                            </label>
+                            <select name="department_id" class="form-select form-select-lg border-2" id="dtrDepartmentSelect"
+                                    style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                    onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                    onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                <option value="">All Departments</option>
+                                @foreach($departments as $dept)
+                                <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @else
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-building me-2 fs-6"></i>Department
+                            </label>
+                            <input type="text" class="form-control form-control-lg border-2" value="{{ auth()->user()->department->department_name ?? 'N/A' }}" readonly
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                            <input type="hidden" name="department_id" value="{{ auth()->user()->department_id }}">
+                            <div class="form-text">You can only generate reports for your department</div>
+                        </div>
+                        @endif
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-people me-2 fs-6"></i>Employees to include
+                            </label>
+                            <div class="border rounded p-2" style="max-height:220px;overflow:auto; background: #fff;">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="empSelectAll">
+                                    <label class="form-check-label" for="empSelectAll">Select All</label>
+                                </div>
+                                @foreach(($employeesForDTR ?? []) as $emp)
+                                <div class="form-check">
+                                    <input class="form-check-input emp-item" type="checkbox" name="employee_ids[]" value="{{ $emp->employee_id }}" id="emp_{{ $emp->employee_id }}">
+                                    <label class="form-check-label" for="emp_{{ $emp->employee_id }}">
+                                        {{ $emp->full_name }} <span class="text-muted">({{ $emp->department->department_name ?? 'N/A' }})</span>
+                                    </label>
+                                </div>
+                                @endforeach
+                            </div>
+                            <div class="form-text">Leave empty to include all employees in the selected department.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-calendar-date me-2 fs-6"></i>Start Date
+                            </label>
+                            <input type="date" name="start_date" class="form-control form-control-lg border-2" value="{{ now()->startOfMonth()->toDateString() }}" required
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                   onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                   onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                            <div class="form-text">Defaults to the first day of this month</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                <i class="bi bi-calendar-check me-2 fs-6"></i>End Date
+                            </label>
+                            <input type="date" name="end_date" class="form-control form-control-lg border-2" value="{{ now()->toDateString() }}" required
+                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                   onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                   onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                            <div class="form-text">Defaults to today</div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning text-dark fw-semibold">Generate Report</button>
+                <div class="modal-footer border-0 p-4" style="background: white;">
+                    <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
+                            style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                            onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                            onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                            style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                        <i class="bi bi-file-earmark-text me-2"></i>Generate Report
+                    </button>
                 </div>
             </form>
         </div>
@@ -1721,31 +1792,11 @@
 
 <style>
 /* Ensure consistent alignment for filter elements */
-#attendanceFiltersForm .col-lg-2 {
-    min-height: 120px;
-    display: flex;
-    flex-direction: column;
-}
-
-#attendanceFiltersForm .form-label {
-    min-height: 24px;
-    margin-bottom: 8px;
-}
-
+/* Remove legacy grid helpers to avoid forced heights that created vertical scroll */
+#attendanceFiltersForm .col-lg-2 { min-height: unset; display: initial; flex-direction: initial; }
+#attendanceFiltersForm .form-label { min-height: unset; margin-bottom: 8px; }
 #attendanceFiltersForm .form-control,
-#attendanceFiltersForm .form-select {
-    flex: 1;
-    margin-bottom: 4px;
-}
-
-#attendanceFiltersForm .form-text {
-    min-height: 16px;
-    margin-bottom: 0;
-    flex-shrink: 0;
-}
-
-/* Ensure buttons are aligned properly */
-#attendanceFiltersForm .d-grid {
-    margin-top: auto;
-}
+#attendanceFiltersForm .form-select { flex: initial; margin-bottom: 0; }
+#attendanceFiltersForm .form-text { min-height: unset; margin-bottom: 0; }
+#attendanceFiltersForm .d-grid { margin-top: 0; }
 </style>

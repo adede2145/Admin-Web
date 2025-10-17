@@ -4,23 +4,19 @@
 
 @section('content')
     <div class="container-fluid">
+        @php $period = request('period', 'week'); @endphp
         <!-- Success/Error Messages REMOVED (now handled by toasts)-->
         {{-- Alert banners removed --}}
-        <!-- Header -->
-        <div class="aa-card mb-3">
-            <div class="card-header header-maroon d-flex justify-content-between align-items-center">
-                <h4 class="card-title mb-0 text-white"><i class="bi bi-graph-up me-2"></i>Reports</h4>
-                <div class="d-flex align-items-center gap-3">
-                    @php $period = request('period', 'week'); @endphp
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-white-50 small">Select Period</span>
-                        <select class="form-select form-select-sm" id="reportsPeriod">
-                            <option value="week" {{ $period==='week' ? 'selected' : '' }}>Last 7 Days</option>
-                            <option value="month" {{ $period==='month' ? 'selected' : '' }}>This Month</option>
-                            <option value="quarter" {{ $period==='quarter' ? 'selected' : '' }}>Last 90 Days</option>
-                        </select>
-                    </div>
-                </div>
+        <!-- Header (no surrounding card) -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0"><i class="bi bi-graph-up me-2"></i>Reports</h4>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small">Select Period</span>
+                <select class="form-select form-select-sm" id="reportsPeriod">
+                    <option value="week" {{ $period==='week' ? 'selected' : '' }}>Last 7 Days</option>
+                    <option value="month" {{ $period==='month' ? 'selected' : '' }}>This Month</option>
+                    <option value="quarter" {{ $period==='quarter' ? 'selected' : '' }}>Last 90 Days</option>
+                </select>
             </div>
         </div>
 

@@ -14,10 +14,9 @@
                         <i class="bi bi-download me-2"></i>Download
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'html']) }}"><i class="bi bi-filetype-html me-2"></i>HTML</a></li>
-                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'pdf']) }}"><i class="bi bi-filetype-pdf me-2"></i>PDF</a></li>
-                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'excel']) }}"><i class="bi bi-file-earmark-excel me-2"></i>Excel</a></li>
-                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'csv']) }}"><i class="bi bi-filetype-csv me-2"></i>CSV</a></li>
+                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'html']) }}"><i class="bi bi-filetype-html me-2 text-primary"></i>HTML</a></li>
+                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'pdf']) }}"><i class="bi bi-filetype-pdf me-2 text-danger"></i>PDF</a></li>
+                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'csv']) }}"><i class="bi bi-filetype-csv me-2 text-success"></i>CSV</a></li>
                     </ul>
                 </div>
             </div>
@@ -193,27 +192,27 @@
                 $ov = isset($overrides) ? ($overrides[$ovKey] ?? null) : null;
             @endphp
             <div class="modal fade" id="ovModal_{{ $summary->employee->employee_id }}_{{ $dateKey }}" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">@if($ov) Edit Leave @else Mark as Leave @endif - {{ $summary->employee->full_name }} ({{ \Carbon\Carbon::parse($detail->date)->format('M d, Y') }})</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
+                            <h5 class="modal-title text-white mb-0">@if($ov) Edit Leave @else Mark as Leave @endif - {{ $summary->employee->full_name }} ({{ \Carbon\Carbon::parse($detail->date)->format('M d, Y') }})</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
                         <form action="{{ route('dtr.override.store') }}" method="POST">
                             @csrf
-                            <div class="modal-body">
+                            <div class="modal-body p-4" style="background: #fafbfc;">
                                 <input type="hidden" name="report_id" value="{{ $report->report_id }}">
                                 <input type="hidden" name="employee_id" value="{{ $summary->employee->employee_id }}">
                                 <input type="hidden" name="date" value="{{ $dateKey }}">
                                 <div class="mb-3">
-                                    <label class="form-label">Remarks (optional)</label>
-                                    <input type="text" name="remarks" class="form-control" placeholder="Reason or notes" value="{{ $ov? $ov->remarks : '' }}">
+                                    <label class="form-label fw-semibold" style="color: var(--aa-maroon);">Remarks (optional)</label>
+                                    <input type="text" name="remarks" class="form-control form-control-lg border-2" placeholder="Reason or notes" value="{{ $ov? $ov->remarks : '' }}" style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px;">
                                 </div>
                                 <div class="form-text">This overlay does not change stored attendance, only how this DTR shows/exports.</div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save</button>
+                            <div class="modal-footer border-0 p-4" style="background: white;">
+                                <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal" style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600;">Cancel</button>
+                                <button type="submit" class="btn btn-lg px-4 fw-bold text-white" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px;">Save</button>
                             </div>
                         </form>
                     </div>

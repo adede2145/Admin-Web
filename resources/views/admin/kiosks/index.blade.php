@@ -190,7 +190,7 @@
             <div class="card-body">
                 @if($kiosks->count() > 0)
                     <div class="table-responsive">
-                        <table class="table table-bordered" id="kiosksTable" width="100%" cellspacing="0">
+                        <table class="table table-borderless" id="kiosksTable" width="100%" cellspacing="0">
                             <thead>
                                 <tr>
                                     <th>Kiosk ID</th>

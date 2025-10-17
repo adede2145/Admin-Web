@@ -27,12 +27,26 @@
             </div>
         @endif
 
-        <!-- Form Card -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 fw-bold text-primary">Kiosk Information</h6>
+        <!-- Top Red Card -->
+        <div class="card shadow mb-3 border-0" style="overflow:hidden;">
+            <div class="card-header py-3 text-white fw-bold d-flex align-items-center" style="background-color:#b00020;">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <span>Important: Kiosk edits affect attendance syncing</span>
             </div>
             <div class="card-body">
+                <p class="mb-0 small text-muted">
+                    Changing the kiosk location updates where attendance is recorded. Deleting a kiosk will also remove its associated attendance logs.
+                </p>
+            </div>
+        </div>
+
+        <!-- Form Card (merged with Quick Actions) -->
+        <div class="card shadow mb-4 rounded-bottom border-0" style="overflow:hidden;">
+            <div class="card-header py-3 header-maroon text-white d-flex align-items-center" style="background-color:#890a0a;">
+                <i class="bi bi-info-circle me-2"></i>
+                <h6 class="m-0 fw-bold">Kiosk Information</h6>
+            </div>
+            <div class="card-body bg-light-subtle">
                 <form action="{{ route('kiosks.update', $kiosk) }}" method="POST">
                     @csrf
                     @method('PUT')
@@ -128,31 +142,28 @@
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
 
-        <!-- Quick Actions Card -->
-        <div class="card shadow">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 fw-bold text-warning">
-                            <i class="bi bi-gear me-2"></i>Quick Actions
-                        </h6>
-                    </div>
-            <div class="card-body">
+                <hr class="my-4">
+
+                <!-- Merged Quick Actions (Danger Zone) -->
                 <div class="row justify-content-center">
-                    <div class="col-md-6">
-                        <h6 class="text-danger">Danger Zone</h6>
-                        <p class="text-muted small mb-3">
-                            Permanently delete this kiosk location. This action cannot be undone.
-                        </p>
-                        <form action="{{ route('kiosks.destroy', $kiosk) }}" method="POST" class="d-inline" 
-                              onsubmit="return confirm('Are you sure you want to delete this kiosk? This will also delete all associated attendance logs!')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-trash me-1"></i>Delete Kiosk
-                            </button>
-                        </form>
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center justify-content-center flex-wrap gap-3 text-center">
+                            <div>
+                                <h6 class="text-danger mb-1">Danger Zone</h6>
+                                <p class="text-muted small mb-0">
+                                    Permanently delete this kiosk location. This action cannot be undone.
+                                </p>
+                            </div>
+                            <form action="{{ route('kiosks.destroy', $kiosk) }}" method="POST" class="d-inline"
+                                    onsubmit="return confirm('Are you sure you want to delete this kiosk? This will also delete all associated attendance logs!')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-trash me-1"></i>Delete Kiosk
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
