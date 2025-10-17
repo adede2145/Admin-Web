@@ -74,6 +74,12 @@ class AttendanceLog extends Model
         return $query->whereBetween('time_in', [$startDate, $endDate]);
     }
 
+    // Audit-related helper methods
+    public function getRelatedModelForAudit()
+    {
+        return $this->employee;
+    }
+
     // Photo-related helper methods
     public function hasPhoto()
     {

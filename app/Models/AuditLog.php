@@ -12,6 +12,10 @@ class AuditLog extends Model
         'action',
         'model_type',
         'model_id',
+        'context_info',
+        'related_model_type',
+        'related_model_id',
+        'summary',
         'old_values',
         'new_values',
         'ip_address',
@@ -70,6 +74,79 @@ class AuditLog extends Model
     {
         $readBy = $this->read_by ?? [];
         return !in_array($adminId, $readBy);
+    }
+
+    // Get related model information
+    public function getRelatedModelInfo()
+    {
+        if (!$this->related_model_type || !$this->related_model_id) {
+            return null;
+        }
+
+        try {
+            $model = $this->related_model_type::find($this->related_model_id);
+            if (!$model) {
+                return null;
+            }
+
+            // Return human-readable information based on model type
+            switch ($this->related_model_type) {
+                case 'App\Models\Employee':
+                    return [
+                        'name' => $model->full_name,
+                        'id' => $model->employee_id,
+                        'department' => $model->department ? $model->department->department_name : 'Unknown'
+                    ];
+                case 'App\Models\AttendanceLog':
+                    return [
+                        'employee_name' => $model->employee ? $model->employee->full_name : 'Unknown Employee',
+                        'time_in' => $model->time_in ? $model->time_in->format('M d, Y h:i A') : 'N/A',
+                        'time_out' => $model->time_out ? $model->time_out->format('M d, Y h:i A') : 'N/A',
+                        'method' => ucfirst($model->method)
+                    ];
+                case 'App\Models\Department':
+                    return [
+                        'name' => $model->department_name,
+                        'id' => $model->department_id
+                    ];
+                default:
+                    return [
+                        'id' => $model->getKey(),
+                        'name' => $model->name ?? $model->title ?? 'Unknown'
+                    ];
+            }
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    // Get context information for display
+    public function getContextDisplay()
+    {
+        if ($this->context_info) {
+            return $this->context_info;
+        }
+
+        // Generate context based on model type and action
+        $modelName = class_basename($this->model_type);
+        $relatedInfo = $this->getRelatedModelInfo();
+        
+        switch ($this->model_type) {
+            case 'App\Models\AttendanceLog':
+                if ($this->action === 'delete' && $relatedInfo) {
+                    return "Deleted attendance record for {$relatedInfo['employee_name']} ({$relatedInfo['time_in']})";
+                }
+                break;
+            case 'App\Models\Employee':
+                if ($this->action === 'delete' && $relatedInfo) {
+                    return "Deleted employee: {$relatedInfo['name']} from {$relatedInfo['department']}";
+                } elseif ($this->action === 'create' && $relatedInfo) {
+                    return "Created employee: {$relatedInfo['name']} in {$relatedInfo['department']}";
+                }
+                break;
+        }
+
+        return ucfirst($this->action) . ' ' . $modelName . ' (ID: ' . $this->model_id . ')';
     }
 
     // Mark this audit as read by the given admin

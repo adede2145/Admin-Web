@@ -106,32 +106,38 @@
                                 </td>
                                 <td>
                                     @if($log->action == 'edit')
-                                        @if($log->changes && count($log->changes) > 0)
-                                            @foreach($log->changes as $field => $change)
-                                                <div class="small">
-                                                    <strong>{{ $field == 'department_id' ? 'Department' : ucwords(str_replace('_', ' ', $field)) }}:</strong>
-                                                    @if($field == 'department_id')
-                                                        @php
-                                                            $oldDept = \App\Models\Department::find($change['old']);
-                                                            $newDept = \App\Models\Department::find($change['new']);
-                                                        @endphp
-                                                        <span class="text-danger">{{ $oldDept ? $oldDept->department_name : $change['old'] }}</span>
-                                                        <i class="bi bi-arrow-right mx-1"></i>
-                                                        <span class="text-success">{{ $newDept ? $newDept->department_name : $change['new'] }}</span>
-                                                    @else
-                                                    <span class="text-danger">{{ is_array($change['old']) ? json_encode($change['old']) : ($change['old'] ?? 'None') }}</span>
-                                                    <i class="bi bi-arrow-right mx-1"></i>
-                                                    <span class="text-success">{{ is_array($change['new']) ? json_encode($change['new']) : ($change['new'] ?? 'None') }}</span>
-                                                    @endif
-                                                </div>
-                                            @endforeach
+                                        @if($log->context_info)
+                                            <div class="text-warning">
+                                                <strong>{{ $log->context_info }}</strong>
+                                                @if($log->summary)
+                                                    <br><small class="text-muted">{{ $log->summary }}</small>
+                                                @endif
+                                            </div>
                                         @else
-                                            <span class="text-warning">Changes data not available</span>
+                                            <span class="text-warning">Record updated</span>
                                         @endif
                                     @elseif($log->action == 'create')
-                                        <span class="text-success">New record created</span>
+                                        @if($log->context_info)
+                                            <div class="text-success">
+                                                <strong>{{ $log->context_info }}</strong>
+                                                @if($log->summary)
+                                                    <br><small class="text-muted">{{ $log->summary }}</small>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-success">New record created</span>
+                                        @endif
                                     @elseif($log->action == 'delete')
-                                        <span class="text-danger">Record deleted</span>
+                                        @if($log->context_info)
+                                            <div class="text-danger">
+                                                <strong>{{ $log->context_info }}</strong>
+                                                @if($log->summary)
+                                                    <br><small class="text-muted">{{ $log->summary }}</small>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-danger">Record deleted</span>
+                                        @endif
                                     @else
                                         <span class="text-muted">Unknown action: {{ $log->action }}</span>
                                     @endif

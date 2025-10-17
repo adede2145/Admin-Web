@@ -94,12 +94,28 @@ class AttendanceController extends Controller
     // Update attendance record
     public function update(Request $request, $id)
     {
+
         $request->validate([
             'date' => 'required|date',
             'time_in' => 'required|date_format:H:i',
-            'time_out' => 'nullable|date_format:H:i|after:time_in',
-            'method' => 'required|in:rfid,fingerprint',
+            'time_out' => 'nullable|date_format:H:i',
+            'method' => 'required|in:rfid,fingerprint,manual',
         ]);
+
+        // Simple validation - just check if time_out is provided and valid
+        if ($request->filled('time_out')) {
+            try {
+                // Just validate that the time format is correct
+                $timeOut = Carbon::createFromFormat('H:i', $request->time_out);
+                Log::info('Time out validation passed', ['time_out' => $timeOut->format('H:i:s')]);
+            } catch (\Exception $e) {
+                Log::error('Time out validation error', [
+                    'error' => $e->getMessage(),
+                    'time_out' => $request->time_out
+                ]);
+                return back()->withErrors(['time_out' => 'Invalid time format.'])->withInput();
+            }
+        }
 
         $attendanceLog = AttendanceLog::findOrFail($id);
 
@@ -127,17 +143,45 @@ class AttendanceController extends Controller
             'method' => $request->method,
         ];
 
+        // Log what we're about to update
+        Log::info('Preparing update', [
+            'request_data' => [
+                'date' => $request->date,
+                'time_in' => $request->time_in,
+                'time_out' => $request->time_out,
+                'method' => $request->method
+            ],
+            'processed_time_in' => $timeIn
+        ]);
+
         if ($request->filled('time_out')) {
             $timeOut = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->time_out)
                 ->format('Y-m-d H:i:s');
             $updateData['time_out'] = $timeOut;
+            Log::info('Setting time_out', ['time_out' => $timeOut]);
+        } else {
+            // Clear time_out if field is empty
+            $updateData['time_out'] = null;
+            Log::info('Clearing time_out');
         }
+
+        // Log final update data
+        Log::info('Final update data', ['updateData' => $updateData]);
+
 
         // Update the attendance log
         $attendanceLog->update($updateData);
 
         // Save new values for audit after the update
         $newValues = $attendanceLog->fresh()->only(['time_in', 'time_out', 'method']);
+        
+        // Log what was actually saved
+        Log::info('Update completed', [
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'update_successful' => true
+        ]);
+        
 
         try {
             // Create audit log entry
@@ -385,7 +429,8 @@ class AttendanceController extends Controller
 
             // Redirect to the generated DTR report details page so user sees the summary immediately
             return redirect()->route('dtr.details', $dtrReport->report_id)
-                ->with('success', 'DTR report generated successfully!');
+                ->with('success', 'DTR report generated successfully!')
+                ->with('generated_report_id', $dtrReport->report_id);
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to generate DTR report: ' . $e->getMessage());
         }

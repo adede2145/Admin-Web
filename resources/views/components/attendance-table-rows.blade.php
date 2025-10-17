@@ -108,7 +108,7 @@
     <td>
         <div class="btn-group btn-group-sm action-buttons">
             <!-- Edit and Delete buttons only - Approve/Reject moved to modal -->
-            <button class="btn btn-outline-primary"
+            <button type="button" class="btn btn-outline-primary"
                 data-bs-toggle="modal"
                 data-bs-target="#editAttendance{{ $log->log_id }}"
                 title="Edit attendance record">

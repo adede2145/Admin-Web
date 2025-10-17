@@ -8,6 +8,24 @@
         display: none;
     }
 
+    /* Simple black checkbox styling for DTR modal */
+    #generateDTRModal .form-check-input {
+        border: 2px solid #000 !important;
+        border-radius: 3px !important;
+        width: 18px !important;
+        height: 18px !important;
+        transform: scale(1.1);
+    }
+
+    #generateDTRModal .form-check-input:checked {
+        background-color: #000 !important;
+        border-color: #000 !important;
+    }
+
+    #generateDTRModal .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.25) !important;
+    }
+
     .filter-card {
         border: 1px solid #e9ecef;
         border-radius: 12px;
@@ -630,7 +648,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
             </div>
-            <form action="{{ route('attendance.dtr') }}" method="POST">
+            <form action="{{ route('attendance.dtr') }}" method="POST" data-dtr-form="true">
                 @csrf
                 <div class="modal-body p-4" style="background: #fafbfc;">
                     <div class="row g-3">
@@ -679,19 +697,28 @@
                             <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                 <i class="bi bi-people me-2 fs-6"></i>Employees to include
                             </label>
-                            <div class="border rounded p-2" style="max-height:220px;overflow:auto; background: #fff;">
-                                <div class="form-check mb-2">
+                            <div class="border rounded p-3" style="max-height:220px;overflow:auto; background: #fff; border-color: #dee2e6 !important;">
+                                <div class="form-check mb-3 p-2" style="background: #f8f9fa; border-radius: 6px;">
                                     <input class="form-check-input" type="checkbox" id="empSelectAll">
-                                    <label class="form-check-label" for="empSelectAll">Select All</label>
+                                    <label class="form-check-label fw-semibold" for="empSelectAll" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-check-all me-2"></i>Select All Employees
+                                    </label>
                                 </div>
                                 @foreach(($employeesForDTR ?? []) as $emp)
-                                <div class="form-check">
+                                <div class="form-check mb-2 p-2" style="border-left: 3px solid #e9ecef; padding-left: 10px;">
                                     <input class="form-check-input emp-item" type="checkbox" name="employee_ids[]" value="{{ $emp->employee_id }}" id="emp_{{ $emp->employee_id }}">
-                                    <label class="form-check-label" for="emp_{{ $emp->employee_id }}">
-                                        {{ $emp->full_name }} <span class="text-muted">({{ $emp->department->department_name ?? 'N/A' }})</span>
+                                    <label class="form-check-label" for="emp_{{ $emp->employee_id }}" style="font-size: 0.95rem;">
+                                        <strong>{{ $emp->full_name }}</strong> 
+                                        <span class="text-muted ms-1">({{ $emp->department->department_name ?? 'N/A' }})</span>
                                     </label>
                                 </div>
                                 @endforeach
+                                @if(($employeesForDTR ?? [])->isEmpty())
+                                <div class="text-center p-3 text-muted">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No employees found for DTR generation.
+                                </div>
+                                @endif
                             </div>
                             <div class="form-text">Leave empty to include all employees in the selected department.</div>
                         </div>
@@ -1123,6 +1150,96 @@
             console.log('Delete button clicked, logId:', logId); // Debug log
             deleteAttendance(logId);
         }
+    });
+
+    // Add event listener for edit buttons - simplified approach
+    document.addEventListener('click', function(e) {
+        // Check if clicked element is an edit button or inside an edit button
+        const editButton = e.target.closest('button[data-bs-toggle="modal"]');
+        if (editButton) {
+            console.log('Edit button clicked'); // Debug log
+            // Let Bootstrap handle the modal opening naturally
+            // Don't prevent default or interfere
+        }
+    });
+
+    // Handle attendance edit forms with AJAX for better UX
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Handle attendance edit forms (exclude DTR generation form)
+        document.querySelectorAll('form[action*="attendance"]:not([data-dtr-form])').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
+                
+                // Debug: Log form data
+                console.log('Form data being sent:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ': ' + value);
+                }
+                
+                // Debug: Check specific time fields
+                const timeInField = form.querySelector('input[name="time_in"]');
+                const timeOutField = form.querySelector('input[name="time_out"]');
+                console.log('Time In field value:', timeInField ? timeInField.value : 'NOT FOUND');
+                console.log('Time Out field value:', timeOutField ? timeOutField.value : 'NOT FOUND');
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating...';
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formData.get('_token')
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    // Parse the response to extract messages
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Check for success message
+                    const successAlert = doc.querySelector('.alert-success');
+                    const errorAlert = doc.querySelector('.alert-danger');
+                    
+                    if (successAlert) {
+                        const message = successAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
+                        showNotification('success', message);
+                        
+                        // Close modal and reload page after short delay
+                        if (modal) modal.hide();
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else if (errorAlert) {
+                        const message = errorAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
+                        showNotification('error', message);
+                    } else {
+                        showNotification('success', 'Attendance record updated successfully!');
+                        if (modal) modal.hide();
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('error', 'An error occurred while updating attendance.');
+                })
+                .finally(() => {
+                    // Restore button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                });
+            });
+        });
     });
 
     function deleteAttendance(logId) {

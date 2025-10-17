@@ -41,6 +41,17 @@
                     <dd class="col-sm-8">{{ class_basename($log->model_type) }}</dd>
                     <dt class="col-sm-4">Record ID</dt>
                     <dd class="col-sm-8">{{ $log->model_id }}</dd>
+                    @if($log->context_info || $log->summary)
+                    <dt class="col-sm-4">Context</dt>
+                    <dd class="col-sm-8">
+                        @if($log->context_info)
+                            <strong>{{ $log->context_info }}</strong>
+                        @endif
+                        @if($log->summary)
+                            <br><small class="text-muted">{{ $log->summary }}</small>
+                        @endif
+                    </dd>
+                    @endif
                 </dl>
             </div>
         </div>
@@ -129,8 +140,30 @@
                             <tbody>
                                 @foreach($log->old_values as $field => $value)
                                 <tr>
-                                    <td>{{ ucwords(str_replace('_', ' ', $field)) }}</td>
-                                    <td>{{ is_array($value) ? json_encode($value) : $value }}</td>
+                                    <td>
+                                        @if($field == 'employee_id' && $log->model_type == 'App\Models\AttendanceLog')
+                                            Employee Name
+                                        @elseif($field == 'department_id')
+                                            Department
+                                        @else
+                                            {{ ucwords(str_replace('_', ' ', $field)) }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($field == 'employee_id' && $log->model_type == 'App\Models\AttendanceLog')
+                                            @php
+                                                $employee = \App\Models\Employee::find($value);
+                                            @endphp
+                                            {{ $employee ? $employee->full_name : 'Unknown Employee' }}
+                                        @elseif($field == 'department_id')
+                                            @php
+                                                $department = \App\Models\Department::find($value);
+                                            @endphp
+                                            {{ $department ? $department->department_name : 'Unknown Department' }}
+                                        @else
+                                            {{ is_array($value) ? json_encode($value) : $value }}
+                                        @endif
+                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>
