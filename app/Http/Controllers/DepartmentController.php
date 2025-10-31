@@ -9,10 +9,10 @@ class DepartmentController extends Controller
 {
     public function __construct()
     {
-        // Ensure only super admins can access department management
+        // Ensure only super admins can access office management
         $this->middleware(function ($request, $next) {
             if (!auth()->check() || !auth()->user()->role || auth()->user()->role->role_name !== 'super_admin') {
-                abort(403, 'Access denied. Only Super Admins can manage departments.');
+                abort(403, 'Access denied. Only Super Admins can manage offices.');
             }
             return $next($request);
         });
@@ -33,12 +33,17 @@ class DepartmentController extends Controller
     {
         $validated = $request->validate([
             'department_name' => 'required|string|max:100|unique:departments,department_name',
+        ], [
+            'department_name.required' => 'Office name is required.',
+            'department_name.string' => 'Office name must be a valid text.',
+            'department_name.max' => 'Office name cannot exceed 100 characters.',
+            'department_name.unique' => 'An office with this name already exists.',
         ]);
 
         Department::create($validated);
 
         return redirect()->route('departments.index')
-            ->with('success', 'Department created successfully.');
+            ->with('success', 'Office created successfully.');
     }
 
     public function edit(Department $department)
@@ -52,31 +57,31 @@ class DepartmentController extends Controller
             $validated = $request->validate([
                 'department_name' => 'required|string|max:100|unique:departments,department_name,' . $department->department_id . ',department_id',
             ], [
-                'department_name.required' => 'Department name is required.',
-                'department_name.string' => 'Department name must be a valid text.',
-                'department_name.max' => 'Department name cannot exceed 100 characters.',
-                'department_name.unique' => 'A department with this name already exists.',
+                'department_name.required' => 'Office name is required.',
+                'department_name.string' => 'Office name must be a valid text.',
+                'department_name.max' => 'Office name cannot exceed 100 characters.',
+                'department_name.unique' => 'An office with this name already exists.',
             ]);
 
             $department->update($validated);
 
             return redirect()->route('departments.index')
-                ->with('success', 'Department "' . $validated['department_name'] . '" updated successfully!');
+                ->with('success', 'Office "' . $validated['department_name'] . '" updated successfully!');
                 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->route('departments.index')
                 ->withErrors($e->validator)
                 ->withInput()
-                ->with('error', 'Failed to update department. Please check the form for errors.');
+                ->with('error', 'Failed to update office. Please check the form for errors.');
         } catch (\Exception $e) {
-            \Log::error('Department update failed', [
+            \Log::error('Office update failed', [
                 'department_id' => $department->department_id,
                 'error' => $e->getMessage(),
                 'user_id' => auth()->user()->admin_id
             ]);
             
             return redirect()->route('departments.index')
-                ->with('error', 'An unexpected error occurred while updating the department.');
+                ->with('error', 'An unexpected error occurred while updating the office.');
         }
     }
 
@@ -94,17 +99,17 @@ class DepartmentController extends Controller
             $department->delete();
 
             return redirect()->route('departments.index')
-                ->with('success', 'Department "' . $departmentName . '" deleted successfully!');
+                ->with('success', 'Office "' . $departmentName . '" deleted successfully!');
                 
         } catch (\Exception $e) {
-            \Log::error('Department deletion failed', [
+            \Log::error('Office deletion failed', [
                 'department_id' => $department->department_id,
                 'error' => $e->getMessage(),
                 'user_id' => auth()->user()->admin_id
             ]);
             
             return redirect()->route('departments.index')
-                ->with('error', 'An unexpected error occurred while deleting the department.');
+                ->with('error', 'An unexpected error occurred while deleting the office.');
         }
     }
 }

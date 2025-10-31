@@ -99,24 +99,12 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock fs-5 text-secondary"></i></span>
                             <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Enter Password" required autocomplete="current-password">
-                            <span class="input-group-text" style="cursor: pointer;" onclick="togglePassword()"><i class="bi bi-eye text-secondary" id="passwordToggleIcon"></i></span>
                         </div>
                         @error('password')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember">
-                        <label class="form-check-label" for="remember_me">Remember me</label>
-                    </div>
                     <button type="submit" class="btn btn-login w-100">Sign in</button>
-                    @if (Route::has('password.request'))
-                        <div class="text-end mt-2">
-                            <a class="text-decoration-none text-danger small fw-semibold" href="{{ route('password.request') }}">
-                                Forgot your password?
-                            </a>
-                        </div>
-                    @endif
                 </form>
             </div>
         </div>
@@ -144,10 +132,10 @@ function togglePassword() {
     
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        toggleIcon.className = 'bi bi-eye-slash text-secondary';
+        toggleIcon.className = 'bi bi-eye text-secondary';
     } else {
         passwordInput.type = 'password';
-        toggleIcon.className = 'bi bi-eye text-secondary';
+        toggleIcon.className = 'bi bi-eye-slash text-secondary';
     }
 }
 </script>

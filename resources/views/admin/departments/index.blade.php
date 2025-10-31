@@ -1,22 +1,22 @@
 @extends('layouts.theme')
-@section('title', 'Departments')
+@section('title', 'Offices')
 @section('content')
     {{-- Security check: Only super admins can access this page --}}
     @if(!auth()->check() || !auth()->user()->role || auth()->user()->role->role_name !== 'super_admin')
         <div class="container-fluid">
             <div class="alert alert-danger">
                 <i class="bi bi-shield-exclamation me-2"></i>
-                <strong>Access Denied!</strong> Only Super Admins can manage departments.
+                <strong>Access Denied!</strong> Only Super Admins can manage offices.
             </div>
         </div>
-        @php abort(403, 'Access denied. Only Super Admins can manage departments.'); @endphp
+        @php abort(403, 'Access denied. Only Super Admins can manage offices.'); @endphp
     @endif
 
     <div class="container-fluid">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold fs-2 mb-0">
-                <i class="bi bi-building me-2 fs-4"></i>Manage Departments
+                <i class="bi bi-building me-2 fs-4"></i>Manage Offices
             </h1>
             <span class="badge bg-primary fs-5">Super Admin</span>
         </div>
@@ -25,12 +25,12 @@
         {{-- Alerts removed --}}
 
         <div class="row align-items-stretch">
-            <!-- Create Department Form -->
+            <!-- Create Office Form -->
             <div class="col-md-6 mb-4">
                 <div class="aa-card h-100 shadow-sm">
                     <div class="card-header header-maroon">
                         <h4 class="card-title mb-0">
-                            <i class="bi bi-plus-circle me-2"></i>Create New Department
+                            <i class="bi bi-plus-circle me-2"></i>Create New Office
                         </h4>
                     </div>
                     <div class="card-body p-4">
@@ -38,11 +38,11 @@
                             @csrf
                             <div class="mb-3">
                                 <label for="department_name" class="form-label">
-                                    <i class="bi bi-building me-2"></i>Department Name
+                                    <i class="bi bi-building me-2"></i>Office Name
                                 </label>
                                 <input type="text" name="department_name" id="department_name" 
                                        class="form-control @error('department_name') is-invalid @enderror" 
-                                       placeholder="Enter department name" required maxlength="100" 
+                                       placeholder="Enter Office Name" required maxlength="100" 
                                        value="{{ old('department_name') }}">
                                 @error('department_name')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -52,7 +52,7 @@
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-warning">
-                                    <i class="bi bi-plus-circle me-2"></i>Create Department
+                                    <i class="bi bi-plus-circle me-2"></i>Create Office
                                 </button>
                             </div>
                         </form>
@@ -60,12 +60,12 @@
                 </div>
             </div>
 
-            <!-- Department Quick Stats -->
+            <!-- Office Quick Stats -->
             <div class="col-md-6 mb-4">
                 <div class="aa-card h-100 shadow-sm">
                     <div class="card-header header-maroon">
                         <h5 class="card-title mb-0">
-                            <i class="bi bi-graph-up me-2"></i>Department Overview
+                            <i class="bi bi-graph-up me-2"></i>Office Overview
                         </h5>
                     </div>
                     <div class="card-body p-4">
@@ -82,7 +82,7 @@
                                     <div class="position-absolute top-0 start-0 w-100 h-100 bg-primary opacity-10"></div>
                                     <div class="position-relative">
                                         <div class="display-6 fw-bold text-primary">{{ $departments->count() }}</div>
-                                        <div class="small text-muted">Total Departments</div>
+                                        <div class="small text-muted">Total Offices</div>
                                     </div>
                                 </div>
                             </div>
@@ -99,7 +99,7 @@
                                 <div class="p-3 bg-light rounded">
                                     <div class="row">
                                         <div class="col-6">
-                                            <div class="small text-muted mb-1"><i class="bi bi-trophy me-1"></i>Largest Department</div>
+                                            <div class="small text-muted mb-1"><i class="bi bi-trophy me-1"></i>Largest Office</div>
                                             <div class="fw-semibold text-warning">
                                                 {{ $largestDept ? $largestDept->department_name : 'N/A' }}
                                                 @if($largestDept)
@@ -108,7 +108,7 @@
                                             </div>
                                         </div>
                                         <div class="col-6">
-                                            <div class="small text-muted mb-1"><i class="bi bi-calculator me-1"></i>Average per Dept</div>
+                                            <div class="small text-muted mb-1"><i class="bi bi-calculator me-1"></i>Average per Office</div>
                                             <div class="fw-semibold text-info">{{ $avgEmployeesPerDept }} employees</div>
                                         </div>
                                     </div>
@@ -116,9 +116,9 @@
                             </div>
                         </div>
                         
-                        <!-- Department Distribution Chart -->
+                        <!-- Office Distribution Chart -->
                         <div class="mt-4">
-                            <h6 class="text-muted mb-3"><i class="bi bi-bar-chart me-2"></i>Department Size Distribution</h6>
+                            <h6 class="text-muted mb-3"><i class="bi bi-bar-chart me-2"></i>Office Size Distribution</h6>
                             @foreach($departments->sortByDesc('employees_count') as $dept)
                                 @php
                                     $percentage = $totalEmployees > 0 ? ($dept->employees_count / $totalEmployees) * 100 : 0;
@@ -141,11 +141,11 @@
             </div>
         </div>
 
-        <!-- Department List -->
+        <!-- Office List -->
         <div class="aa-card shadow-sm">
             <div class="card-header header-maroon">
                 <h4 class="card-title mb-0">
-                    <i class="bi bi-list-ul me-2"></i>All Departments
+                    <i class="bi bi-list-ul me-2"></i>All Offices
                 </h4>
             </div>
             <div class="card-body">
@@ -154,7 +154,7 @@
                         <thead style="background:transparent;">
                             <tr>
                                 <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-hash me-1"></i>ID</th>
-                                <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-building me-1"></i>Department Name</th>
+                                <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-building me-1"></i>Office Name</th>
                                 <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-people me-1"></i>Employees</th>
                                 <th class="py-3 px-2 text-center" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-gear me-1"></i>Actions</th>
                             </tr>
@@ -179,22 +179,34 @@
                                                 class="btn btn-sm btn-outline-primary me-1 edit-dept-btn" 
                                                 onclick="openEditModal({{ $department->department_id }})" 
                                                 data-dept-id="{{ $department->department_id }}"
-                                                title="Edit Department">
+                                                title="Edit Office">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger delete-department-btn" data-department-id="{{ $department->department_id }}" data-department-name="{{ $department->department_name }}" data-employees-count="{{ $department->employees_count }}" {{ $department->employees_count > 0 ? 'disabled title="Cannot delete department with employees"' : '' }}>
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        
+                                        @if($department->employees_count == 0)
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-department-btn" 
+                                                    data-department-id="{{ $department->department_id }}" 
+                                                    data-department-name="{{ $department->department_name }}" 
+                                                    data-employees-count="{{ $department->employees_count }}"
+                                                    title="Delete Office">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        @else
+                                            <span class="badge bg-secondary text-muted small" 
+                                                  title="Cannot delete office with {{ $department->employees_count }} employee{{ $department->employees_count != 1 ? 's' : '' }}">
+                                                <i class="bi bi-shield-lock me-1"></i>Protected
+                                            </span>
+                                        @endif
                                     </td>
                                 </tr>
 
-                                <!-- Edit Department Modal -->
+                                <!-- Edit Office Modal -->
                                 <div class="modal" id="editDepartmentModal_{{ $department->department_id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="editDepartmentModalLabel_{{ $department->department_id }}">
-                                                    <i class="bi bi-pencil-square me-2"></i>Edit Department: {{ $department->department_name }}
+                                                    <i class="bi bi-pencil-square me-2"></i>Edit Office: {{ $department->department_name }}
                                                 </h5>
                                                 <button type="button" class="btn-close" onclick="closeModal(document.getElementById('editDepartmentModal_{{ $department->department_id }}'))" aria-label="Close"></button>
                                             </div>
@@ -204,7 +216,7 @@
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label for="edit_department_name_{{ $department->department_id }}" class="form-label">
-                                                            <i class="bi bi-building me-2"></i>Department Name
+                                                            <i class="bi bi-building me-2"></i>Office Name
                                                         </label>
                                                         <input type="text" 
                                                                name="department_name" 
@@ -213,14 +225,14 @@
                                                                value="{{ $department->department_name }}" 
                                                                required 
                                                                maxlength="100"
-                                                               placeholder="Enter department name">
+                                                               placeholder="Enter office name">
                                                         <div class="invalid-feedback"></div>
                                                     </div>
                                                     <div class="alert alert-info">
                                                         <i class="bi bi-info-circle me-2"></i>
-                                                        This department currently has <strong>{{ $department->employees_count }}</strong> employee{{ $department->employees_count != 1 ? 's' : '' }}.
+                                                        This office currently has <strong>{{ $department->employees_count }}</strong> employee{{ $department->employees_count != 1 ? 's' : '' }}.
                                                         @if($department->employees_count > 0)
-                                                            <br><small class="text-muted">Note: You cannot delete this department while it has employees.</small>
+                                                            <br><small class="text-muted">Note: You cannot delete this office while it has employees.</small>
                                                         @endif
                                                     </div>
                                                 </div>
@@ -241,8 +253,8 @@
                                     <td colspan="4" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                                            <h5>No Departments Found</h5>
-                                            <p>Create your first department using the form above.</p>
+                                            <h5>No Offices Found</h5>
+                                            <p>Create your first office using the form above.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -254,13 +266,13 @@
         </div>
     </div>
 
-    <!-- Custom Delete Department Modal -->
+    <!-- Custom Delete Office Modal -->
     <div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
                     <h5 class="modal-title" id="deleteDepartmentModalLabel">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Delete Department
+                        <i class="bi bi-exclamation-triangle me-2"></i>Delete Office
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -273,13 +285,17 @@
                         </div>
                         <h5 class="text-danger mb-3">Confirm Deletion</h5>
                         <p class="text-muted mb-0" id="deleteDepartmentMessage">
-                            Are you sure you want to delete this department? 
+                            Are you sure you want to delete this office? 
                             <br><strong class="text-danger">This action cannot be undone.</strong>
                         </p>
                     </div>
                     <div class="alert alert-warning d-flex align-items-center" role="alert">
                         <i class="bi bi-info-circle me-2"></i>
-                        <small id="deleteDepartmentWarning">This will permanently remove the department from the system.</small>
+                        <small id="deleteDepartmentWarning">This will permanently remove the office from the system.</small>
+                    </div>
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        <small>💡 <strong>Tip:</strong> Only empty offices can be deleted. Transfer employees to other offices first if needed.</small>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0">
@@ -287,7 +303,7 @@
                         <i class="bi bi-x-circle me-1"></i>Cancel
                     </button>
                     <button type="button" class="btn btn-danger" id="confirmDeleteDepartmentBtn" onclick="confirmDeleteDepartment()">
-                        <i class="bi bi-trash me-1"></i>Delete Department
+                        <i class="bi bi-trash me-1"></i>Delete Office
                     </button>
                 </div>
             </div>
@@ -337,9 +353,7 @@
         }
         
         /* Completely disable hover effects to prevent modal flickering */
-        .aa-card:hover {
-            /* No hover effects */
-        }
+        
         
         .header-maroon {
             background: var(--aa-maroon);
@@ -393,6 +407,17 @@
         
         .badge:hover {
             transform: scale(1.05);
+        }
+        
+        .badge.bg-secondary {
+            background-color: #6c757d !important;
+            font-size: 0.75em;
+            padding: 0.35em 0.65em;
+        }
+        
+        .badge.bg-secondary:hover {
+            transform: none;
+            cursor: default;
         }
         
         .btn-outline-primary:hover {
@@ -509,29 +534,29 @@
         
         /* All animations disabled to prevent modal conflicts */
         .aa-card {
-            /* No animations */
+            border: 1px solid transparent;
         }
         
         .table tbody tr {
-            /* No animations */
+            border-top: 1px solid #dee2e6;
         }
     </style>
 
     <script>
         // Debug function to check if script is loading
-        console.log('Department management script loaded');
+        console.log('Office management script loaded');
         
         // Prevent multiple event bindings and modal conflicts
         let modalHandlersAttached = false;
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded - Department script');
+            console.log('DOM Content Loaded - Office script');
             
             // Only attach handlers once
             if (modalHandlersAttached) return;
             modalHandlersAttached = true;
             
-            // Initialize delete department modal
+            // Initialize delete office modal
             initializeDeleteDepartmentModal();
             
             // Remove any existing click handlers to prevent conflicts
@@ -552,37 +577,6 @@
                         console.log('Alert already dismissed');
                     }
                 }, 5000);
-            });
-            
-            // Handle delete confirmations with better messaging
-            document.querySelectorAll('form[action*="departments"][method="POST"] button[type="submit"]').forEach(function(deleteBtn) {
-                if (deleteBtn.innerHTML.includes('bi-trash')) {
-                    const form = deleteBtn.closest('form');
-                    
-                    // Remove existing listeners to prevent duplicates
-                    const newForm = form.cloneNode(true);
-                    form.parentNode.replaceChild(newForm, form);
-                    
-                    newForm.addEventListener('submit', function(e) {
-                        const departmentRow = newForm.closest('tr');
-                        const departmentName = departmentRow.querySelector('.fw-semibold').textContent.trim();
-                        const employeeCount = departmentRow.querySelector('.badge').textContent.trim();
-                        
-                        const confirmMessage = `Are you sure you want to delete "${departmentName}"?\n\n` +
-                                             `Current employees: ${employeeCount}\n\n` +
-                                             `This action cannot be undone!`;
-                        
-                        if (!confirm(confirmMessage)) {
-                            e.preventDefault();
-                            return false;
-                        }
-                        
-                        // Show loading state
-                        const submitBtn = newForm.querySelector('button[type="submit"]');
-                        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
-                        submitBtn.disabled = true;
-                    });
-                }
             });
         });
         
@@ -707,16 +701,16 @@
             departmentNameInput.classList.remove('is-invalid');
             feedbackDiv.textContent = '';
             
-            // Validate department name
+            // Validate office name
             if (!departmentNameInput.value.trim()) {
                 departmentNameInput.classList.add('is-invalid');
-                feedbackDiv.textContent = 'Department name is required.';
+                feedbackDiv.textContent = 'Office name is required.';
                 return false;
             }
             
             if (departmentNameInput.value.trim().length > 100) {
                 departmentNameInput.classList.add('is-invalid');
-                feedbackDiv.textContent = 'Department name cannot exceed 100 characters.';
+                feedbackDiv.textContent = 'Office name cannot exceed 100 characters.';
                 return false;
             }
             
@@ -732,14 +726,22 @@
         // Make function globally available
         window.validateAndSubmit = validateAndSubmit;
         
-        // Delete Department Modal Functions
+        // Delete Office Modal Functions
         function initializeDeleteDepartmentModal() {
             document.addEventListener('click', function(e) {
                 if (e.target.closest('.delete-department-btn')) {
                     e.preventDefault();
-                    const departmentId = e.target.closest('.delete-department-btn').dataset.departmentId;
-                    const departmentName = e.target.closest('.delete-department-btn').dataset.departmentName;
-                    const employeesCount = e.target.closest('.delete-department-btn').dataset.employeesCount;
+                    const btn = e.target.closest('.delete-department-btn');
+                    const departmentId = btn.dataset.departmentId;
+                    const departmentName = btn.dataset.departmentName;
+                    const employeesCount = btn.dataset.employeesCount;
+                    
+                    // Double-check that there are no employees (safety check)
+                    if (parseInt(employeesCount) > 0) {
+                        showNotification('error', 'Cannot delete office with employees. Please transfer or remove employees first.');
+                        return;
+                    }
+                    
                     deleteDepartment(departmentId, departmentName, employeesCount);
                 }
             });
@@ -754,7 +756,7 @@
                 `Are you sure you want to delete "<strong>${departmentName}</strong>"?<br><strong class="text-danger">This action cannot be undone.</strong>`;
             
             document.getElementById('deleteDepartmentWarning').textContent = 
-                `This will permanently remove the department from the system. Current employees: ${employeesCount}`;
+                `This will permanently remove the office from the system. This office has no employees.`;
             
             // Show the custom delete modal
             const modal = new bootstrap.Modal(document.getElementById('deleteDepartmentModal'));
@@ -785,14 +787,14 @@
                 document.body.appendChild(form);
                 form.submit();
             } catch (error) {
-                console.error('Error deleting department:', error);
-                alert('An error occurred while trying to delete the department. Please try again.');
+                console.error('Error deleting office:', error);
+                alert('An error occurred while trying to delete the office. Please try again.');
             }
         }
         
         // Test function to verify everything is working
-        function testDepartmentFunctions() {
-            console.log('Testing department functions...');
+        function testOfficeFunctions() {
+            console.log('Testing office functions...');
             console.log('openEditModal function:', typeof window.openEditModal);
             console.log('validateAndSubmit function:', typeof window.validateAndSubmit);
             console.log('Bootstrap loaded:', typeof bootstrap !== 'undefined');
@@ -800,7 +802,7 @@
         
         // Run test when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(testDepartmentFunctions, 1000);
+            setTimeout(testOfficeFunctions, 1000);
         });
         
         // Cool notification functions
@@ -826,25 +828,31 @@
                 toastEl.style.transform = 'translateX(0)';
             }, 100);
         }
-
-        // Show notifications based on session messages
-        @if(session('success'))
-            document.addEventListener('DOMContentLoaded', function() {
-                showNotification('success', '{{ session('success') }}');
-            });
-        @endif
-        
-        @if(session('error'))
-            document.addEventListener('DOMContentLoaded', function() {
-                showNotification('error', '{{ session('error') }}');
-            });
-        @endif
-        
-        @if(session('info'))
-            document.addEventListener('DOMContentLoaded', function() {
-                showNotification('info', '{{ session('info') }}');
-            });
-        @endif
     </script>
+
+    @if(session('success'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            showNotification('success', "{{ session('success') }}");
+        });
+    </script>
+    @endif
+    
+    @if(session('error'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            showNotification('error', "{{ session('error') }}");
+        });
+    </script>
+    @endif
+    
+    @if(session('info'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            showNotification('info', "{{ session('info') }}");
+        });
+    </script>
+    @endif
+
 @include('layouts.toast-js')
 @endsection
