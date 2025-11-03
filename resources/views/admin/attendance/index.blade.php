@@ -10,9 +10,9 @@
             <form action="{{ route('attendance.index') }}" method="GET" class="row g-3 mb-4">
                 @if(auth()->user()->isSuperAdmin())
                 <div class="col-md-3">
-                    <label for="department_id" class="form-label">Department</label>
+                    <label for="department_id" class="form-label">Office</label>
                     <select name="department_id" id="department_id" class="form-select">
-                        <option value="">All Departments</option>
+                        <option value="">All Offices</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->department_id }}" {{ request('department_id') == $dept->department_id ? 'selected' : '' }}>
                                 {{ $dept->department_name }}
@@ -51,7 +51,7 @@
                     <thead>
                         <tr>
                             <th>Employee</th>
-                            <th>Department</th>
+                            <th>Office</th>
                             <th>Timestamp</th>
                             <th>Method</th>
                             <th>Kiosk</th>
@@ -86,7 +86,7 @@
                     
                     @if(auth()->user()->isSuperAdmin())
                     <div class="col-md-3">
-                        <label for="report_department_id" class="form-label">Department</label>
+                        <label for="report_department_id" class="form-label">Office</label>
                         <select name="department_id" id="report_department_id" class="form-select" required>
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->department_id }}">

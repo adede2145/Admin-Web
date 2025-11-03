@@ -25,7 +25,7 @@
                     <div class="col-md-3">
                         <div class="rounded p-3">
                             <h3 class="text-primary"><i class="bi bi-building me-2"></i>{{ $report->department_name }}</h3>
-                            <p class="mb-0">Department</p>
+                            <p class="mb-0">Office</p>
                         </div>
                     </div>
                     <div class="col-md-3">

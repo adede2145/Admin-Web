@@ -46,21 +46,21 @@
                             <div class="form-text">Min 8 chars, start with capital, include a symbol.</div>
                         </div>
 
-                        <!-- Department Filter for Employee Selection -->
+                        <!-- Office Filter for Employee Selection -->
                         <div class="mb-3">
                             <label for="filter_department" class="form-label">
                                 <span class="d-flex align-items-center">
                                     <i class="bi bi-funnel me-2 text-muted"></i>
-                                    Filter by Department
+                                    Filter by Office
                                 </span>
                             </label>
                             <select id="filter_department" class="form-select" required>
-                                <option value="">Select Department</option>
+                                <option value="">Select Office</option>
                                 @foreach($departments as $dept)
                                 <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
                                 @endforeach
                             </select>
-                            <div class="form-text">Filter employees by department</div>
+                            <div class="form-text">Filter employees by office</div>
                         </div>
 
                         <!-- Employee Selection -->
@@ -191,9 +191,9 @@
                                 <span class="display-1 fw-bold text-warning mb-1">
                                     <i class="bi bi-building me-2 text-warning" style="font-size:4rem;"></i>{{ $deptAdmins->count() }}
                                 </span>
-                                <div class="fs-4 fw-bold text-warning mb-3">Department Admins</div>
+                                <div class="fs-4 fw-bold text-warning mb-3">Office Admins</div>
                                 <div class="bg-light rounded p-3 w-100 mt-auto">
-                                    <div class="small text-muted mb-1"><i class="bi bi-collection me-2 text-danger"></i>Admin with Most Departments</div>
+                                    <div class="small text-muted mb-1"><i class="bi bi-collection me-2 text-danger"></i>Admin with Most Offices</div>
                                     <div class="fs-5 fw-bold text-danger">{{ $mostDeptsAdmin ?? 'N/A' }}@if($mostDeptsCount) <span class="fs-6 text-muted">({{ $mostDeptsCount }})</span>@endif</div>
                                 </div>
                             </div>
@@ -218,7 +218,7 @@
                                 <i class="bi bi-diagram-3 fs-2 text-warning me-3"></i>
                                 <div>
                                     <div class="fw-bold fs-5">{{ $uniqueDepartments }}</div>
-                                    <div class="small text-muted">Departments with Admins</div>
+                                    <div class="small text-muted">Offices with Admins</div>
                                 </div>
                             </div>
                         </div>
@@ -226,7 +226,7 @@
                             <div class="p-3 bg-light rounded shadow-sm h-100 d-flex align-items-center">
                                 <i class="bi bi-building fs-2 text-danger me-3"></i>
                                 <div>
-                                    <div class="fw-bold fs-6">Most Common Dept:</div>
+                                    <div class="fw-bold fs-6">Most Common Office:</div>
                                     <div class="fw-semibold">{{ $mostCommonDept?->department_name ?? 'N/A' }}</div>
                                 </div>
                             </div>
@@ -280,7 +280,7 @@
                             <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-hash me-1"></i>ID</th>
                             <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-person me-1"></i>Username</th>
                             <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-shield-lock me-1"></i>Role</th>
-                            <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-building me-1"></i>Department</th>
+                            <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-building me-1"></i>Office</th>
                             <th class="py-3 px-2 text-center" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-gear me-1"></i>Actions</th>
                         </tr>
                     </thead>
@@ -562,11 +562,11 @@
         let filteredEmployees = []; // Start with empty array since no department is selected
         let selectedEmployee = null;
 
-        // Department filter change handler
+        // Office filter change handler
         departmentFilter.addEventListener('change', function() {
             const deptId = this.value;
             if (deptId === '') {
-                // No department selected - show no employees
+                // No office selected - show no employees
                 filteredEmployees = [];
             } else {
                 filteredEmployees = allEmployees.filter(emp => emp.department_id == deptId);

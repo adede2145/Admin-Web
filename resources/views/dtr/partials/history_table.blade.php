@@ -89,7 +89,7 @@
                 <tr>
                     <th scope="col" class="table-header-red">Report ID</th>
                     <th scope="col" class="table-header-red">Title</th>
-                    <th scope="col" class="table-header-red">Department</th>
+                    <th scope="col" class="table-header-red">Office</th>
                     <th scope="col" class="table-header-red">Type</th>
                     <th scope="col" class="table-header-red">Period</th>
                     <th scope="col" class="table-header-red">Employees</th>

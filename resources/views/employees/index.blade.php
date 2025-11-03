@@ -53,7 +53,7 @@
                                         <th scope="col"><i class="bi bi-hash me-1"></i>Employee ID</th>
                                         <th scope="col"><i class="bi bi-person me-1"></i>Full Name</th>
                                         <th scope="col"><i class="bi bi-briefcase me-1"></i>Employment Type</th>
-                                        <th scope="col"><i class="bi bi-building me-1"></i>Department</th>
+                                        <th scope="col"><i class="bi bi-building me-1"></i>Office</th>
                                         <th scope="col"><i class="bi bi-credit-card me-1"></i>RFID Code</th>
                                         <th scope="col"><i class="bi bi-gear me-1"></i>Actions</th>
                                     </tr>
@@ -215,10 +215,10 @@
                                        onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
                             </div>
 
-                            <!-- Department -->
+                            <!-- Office -->
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                    <i class="bi bi-building me-2 fs-6"></i>Department
+                                    <i class="bi bi-building me-2 fs-6"></i>Office
                                 </label>
                                 <select name="department_id" class="form-select form-select-lg border-2" required
                                         style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
@@ -603,11 +603,11 @@
                 console.log('Updated name to:', data.full_name);
             }
 
-            // Update department - it's the text-muted small element right after the name
+            // Update office - it's the text-muted small element right after the name
             const deptElement = summaryCard.querySelector('.text-muted.small.mb-3');
             if (deptElement) {
                 deptElement.textContent = data.department;
-                console.log('Updated department to:', data.department);
+                console.log('Updated office to:', data.department);
             }
 
             // Update statistics - these are in col-6 elements with display-6 fw-bold

@@ -17,7 +17,7 @@
         <div class="card-body">
             <div class="row mb-4">
                 <div class="col-md-6">
-                    <h5>Department: {{ $report->department->department_name }}</h5>
+                    <h5>Office: {{ $report->department->department_name }}</h5>
                     <p>Report Type: {{ ucfirst($report->report_type) }}</p>
                     <p>Generated On: {{ $report->generated_on->format('F d, Y h:i A') }}</p>
                 </div>
@@ -118,7 +118,7 @@
                         <p>Certified Correct:</p>
                         <div class="mt-4">
                             <hr style="width: 200px;">
-                            <p class="text-center" style="width: 200px;">Department Head</p>
+                            <p class="text-center" style="width: 200px;">Office Head</p>
                         </div>
                     </div>
                 </div>

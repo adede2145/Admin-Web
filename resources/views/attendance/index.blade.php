@@ -242,7 +242,7 @@
                     @if(auth()->user()->role->role_name === 'super_admin')
                     System-wide access
                     @else
-                    Limited to {{ auth()->user()->department->department_name ?? 'your department' }}
+                    Limited to {{ auth()->user()->department->department_name ?? 'your office' }}
                     @endif
                 </small>
             </div>
@@ -291,7 +291,7 @@
                             @if(auth()->user()->role->role_name === 'super_admin')
                             All Employees ({{ $empOptions->count() }})
                             @else
-                            All in {{ auth()->user()->department->department_name ?? 'Department' }} ({{ $empOptions->count() }})
+                            All in {{ auth()->user()->department->department_name ?? 'Office' }} ({{ $empOptions->count() }})
                             @endif
                         </option>
                         @foreach($empOptions as $emp)
@@ -299,7 +299,7 @@
                             {{ (string)request('employee_id') === (string)$emp->employee_id ? 'selected' : '' }}>
                             {{ $emp->full_name }}
                             @if(auth()->user()->role->role_name === 'super_admin')
-                            <span class="text-muted">({{ $emp->department->department_name ?? 'No Dept' }})</span>
+                            <span class="text-muted">({{ $emp->department->department_name ?? 'No Office' }})</span>
                             @endif
                         </option>
                         @endforeach
@@ -313,14 +313,14 @@
                     </div>
                 </div>
 
-                <!-- Department Filter (Super Admin Only) -->
+                <!-- Office Filter (Super Admin Only) -->
                 @if(auth()->user()->role->role_name === 'super_admin')
                 <div class="filter-item">
                     <label class="form-label fw-semibold">
-                        <i class="bi bi-building me-1"></i>Department
+                        <i class="bi bi-building me-1"></i>Office
                     </label>
                     <select name="department_id" class="form-select" id="departmentFilter">
-                        <option value="">All Departments ({{ $departments->count() }})</option>
+                        <option value="">All Offices ({{ $departments->count() }})</option>
                         @foreach($departments as $dept)
                         <option value="{{ $dept->department_id }}"
                             {{ request('department_id') == $dept->department_id ? 'selected' : '' }}>
@@ -586,7 +586,7 @@
                                     <th scope="col">ID</th>
                                     <th scope="col">Employee</th>
                                     @if(auth()->user()->role->role_name === 'super_admin')
-                                    <th scope="col">Department</th>
+                                    <th scope="col">Office</th>
                                     @endif
                                     <th scope="col">Time In</th>
                                     <th scope="col">Time Out</th>
@@ -669,13 +669,13 @@
                         @if(auth()->user()->role->role_name === 'super_admin')
                         <div class="col-md-6">
                             <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                <i class="bi bi-building me-2 fs-6"></i>Department
+                                <i class="bi bi-building me-2 fs-6"></i>Office
                             </label>
                             <select name="department_id" class="form-select form-select-lg border-2" id="dtrDepartmentSelect"
                                     style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
                                     onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
                                     onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                <option value="">All Departments</option>
+                                <option value="">All Offices</option>
                                 @foreach($departments as $dept)
                                 <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
                                 @endforeach
@@ -684,7 +684,7 @@
                         @else
                         <div class="col-md-6">
                             <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                <i class="bi bi-building me-2 fs-6"></i>Department
+                                <i class="bi bi-building me-2 fs-6"></i>Office
                             </label>
                             <input type="text" class="form-control form-control-lg border-2" value="{{ auth()->user()->department->department_name ?? 'N/A' }}" readonly
                                    style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">

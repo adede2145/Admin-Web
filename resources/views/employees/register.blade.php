@@ -114,10 +114,10 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Department</label>
+                            <label class="form-label">Office</label>
                             @if($isSuper && !($editFp ?? false))
                             <select id="departmentId" name="department_id" class="form-select" required>
-                                <option value="">Select department</option>
+                                <option value="">Select office</option>
                                 @foreach($departments as $dept)
                                 <option value="{{ $dept->id ?? $dept->department_id }}">{{ $dept->department_name ?? $dept->name }}</option>
                                 @endforeach
@@ -126,7 +126,7 @@
                             @php
                             $deptName = isset($employee) ? optional($employee->department)->department_name : optional(\App\Models\Department::find($userDeptId))->department_name;
                             @endphp
-                            <input type="text" class="form-control" value="{{ $deptName ?? 'My Department' }}" disabled>
+                            <input type="text" class="form-control" value="{{ $deptName ?? 'My Office' }}" disabled>
                             <input type="hidden" id="departmentId" name="department_id" value="{{ ($editFp ?? false) && isset($employee) ? $employee->department_id : $userDeptId }}">
                             @endif
                         </div>
@@ -949,7 +949,7 @@
             } else {
                 showNotification(
                     'Not Ready',
-                    'Please complete all required fields (Name, ID, Department, Employment Type, RFID, and Primary Fingerprint).',
+                    'Please complete all required fields (Name, ID, Office, Employment Type, RFID, and Primary Fingerprint).',
                     'warning'
                 );
             }

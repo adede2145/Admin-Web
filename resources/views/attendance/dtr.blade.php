@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DTR Report - {{ $reportData['department']->department_name ?? 'All Departments' }}</title>
+    <title>DTR Report - {{ $reportData['office']->department_name ?? 'All Offices' }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -120,15 +120,15 @@
     </div>
 
     <div class="container-fluid" style="max-width: 1200px;">
-        <!-- Department Selection -->
+        <!-- Office Selection -->
         <form method="GET" action="">
             <div class="row mb-4">
                 <div class="col-md-4">
-                    <label for="department_id" class="form-label fw-bold">Select Department</label>
-                    <select name="department_id" id="department_id" class="form-select">
-                        <option value="">All Departments</option>
+                    <label for="office_id" class="form-label fw-bold">Select Office</label>
+                    <select name="office_id" id="office_id" class="form-select">
+                        <option value="">All Offices</option>
                         @foreach($departments as $dept)
-                            <option value="{{ $dept->department_id }}" {{ request('department_id') == $dept->department_id ? 'selected' : '' }}>{{ $dept->department_name }}</option>
+                            <option value="{{ $dept->department_id }}" {{ request('office_id') == $dept->department_id ? 'selected' : '' }}>{{ $dept->department_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -144,7 +144,7 @@
             </div>
             <div class="row">
                 <div class="col-md-6">
-                    <strong>Department:</strong> {{ $reportData['department']->department_name ?? 'All Departments' }}
+                    <strong>Office:</strong> {{ $reportData['office']->department_name ?? 'All Offices' }}
                 </div>
                 <div class="col-md-6 text-end">
                     <strong>Report Type:</strong> {{ ucfirst($reportData['report_type']) }}
@@ -273,13 +273,13 @@
                     <p><strong>Prepared by:</strong></p>
                     <div class="signature-line"></div>
                     <p class="mt-2">{{ $reportData['admin']->username }}</p>
-                    <small>Department Administrator</small>
+                    <small>Office Administrator</small>
                 </div>
                 <div class="col-md-6 text-center">
                     <p><strong>Certified Correct:</strong></p>
                     <div class="signature-line"></div>
-                    <p class="mt-2">Department Head</p>
-                    <small>Department Head</small>
+                    <p class="mt-2">Office Head</p>
+                    <small>Office Head</small>
                 </div>
             </div>
         </div>
