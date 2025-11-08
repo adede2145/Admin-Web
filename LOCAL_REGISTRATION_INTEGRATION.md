@@ -1,7 +1,25 @@
 # Local Registration Integration - Changes Summary
 
 ## Overview
-Successfully configured the system to allow local registration page (installed with Fingerprint Device Bridge) to communicate with the hosted backend application.
+Successfully configured the system to allow local registration page (served by embedded Python web server on port 18426) to communicate with the hosted backend application.
+
+## Architecture
+
+### Components:
+1. **Hosted Web App** - Laravel application (your domain/IP)
+2. **Fingerprint Device Bridge** - C# Windows Service (port 18420) - handles fingerprint device
+3. **Local Web Server** - Embedded Python HTTP server (port 18426) - serves registration page
+4. **Registration Page** - HTML/JavaScript page for employee registration and fingerprint capture
+
+### Flow:
+```
+User clicks "Register Employee" 
+    → Backend generates token 
+    → Opens http://127.0.0.1:18426/register.html?token=xyz&backend=https://yourapp.com
+    → Page communicates with:
+        - Device Bridge (127.0.0.1:18420) for fingerprints
+        - Backend API for saving data
+```
 
 ## Changes Made
 
@@ -54,14 +72,23 @@ Changes:
 1. **User clicks "Register Employee"** on hosted web app
 2. **Backend generates token** via `/api/generate-token` API
 3. **Token stored in cache** for 10 minutes with admin details
-4. **Opens local HTML file** using `file://` protocol with parameters:
+4. **Opens local web server** using `http://127.0.0.1:18426/register.html` with parameters:
    - `token`: Authentication token
-   - `backend`: Backend URL (e.g., `http://localhost/Admin-Web/public`)
+   - `backend`: Backend URL (e.g., `http://localhost/Admin-Web/public` or `https://yourapp.com`)
 5. **Local registration page**:
    - Reads token and backend URL from URL parameters
    - Connects to local fingerprint bridge (127.0.0.1:18420)
    - Sends registration data to backend using the token
    - Backend validates token and processes registration
+
+### For Edit Fingerprints:
+1. **User clicks "Edit Fingerprints"** on employee details
+2. **Backend generates token** (60 minute expiry for edit mode)
+3. **Redirects to** `http://127.0.0.1:18426/register.html` with parameters:
+   - `mode=edit`
+   - `employee_id`: Employee ID to edit
+   - `token`: Authentication token
+   - `backend`: Backend URL
 
 ### Security:
 - Tokens expire after 10 minutes
@@ -127,15 +154,43 @@ php artisan optimize
 - Some browsers block file:// by default - try Chrome/Edge
 
 ## Files Modified
-1. `routes/api.php`
-2. `app/Http/Controllers/Api/TokenController.php` (new)
-3. `app/Http/Middleware/Cors.php` (new)
-4. `app/Http/Kernel.php`
-5. `config/cors.php`
-6. `resources/views/layouts/theme.blade.php`
-7. `public/local_registration/register.html`
-8. `resources/views/employees/register.html`
-9. `C:\Program Files (x86)\Tresmongos\Fingerprint Device Bridge\local_registration\register.html`
+1. `routes/api.php` - Added token generation endpoint
+2. `app/Http/Controllers/Api/TokenController.php` (new) - Token generation logic
+3. `app/Http/Middleware/Cors.php` (new) - CORS middleware for cross-origin requests
+4. `app/Http/Kernel.php` - Registered CORS middleware
+5. `config/cors.php` - Enabled credentials support
+6. `resources/views/layouts/theme.blade.php` - Updated to open http://127.0.0.1:18426
+7. `app/Http/Controllers/EmployeeController.php` - Updated edit fingerprints redirect
+8. `public/local_registration/register.html` - Updated to accept backend URL parameter
+9. `resources/views/employees/register.html` - Updated to accept backend URL parameter
+10. `start_webserver.py` (new) - Python script for local web server (port 18426)
+
+## Embedded Python Web Server
+
+### Why Port 18426?
+- Port 18420: Fingerprint Device Bridge API
+- Port 18426: Local Registration Web Server
+
+### Python Script Features:
+- ✅ Serves files from `local_registration` folder
+- ✅ CORS enabled for remote backend communication
+- ✅ Automatic port fallback (18426-18430)
+- ✅ Logging to `webserver.log`
+- ✅ Handles GET, POST, OPTIONS requests
+- ✅ No external dependencies (uses Python stdlib)
+
+### Installation with Device Bridge:
+Copy `start_webserver.py` to Device Bridge installation folder:
+```
+C:\Program Files (x86)\Tresmongos\Fingerprint Device Bridge\
+├── DeviceBridge.exe
+├── python-embed\
+│   └── python.exe (embedded Python)
+├── start_webserver.py (this file)
+├── local_registration\
+│   └── register.html
+└── webserver.log (created automatically)
+```
 
 ## Notes
 - Local registration file must be installed with Fingerprint Device Bridge

@@ -374,14 +374,17 @@ class EmployeeController extends Controller
         $tokenService = app(\App\Services\TokenService::class);
         $token = $tokenService->generateRegistrationToken(auth()->user(), 60);
 
+        $backendUrl = url('/');
+
         // Redirect to register.html with employee data as query parameters
         $queryParams = http_build_query([
             'mode' => 'edit',
             'employee_id' => $employee->employee_id,
             'token' => $token,
+            'backend_url' => $backendUrl,
         ]);
 
-        return redirect('/local_registration/register.html?' . $queryParams);
+        return redirect('http://127.0.0.1:18426/register.html?' . $queryParams);
     }
 
     /**
