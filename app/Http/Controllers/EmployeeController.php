@@ -370,9 +370,18 @@ class EmployeeController extends Controller
             ->get()
             ->keyBy('template_index');
 
-        // Reuse register view with edit mode
-        $mode = 'edit-fp';
-        return view('employees.register', compact('employee', 'templates', 'mode'));
+        // Generate token for the session (expires in 60 minutes for edit mode)
+        $tokenService = app(\App\Services\TokenService::class);
+        $token = $tokenService->generateRegistrationToken(auth()->user(), 60);
+
+        // Redirect to register.html with employee data as query parameters
+        $queryParams = http_build_query([
+            'mode' => 'edit',
+            'employee_id' => $employee->employee_id,
+            'token' => $token,
+        ]);
+
+        return redirect('/local_registration/register.html?' . $queryParams);
     }
 
     /**

@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Employee</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --aa-maroon: #560000;
+            --aa-maroon-dark: #3a0000;
+            --aa-yellow: #ffc107;
+        }
+
+        body {
+            background: #d1d5db url('../login-bg.jpg') center/cover no-repeat fixed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .container-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .aa-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .aa-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .header-maroon {
+            background: var(--aa-maroon) !important;
+            color: #fff !important;
+            padding: 0.9rem 1.25rem;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .card-title i {
+            font-size: 1.25rem;
+        }
+
+        .fingerprint-section {
+            transition: all 0.3s ease;
+        }
+
+        .fingerprint-section.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .progress-wrapper {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .notification {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .status-text {
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .device-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+
+        .config-section {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .config-section h6 {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .alert-info {
+            background: #cfe2ff;
+            border-color: #b6d4fe;
+            color: #084298;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-wrapper">
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h6><i class="bi bi-gear-fill me-2"></i>Backend Configuration & Authentication</h6>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label small mb-1">Backend API URL:</label>
+                    <input type="text" id="backendApiUrl" class="form-control form-control-sm" 
+                           value="http://localhost/Admin-Web/public" 
+                           placeholder="https://your-linode-ip-or-domain">
+                    <small class="text-muted">Enter your hosted Laravel backend URL</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small mb-1">Admin Token:</label>
+                    <input type="password" id="adminToken" class="form-control form-control-sm" 
+                           placeholder="Enter your authentication token">
+                    <small class="text-muted">Required for RBAC and API access</small>
+                </div>
+            </div>
+            <div class="row g-2 mt-2">
+                <div class="col-md-12">
+                    <button type="button" id="testConnectionBtn" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-wifi me-1"></i> Test Connection & Load Offices
+                    </button>
+                    <span id="connectionStatus" class="ms-2 small text-muted"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card aa-card">
+                    <div class="card-header header-maroon d-flex justify-content-between align-items-center">
+                        <div class="card-title m-0">
+                            <i class="bi bi-person-plus me-2"></i> Register Employee
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-2 device-status">
+                                <i class="bi bi-usb-symbol text-secondary"></i>
+                                <span id="deviceStatus" class="text-muted status-text">Checking Device Bridge...</span>
+                            </div>
+                        </div>
+
+                        <form id="registerForm">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Profile Image</label>
+                                    <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/*">
+                                    <div class="mt-2">
+                                        <img id="profilePreview" src="" alt="Preview" class="img-thumbnail d-none" style="max-width: 180px;">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Employee Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="empName" name="emp_name" placeholder="Full name" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Employee ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="empId" name="emp_id" placeholder="ID/Code" required>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Office <span class="text-danger">*</span></label>
+                                    <select id="departmentId" name="department_id" class="form-select" required>
+                                        <option value="">Loading offices...</option>
+                                    </select>
+                                    <small class="text-muted" id="officeLoadStatus">Connect to backend to load offices</small>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Employment Type <span class="text-danger">*</span></label>
+                                    <select id="employmentType" name="employment_type" class="form-select" required>
+                                        <option value="">Select employment type</option>
+                                        <option value="full_time">Full Time</option>
+                                        <option value="part_time">Part Time</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">RFID (fallback) <span class="text-danger">*</span> <span id="rfidStatus" class="ms-2 small text-muted"></span></label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="rfidUid" name="rfid_uid" placeholder="Tap card or type UID" autocomplete="off">
+                                        <button class="btn btn-outline-primary" type="button" id="clearRfidBtn">Clear</button>
+                                    </div>
+                                    <div class="form-text">If your reader is keyboard-wedge, focus here and tap a card.</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Fingerprint Enrollment</label>
+
+                                    <!-- Primary Fingerprint Section -->
+                                    <div class="border rounded p-3 mb-3 bg-light">
+                                        <h6 class="text-primary mb-2">
+                                            <i class="bi bi-1-circle me-1"></i> Primary Fingerprint (Index Finger) <span class="text-danger">*</span>
+                                        </h6>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                            <button type="button" id="capturePrimaryBtn" class="btn btn-outline-primary btn-sm" disabled>
+                                                <i class="bi bi-fingerprint me-1"></i> Scan Primary
+                                            </button>
+                                            <span id="primaryStatus" class="text-muted">Waiting for Device Bridge...</span>
+                                        </div>
+                                        <!-- Scanning Progress for Primary -->
+                                        <div id="primaryProgress" class="d-none progress-wrapper">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                <span class="small text-primary">Scanning in progress...</span>
+                                            </div>
+                                            <div class="progress mb-2" style="height: 6px;">
+                                                <div id="primaryProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                                    role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <span id="primaryInstruction">Place your index finger on the scanner...</span>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="primaryTemplate" name="primary_template" value="">
+                                    </div>
+
+                                    <!-- Backup Fingerprint Section -->
+                                    <div class="border rounded p-3 bg-light" id="backupSection" style="opacity: 0.5;">
+                                        <h6 class="text-secondary mb-2">
+                                            <i class="bi bi-2-circle me-1"></i> Backup Fingerprint (Thumb)
+                                        </h6>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                            <button type="button" id="captureBackupBtn" class="btn btn-outline-secondary btn-sm" disabled>
+                                                <i class="bi bi-fingerprint me-1"></i> Scan Backup
+                                            </button>
+                                            <span id="backupStatus" class="text-muted">Complete primary fingerprint first</span>
+                                        </div>
+                                        <!-- Scanning Progress for Backup -->
+                                        <div id="backupProgress" class="d-none progress-wrapper">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                                <span class="small text-secondary">Scanning in progress...</span>
+                                            </div>
+                                            <div class="progress mb-2" style="height: 6px;">
+                                                <div id="backupProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-secondary"
+                                                    role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <span id="backupInstruction">Place your thumb on the scanner...</span>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="backupTemplate" name="backup_template" value="">
+                                    </div>
+
+                                    <!-- Overall Status -->
+                                    <div class="mt-3">
+                                        <span id="fpOverallStatus" class="text-muted">Device status checking...</span>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <button id="registerBtn" type="submit" class="btn btn-primary" disabled>
+                                        <i class="bi bi-check2-circle me-1"></i> Register Employee
+                                    </button>
+                                    <button id="checkReadyBtn" type="button" class="btn btn-outline-secondary">
+                                        <i class="bi bi-clipboard-check me-1"></i> Check if Ready
+                                    </button>
+                                    <span id="registerHint" class="ms-2 text-muted"></span>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION: Backend URL and Authentication Token
+        // ============================================================
+        let bridgeBase = 'http://127.0.0.1:18420';
+        
+        /**
+         * Get the backend API URL from the configuration input field
+         * This should be your hosted Laravel backend URL
+         * Example: https://your-linode-ip-or-domain or http://localhost/Admin-Web/public
+         */
+        function getBackendUrl() {
+            return document.getElementById('backendApiUrl').value.trim() || 'http://localhost/Admin-Web/public';
+        }
+
+        /**
+         * Get the admin authentication token from the input field or localStorage
+         * This token is required for RBAC and authenticating API requests
+         * The token should be obtained after successful login on the hosted backend
+         */
+        function getAuthToken() {
+            // Try to get from input field first
+            let token = document.getElementById('adminToken').value.trim();
+            
+            // If not in input, try localStorage
+            if (!token) {
+                token = localStorage.getItem('adminToken') || '';
+            }
+            
+            return token;
+        }
+
+        /**
+         * Save auth token to localStorage for persistence across page reloads
+         */
+        function saveAuthToken(token) {
+            if (token) {
+                localStorage.setItem('adminToken', token);
+                document.getElementById('adminToken').value = token;
+            }
+        }
+
+        /**
+         * Clear stored authentication token
+         */
+        function clearAuthToken() {
+            localStorage.removeItem('adminToken');
+            document.getElementById('adminToken').value = '';
+        }
+
+        // ============================================================
+        // OFFICE DATA MANAGEMENT: Dynamic loading from backend
+        // ============================================================
+        
+        /**
+         * Fetch offices/departments from the hosted Laravel backend
+         * Respects RBAC: Super Admin sees all offices, Admin sees only their office(s)
+         * Requires valid authentication token in the request header
+         */
+        async function loadOfficesFromBackend() {
+            const backendUrl = getBackendUrl();
+            const token = getAuthToken();
+            const connectionStatus = document.getElementById('connectionStatus');
+            const officeSelect = document.getElementById('departmentId');
+            const officeLoadStatus = document.getElementById('officeLoadStatus');
+
+            // Validate token exists
+            if (!token) {
+                connectionStatus.textContent = '❌ Token required';
+                connectionStatus.className = 'ms-2 small text-danger';
+                officeLoadStatus.textContent = 'Authentication token required. Please enter your token.';
+                officeLoadStatus.className = 'text-danger small';
+                
+                // Show authorization error
+                showNotification(
+                    'Authentication Required',
+                    'You are not authorized. Please log in again and provide your authentication token.',
+                    'error'
+                );
+                
+                // Disable form
+                officeSelect.innerHTML = '<option value="">Not authorized</option>';
+                officeSelect.disabled = true;
+                return false;
+            }
+
+            // Show loading state
+            connectionStatus.textContent = '⏳ Connecting...';
+            connectionStatus.className = 'ms-2 small text-primary';
+            officeSelect.innerHTML = '<option value="">Loading offices...</option>';
+            officeSelect.disabled = true;
+            officeLoadStatus.textContent = 'Fetching offices from backend...';
+            officeLoadStatus.className = 'text-primary small';
+
+            try {
+                console.log('Fetching offices from:', `${backendUrl}/api/offices`);
+
+                // Make authenticated request to backend
+                const response = await fetch(`${backendUrl}/api/offices`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // Send token for authentication
+                    },
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                });
+
+                console.log('Response status:', response.status);
+
+                // Handle authentication errors
+                if (response.status === 401 || response.status === 403) {
+                    connectionStatus.textContent = '❌ Unauthorized';
+                    connectionStatus.className = 'ms-2 small text-danger';
+                    officeLoadStatus.textContent = 'Authentication failed. Token may be invalid or expired.';
+                    officeLoadStatus.className = 'text-danger small';
+                    
+                    officeSelect.innerHTML = '<option value="">Not authorized</option>';
+                    officeSelect.disabled = true;
+                    
+                    showNotification(
+                        'Authorization Failed',
+                        'You are not authorized. Please log in again with a valid token.',
+                        'error'
+                    );
+                    
+                    // Clear invalid token
+                    clearAuthToken();
+                    return false;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Offices data received:', data);
+
+                // Handle different response structures
+                let offices = [];
+                if (Array.isArray(data)) {
+                    offices = data;
+                } else if (data.success && Array.isArray(data.offices)) {
+                    offices = data.offices;
+                } else if (data.data && Array.isArray(data.data)) {
+                    offices = data.data;
+                } else {
+                    throw new Error('Invalid response format from backend');
+                }
+
+                // Validate we have offices
+                if (offices.length === 0) {
+                    connectionStatus.textContent = '⚠️ No offices available';
+                    connectionStatus.className = 'ms-2 small text-warning';
+                    officeLoadStatus.textContent = 'No offices found for your account. Contact administrator.';
+                    officeLoadStatus.className = 'text-warning small';
+                    
+                    officeSelect.innerHTML = '<option value="">No offices available</option>';
+                    officeSelect.disabled = true;
+                    
+                    showNotification(
+                        'No Offices Found',
+                        'Your account has no offices assigned. Please contact your administrator.',
+                        'info'
+                    );
+                    return false;
+                }
+
+                // Populate dropdown with offices
+                officeSelect.innerHTML = '<option value="">Select office</option>';
+                offices.forEach(office => {
+                    const option = document.createElement('option');
+                    // Support different field name conventions
+                    option.value = office.id || office.department_id || office.office_id;
+                    option.textContent = office.department_name || office.name || office.office_name || `Office ${option.value}`;
+                    officeSelect.appendChild(option);
+                });
+
+                officeSelect.disabled = false;
+
+                // Update status
+                connectionStatus.textContent = `✓ Connected (${offices.length} office${offices.length !== 1 ? 's' : ''} loaded)`;
+                connectionStatus.className = 'ms-2 small text-success';
+                officeLoadStatus.textContent = `${offices.length} office${offices.length !== 1 ? 's' : ''} available based on your permissions`;
+                officeLoadStatus.className = 'text-success small';
+
+                showNotification(
+                    'Offices Loaded',
+                    `Successfully loaded ${offices.length} office${offices.length !== 1 ? 's' : ''} from backend.`,
+                    'success'
+                );
+
+                // Save token since it's valid
+                saveAuthToken(token);
+
+                return true;
+
+            } catch (error) {
+                console.error('Failed to load offices:', error);
+                
+                connectionStatus.textContent = '❌ Connection failed';
+                connectionStatus.className = 'ms-2 small text-danger';
+                officeLoadStatus.textContent = `Error: ${error.message}`;
+                officeLoadStatus.className = 'text-danger small';
+                
+                officeSelect.innerHTML = '<option value="">Connection failed</option>';
+                officeSelect.disabled = true;
+
+                let errorMessage = 'Failed to connect to backend server. ';
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMessage += 'Please check your network connection and backend URL.';
+                } else {
+                    errorMessage += error.message;
+                }
+
+                showNotification(
+                    'Connection Failed',
+                    errorMessage,
+                    'error'
+                );
+
+                return false;
+            }
+        }
+
+        // Initialize department ID from config (legacy support - will be replaced by dynamic loading)
+        function initializeDepartment() {
+            // This function is now deprecated in favor of loadOfficesFromBackend()
+            // Kept for backward compatibility during transition
+            console.log('Legacy initializeDepartment() called - use loadOfficesFromBackend() instead');
+        }
+
+        async function resolveBridgeBase() {
+            const candidates = [18420, 18421, 18422, 18423, 18424].map(p => `http://127.0.0.1:${p}`);
+            for (const base of candidates) {
+                try {
+                    const r = await fetch(`${base}/api/health/ping`, { method: 'GET', signal: AbortSignal.timeout(2000) });
+                    if (r.ok) { bridgeBase = base; return base; }
+                } catch (_) { /* try next */ }
+            }
+            return candidates[0];
+        }
+
+        const deviceStatus = document.getElementById('deviceStatus');
+        const registerBtn = document.getElementById('registerBtn');
+        const registerHint = document.getElementById('registerHint');
+
+        // Primary fingerprint elements
+        const capturePrimaryBtn = document.getElementById('capturePrimaryBtn');
+        const primaryStatus = document.getElementById('primaryStatus');
+        const primaryTemplate = document.getElementById('primaryTemplate');
+        const primaryProgress = document.getElementById('primaryProgress');
+        const primaryProgressBar = document.getElementById('primaryProgressBar');
+        const primaryInstruction = document.getElementById('primaryInstruction');
+
+        // Backup fingerprint elements
+        const captureBackupBtn = document.getElementById('captureBackupBtn');
+        const backupStatus = document.getElementById('backupStatus');
+        const backupTemplate = document.getElementById('backupTemplate');
+        const backupProgress = document.getElementById('backupProgress');
+        const backupProgressBar = document.getElementById('backupProgressBar');
+        const backupInstruction = document.getElementById('backupInstruction');
+        const backupSection = document.getElementById('backupSection');
+
+        // Other elements
+        const fpOverallStatus = document.getElementById('fpOverallStatus');
+        const rfidStatus = document.getElementById('rfidStatus');
+        const rfidInput = document.getElementById('rfidUid');
+
+        // State tracking
+        let deviceConnected = false;
+        let enrollmentInProgress = false;
+        let primarySessionId = null;
+        let backupSessionId = null;
+        let primaryPollTimer = null;
+        let backupPollTimer = null;
+        let fingerprintDeviceModel = '';
+        let primaryWasCancelled = false;
+        let backupWasCancelled = false;
+
+        // Request throttling and optimization
+        let lastBridgeCheck = 0;
+        let bridgeCheckInterval = 5000;
+        let maxBridgeCheckInterval = 30000;
+        let bridgeCheckTimer = null;
+        let isCheckingBridge = false;
+
+        // Global sanitizer for RFID text
+        function sanitize(raw) {
+            const original = String(raw ?? '');
+            console.log('RFID Input - Raw value:', JSON.stringify(original));
+            const printableOnly = original.replace(/[^\x20-\x7E]/g, '');
+            const collapsed = printableOnly.replace(/\s+/g, ' ').trim();
+            return collapsed;
+        }
+
+        function updateRegisterEnabled() {
+            const empName = document.getElementById('empName').value.trim();
+            const empId = document.getElementById('empId').value.trim();
+            const rfid = (rfidInput?.value || '').trim();
+            const deptId = (document.getElementById('departmentId')?.value || '').trim();
+            const empType = (document.getElementById('employmentType')?.value || '').trim();
+            const hasPrimaryFp = !!primaryTemplate.value;
+
+            const ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
+            registerBtn.disabled = !ok;
+
+            if (ok) {
+                registerHint.textContent = 'Ready to submit. Click Register button to proceed.';
+                registerHint.className = 'ms-2 text-success';
+            } else if (!hasPrimaryFp) {
+                registerHint.textContent = 'Primary fingerprint is required.';
+                registerHint.className = 'ms-2 text-muted';
+            } else if (!rfid) {
+                registerHint.textContent = 'RFID scan is required.';
+                registerHint.className = 'ms-2 text-muted';
+            } else {
+                registerHint.textContent = 'Please fill all required fields.';
+                registerHint.className = 'ms-2 text-muted';
+            }
+        }
+
+        function updateFingerprintStatus() {
+            const hasPrimary = !!primaryTemplate.value;
+            const hasBackup = !!backupTemplate.value;
+
+            if (hasPrimary && hasBackup) {
+                fpOverallStatus.textContent = 'Both fingerprints captured successfully.';
+                fpOverallStatus.className = 'text-success fw-bold';
+            } else if (hasPrimary) {
+                fpOverallStatus.textContent = 'Primary fingerprint captured. Backup fingerprint is optional.';
+                fpOverallStatus.className = 'text-primary';
+            } else if (deviceConnected) {
+                fpOverallStatus.textContent = 'Primary fingerprint required to proceed.';
+                fpOverallStatus.className = 'text-muted';
+            } else {
+                fpOverallStatus.textContent = 'Device Bridge connection required.';
+                fpOverallStatus.className = 'text-danger';
+            }
+        }
+
+        function updateUIBasedOnDeviceStatus() {
+            console.log('Updating UI - Device connected:', deviceConnected, 'Model:', fingerprintDeviceModel);
+
+            if (deviceConnected && !enrollmentInProgress) {
+                deviceStatus.textContent = `${fingerprintDeviceModel} detected and ready.`;
+                deviceStatus.className = 'text-success status-text';
+
+                if (!primaryTemplate.value) {
+                    capturePrimaryBtn.disabled = false;
+                    primaryStatus.textContent = primaryWasCancelled ? 'Ready (cancelled)' : 'Ready to scan';
+                    primaryStatus.className = primaryWasCancelled ? 'text-warning' : 'text-success';
+                } else {
+                    capturePrimaryBtn.disabled = false;
+                    primaryStatus.textContent = 'Captured ✓';
+                    primaryStatus.className = 'text-success';
+                }
+
+                if (primaryTemplate.value && !backupTemplate.value) {
+                    captureBackupBtn.disabled = false;
+                    backupStatus.textContent = backupWasCancelled ? 'Ready (cancelled)' : 'Ready to scan';
+                    backupStatus.className = backupWasCancelled ? 'text-warning' : 'text-success';
+                    backupSection.style.opacity = '1';
+                } else if (backupTemplate.value) {
+                    captureBackupBtn.disabled = false;
+                    backupStatus.textContent = 'Captured ✓';
+                    backupStatus.className = 'text-success';
+                    backupWasCancelled = false;
+                } else {
+                    captureBackupBtn.disabled = true;
+                    backupStatus.textContent = 'Complete primary fingerprint first';
+                    backupStatus.className = 'text-muted';
+                    backupSection.style.opacity = '0.5';
+                }
+            } else if (!deviceConnected) {
+                deviceStatus.textContent = 'Fingerprint device not detected.';
+                deviceStatus.className = 'text-danger status-text';
+
+                capturePrimaryBtn.disabled = true;
+                captureBackupBtn.disabled = true;
+
+                primaryStatus.textContent = 'Device not available';
+                primaryStatus.className = 'text-danger';
+
+                backupStatus.textContent = 'Device not available';
+                backupStatus.className = 'text-danger';
+                backupSection.style.opacity = '0.5';
+            } else if (enrollmentInProgress) {
+                capturePrimaryBtn.disabled = true;
+                captureBackupBtn.disabled = true;
+            }
+
+            updateFingerprintStatus();
+            updateRegisterEnabled();
+        }
+
+        async function checkBridge() {
+            if (isCheckingBridge) return;
+
+            const now = Date.now();
+            if (now - lastBridgeCheck < 2000) return;
+
+            isCheckingBridge = true;
+            lastBridgeCheck = now;
+
+            try {
+                console.log('Checking Device Bridge...');
+
+                const healthResponse = await fetch(`${bridgeBase}/api/health/ping`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+
+                if (!healthResponse.ok) throw new Error('Bridge not responding');
+
+                console.log('Bridge is running, checking devices...');
+
+                const deviceResponse = await fetch(`${bridgeBase}/api/devices`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+
+                if (!deviceResponse.ok) throw new Error('Failed to get device status');
+
+                const deviceData = await deviceResponse.json();
+                console.log('Device data received:', deviceData);
+
+                const fpPresent = deviceData?.device?.present === true;
+                const fpModel = deviceData?.device?.model || 'Unknown Device';
+
+                const wasConnected = deviceConnected;
+                deviceConnected = fpPresent;
+                fingerprintDeviceModel = fpModel;
+
+                console.log('Device status changed:', wasConnected, '->', deviceConnected);
+
+                if (deviceConnected) {
+                    bridgeCheckInterval = Math.min(bridgeCheckInterval * 0.8, 10000);
+                } else {
+                    bridgeCheckInterval = Math.min(bridgeCheckInterval * 1.2, maxBridgeCheckInterval);
+                }
+
+                updateUIBasedOnDeviceStatus();
+
+            } catch (error) {
+                console.error('Bridge check failed:', error);
+
+                const wasConnected = deviceConnected;
+                deviceConnected = false;
+                fingerprintDeviceModel = '';
+
+                bridgeCheckInterval = Math.min(bridgeCheckInterval * 1.5, maxBridgeCheckInterval);
+
+                deviceStatus.textContent = 'Device Bridge not running on this PC.';
+                deviceStatus.className = 'text-danger status-text';
+
+                fpOverallStatus.textContent = 'Device Bridge connection failed.';
+                fpOverallStatus.className = 'text-danger';
+
+                if (wasConnected !== deviceConnected) {
+                    updateUIBasedOnDeviceStatus();
+                }
+            } finally {
+                isCheckingBridge = false;
+
+                if (bridgeCheckTimer) {
+                    clearTimeout(bridgeCheckTimer);
+                }
+                bridgeCheckTimer = setTimeout(checkBridge, bridgeCheckInterval);
+            }
+        }
+
+        async function enrollFingerprint(isPrimary = true) {
+            const statusElement = isPrimary ? primaryStatus : backupStatus;
+            const progressElement = isPrimary ? primaryProgress : backupProgress;
+            const progressBarElement = isPrimary ? primaryProgressBar : backupProgressBar;
+            const instructionElement = isPrimary ? primaryInstruction : backupInstruction;
+            const templateElement = isPrimary ? primaryTemplate : backupTemplate;
+            const fingerType = isPrimary ? 'index finger' : 'thumb';
+
+            enrollmentInProgress = true;
+            if (isPrimary) {
+                primaryWasCancelled = false;
+            } else {
+                backupWasCancelled = false;
+            }
+            updateUIBasedOnDeviceStatus();
+
+            progressElement.classList.remove('d-none');
+            statusElement.textContent = 'Initializing...';
+            statusElement.className = isPrimary ? 'text-primary' : 'text-secondary';
+            progressBarElement.style.width = '0%';
+            instructionElement.textContent = `Initializing scanner for ${fingerType}...`;
+
+            let sessionId = null;
+            let pollTimer = null;
+            let lastProgress = 0;
+            let scanCount = 0;
+            let enrollmentSuccessful = false;
+
+            try {
+                instructionElement.textContent = `Place your ${fingerType} on the scanner...`;
+                statusElement.textContent = 'Waiting for finger...';
+                progressBarElement.style.width = '10%';
+
+                const startResp = await fetch(`${bridgeBase}/api/fingerprint/enroll/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode: 'dpfj',
+                        requiredScans: 4
+                    }),
+                    signal: AbortSignal.timeout(5000)
+                });
+                if (!startResp.ok) throw new Error(await startResp.text().catch(() => 'Failed to start enrollment'));
+                const startData = await startResp.json();
+                sessionId = startData.sessionId;
+                if (!sessionId) throw new Error('No sessionId from Device Bridge');
+
+                if (isPrimary) {
+                    primarySessionId = sessionId;
+                } else {
+                    backupSessionId = sessionId;
+                }
+                updateUIBasedOnDeviceStatus();
+
+                const pollIntervalMs = 1000;
+                const maxDurationMs = 35000;
+                const startedAt = Date.now();
+
+                await new Promise((resolve, reject) => {
+                    pollTimer = setInterval(async () => {
+                        try {
+                            if (Date.now() - startedAt > maxDurationMs) {
+                                clearInterval(pollTimer);
+                                reject(new Error('Enrollment timeout'));
+                                return;
+                            }
+
+                            const pollResp = await fetch(`${bridgeBase}/api/fingerprint/enroll/status/${sessionId}`, {
+                                method: 'GET',
+                                signal: AbortSignal.timeout(3000)
+                            });
+
+                            if (!pollResp.ok) {
+                                clearInterval(pollTimer);
+                                reject(new Error('Failed to poll enrollment status'));
+                                return;
+                            }
+
+                            const pollData = await pollResp.json();
+                            console.log('Poll data:', pollData);
+
+                            if (pollData.status === 'completed') {
+                                clearInterval(pollTimer);
+                                templateElement.value = pollData.template || '';
+                                progressBarElement.style.width = '100%';
+                                statusElement.textContent = 'Completed ✓';
+                                statusElement.className = 'text-success fw-bold';
+                                instructionElement.textContent = `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully!`;
+                                enrollmentSuccessful = true;
+                                resolve();
+                            } else if (pollData.status === 'cancelled') {
+                                clearInterval(pollTimer);
+                                templateElement.value = '';
+                                progressBarElement.style.width = '0%';
+                                statusElement.textContent = 'Cancelled';
+                                statusElement.className = 'text-warning';
+                                instructionElement.textContent = 'Enrollment cancelled.';
+                                if (isPrimary) {
+                                    primaryWasCancelled = true;
+                                } else {
+                                    backupWasCancelled = true;
+                                }
+                                reject(new Error('Enrollment cancelled'));
+                            } else if (pollData.status === 'error') {
+                                clearInterval(pollTimer);
+                                reject(new Error(pollData.message || 'Enrollment failed'));
+                            } else if (pollData.status === 'in_progress') {
+                                const currentProgress = pollData.progress || 0;
+                                const currentScans = pollData.scansCompleted || 0;
+
+                                if (currentProgress > lastProgress) {
+                                    lastProgress = currentProgress;
+                                    progressBarElement.style.width = `${Math.min(currentProgress, 95)}%`;
+                                }
+
+                                if (currentScans > scanCount) {
+                                    scanCount = currentScans;
+                                    instructionElement.textContent = `Scan ${currentScans} of 4 completed. ${pollData.message || 'Continue...'}`;
+                                    statusElement.textContent = `Scanning... (${currentScans}/4)`;
+                                } else if (pollData.message) {
+                                    instructionElement.textContent = pollData.message;
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Poll error:', err);
+                            clearInterval(pollTimer);
+                            reject(err);
+                        }
+                    }, pollIntervalMs);
+                });
+
+                if (enrollmentSuccessful) {
+                    showNotification(
+                        'Fingerprint Captured',
+                        `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully!`,
+                        'success'
+                    );
+                }
+            } catch (error) {
+                console.error('Enrollment error:', error);
+                progressBarElement.style.width = '0%';
+                statusElement.textContent = `Failed: ${error.message}`;
+                statusElement.className = 'text-danger';
+                instructionElement.textContent = `Failed to enroll ${fingerType}. Please try again.`;
+                showNotification('Fingerprint Enrollment Failed', `Could not capture ${fingerType}: ${error.message}`, 'error');
+            } finally {
+                if (pollTimer) {
+                    clearInterval(pollTimer);
+                }
+                enrollmentInProgress = false;
+
+                if (statusElement.className.includes('text-danger')) {
+                    setTimeout(() => {
+                        progressElement.classList.add('d-none');
+                        progressBarElement.style.width = '0%';
+                    }, 1200);
+                } else {
+                    setTimeout(() => {
+                        progressElement.classList.add('d-none');
+                    }, 2000);
+                }
+
+                setTimeout(updateUIBasedOnDeviceStatus, 300);
+            }
+        }
+
+        function showNotification(title, message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed notification`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+
+            notification.innerHTML = `
+                <div class="d-flex align-items-start">
+                    <div class="me-2">
+                        <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong>${title}</strong><br>
+                        <span>${message}</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Event listeners
+        capturePrimaryBtn?.addEventListener('click', () => enrollFingerprint(true));
+        captureBackupBtn?.addEventListener('click', () => enrollFingerprint(false));
+
+        // Test connection and load offices button
+        document.getElementById('testConnectionBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('testConnectionBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Testing...';
+            
+            await loadOfficesFromBackend();
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }, 1000);
+        });
+
+        rfidInput?.addEventListener('focus', () => {
+            rfidInput.select();
+        });
+
+        document.getElementById('clearRfidBtn')?.addEventListener('click', () => {
+            rfidInput.value = '';
+            rfidStatus.textContent = '';
+            rfidStatus.classList.add('text-muted');
+            rfidInput.focus();
+            updateRegisterEnabled();
+        });
+
+        document.getElementById('checkReadyBtn')?.addEventListener('click', () => {
+            console.log('Manual check ready button clicked');
+            updateRegisterEnabled();
+
+            setTimeout(() => {
+                if (registerBtn.disabled === false) {
+                    showNotification('Ready to Register', 'All required fields are complete!', 'success');
+                } else {
+                    showNotification('Not Ready', 'Please complete all required fields.', 'info');
+                }
+            }, 100);
+        });
+
+        // RFID input handling
+        if (rfidInput) {
+            let lastTs = 0;
+            let burstCount = 0;
+            const burstWindowMs = 400;
+            const minBurst = 4;
+
+            rfidInput.addEventListener('keydown', (e) => {
+                const now = performance.now();
+                if (now - lastTs < 35) {
+                    burstCount++;
+                } else if (now - lastTs > burstWindowMs) {
+                    burstCount = 0;
+                }
+                lastTs = now;
+            });
+
+            rfidInput.addEventListener('input', (e) => {
+                try {
+                    const sanitized = sanitize(e.target.value);
+                    if (sanitized !== e.target.value) {
+                        const cursorPos = e.target.selectionStart;
+                        e.target.value = sanitized;
+                        e.target.setSelectionRange(cursorPos, cursorPos);
+                    }
+
+                    if (sanitized.length > 0) {
+                        rfidStatus.textContent = '✓ Scanned';
+                        rfidStatus.className = 'ms-2 small text-success';
+                    } else {
+                        rfidStatus.textContent = '';
+                        rfidStatus.className = 'ms-2 small text-muted';
+                    }
+
+                    updateRegisterEnabled();
+                } catch (error) {
+                    console.error('RFID input error:', error);
+                }
+            });
+
+            rfidInput.addEventListener('paste', (e) => {
+                setTimeout(() => {
+                    const sanitized = sanitize(rfidInput.value);
+                    rfidInput.value = sanitized;
+                    if (sanitized.length > 0) {
+                        rfidStatus.textContent = '✓ Scanned';
+                        rfidStatus.className = 'ms-2 small text-success';
+                    }
+                    updateRegisterEnabled();
+                    console.log('RFID pasted, but auto-registration is disabled');
+                }, 10);
+            });
+
+            setTimeout(() => rfidInput.focus(), 100);
+        }
+
+        // Form submission via AJAX to backend
+        document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (registerBtn.disabled) {
+                showNotification('Registration Error', 'Please complete required fields first.', 'error');
+                return;
+            }
+
+            // Validate authentication
+            const token = getAuthToken();
+            if (!token) {
+                showNotification(
+                    'Authentication Required',
+                    'You are not authorized. Please log in again and provide your authentication token.',
+                    'error'
+                );
+                return;
+            }
+
+            const originalText = registerBtn.innerHTML;
+            registerBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Processing...';
+            registerBtn.disabled = true;
+
+            try {
+                const rfidValue = sanitize(rfidInput?.value || '');
+                rfidInput.value = rfidValue;
+                console.log('Submitting RFID value (sanitized):', JSON.stringify(rfidValue));
+
+                const formData = new FormData(document.getElementById('registerForm'));
+
+                console.log('Form submission data:');
+                for (let [key, value] of formData.entries()) {
+                    if (key !== 'primary_template' && key !== 'backup_template') {
+                        console.log(`${key}:`, value);
+                    } else {
+                        console.log(`${key}: [${value.length} bytes]`);
+                    }
+                }
+
+                const backendUrl = getBackendUrl();
+                
+                // Submit to backend with authentication token
+                const response = await fetch(`${backendUrl}/employees`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}` // Include token for authentication
+                    }
+                });
+
+                const result = await response.json();
+
+                // Handle authentication errors
+                if (response.status === 401 || response.status === 403) {
+                    showNotification(
+                        'Authorization Failed',
+                        'You are not authorized. Please log in again with a valid token.',
+                        'error'
+                    );
+                    clearAuthToken();
+                    registerBtn.innerHTML = originalText;
+                    updateRegisterEnabled();
+                    return;
+                }
+
+                if (response.ok && result.success) {
+                    showNotification(
+                        'Registration Successful',
+                        `Employee ${result.employee?.full_name || 'registered'} successfully!`,
+                        'success'
+                    );
+
+                    setTimeout(() => {
+                        document.getElementById('registerForm').reset();
+                        primaryTemplate.value = '';
+                        backupTemplate.value = '';
+                        document.getElementById('profilePreview').classList.add('d-none');
+                        document.getElementById('profilePreview').src = '';
+                        rfidStatus.textContent = '';
+                        primaryStatus.textContent = 'Ready to scan';
+                        backupStatus.textContent = 'Complete primary fingerprint first';
+                        backupSection.style.opacity = '0.5';
+                        
+                        // Reset office dropdown to "Select office"
+                        const officeSelect = document.getElementById('departmentId');
+                        if (officeSelect && officeSelect.options.length > 0) {
+                            officeSelect.selectedIndex = 0;
+                        }
+                        
+                        updateRegisterEnabled();
+                        updateUIBasedOnDeviceStatus();
+                        rfidInput.focus();
+                    }, 1500);
+
+                } else {
+                    const errorMessage = result.message || 'Registration failed. Please try again.';
+                    const errors = result.errors || {};
+                    let errorDetails = errorMessage;
+
+                    if (Object.keys(errors).length > 0) {
+                        errorDetails += '<br><ul class="mb-0 mt-1">';
+                        for (const [field, messages] of Object.entries(errors)) {
+                            errorDetails += `<li>${messages.join(', ')}</li>`;
+                        }
+                        errorDetails += '</ul>';
+                    }
+
+                    showNotification('Registration Failed', errorDetails, 'error');
+                }
+
+            } catch (error) {
+                console.error('Registration error:', error);
+                let errorMessage = error.message || 'An error occurred during registration. Please try again.';
+
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMessage = 'Cannot connect to backend server. Please check your network connection and backend URL configuration.';
+                }
+
+                showNotification('Registration Failed', errorMessage, 'error');
+            } finally {
+                setTimeout(() => {
+                    registerBtn.innerHTML = originalText;
+                    updateRegisterEnabled();
+                }, 1000);
+            }
+        });
+
+        // Profile image preview
+        const profileImage = document.getElementById('profileImage');
+        const profilePreview = document.getElementById('profilePreview');
+        profileImage?.addEventListener('change', () => {
+            const f = profileImage.files && profileImage.files[0];
+            if (!f) {
+                profilePreview.classList.add('d-none');
+                profilePreview.src = '';
+                return;
+            }
+            const url = URL.createObjectURL(f);
+            profilePreview.src = url;
+            profilePreview.classList.remove('d-none');
+        });
+
+        // Re-evaluate enabling when fields change
+        ['empName', 'empId', 'departmentId', 'employmentType'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', updateRegisterEnabled);
+            document.getElementById(id)?.addEventListener('change', updateRegisterEnabled);
+        });
+
+        registerBtn?.addEventListener('click', () => {
+            updateRegisterEnabled();
+        });
+
+        // Save backend config to localStorage
+        document.getElementById('backendApiUrl')?.addEventListener('change', (e) => {
+            localStorage.setItem('backendApiUrl', e.target.value);
+        });
+
+        // Save admin token to localStorage when changed
+        document.getElementById('adminToken')?.addEventListener('change', (e) => {
+            saveAuthToken(e.target.value);
+        });
+
+        // Load saved config from localStorage
+        const savedBackendUrl = localStorage.getItem('backendApiUrl');
+        if (savedBackendUrl) {
+            document.getElementById('backendApiUrl').value = savedBackendUrl;
+        }
+
+        const savedToken = localStorage.getItem('adminToken');
+        if (savedToken) {
+            document.getElementById('adminToken').value = savedToken;
+        }
+
+        // Initial checks
+        setTimeout(() => {
+            // Auto-load offices if token is available
+            const token = getAuthToken();
+            if (token) {
+                loadOfficesFromBackend();
+            }
+            
+            checkBridge();
+            updateUIBasedOnDeviceStatus();
+        }, 100);
+
+        bridgeCheckTimer = setTimeout(checkBridge, bridgeCheckInterval);
+    </script>
+</body>
+</html>

@@ -24,3 +24,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/employees', [\App\Http\Controllers\Api\EmployeeController::class, 'getList']);
     Route::get('/dtr-reports', [\App\Http\Controllers\Api\DTRController::class, 'getReports']);
 });
+
+// Public token validation endpoints (no auth required, token validates itself)
+Route::post('/validate-token', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'validateToken']);
+Route::get('/offices', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'getOffices']);
+
+// Employee registration with token authentication (for local registration page)
+Route::post('/register-employee', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'registerEmployee']);
+
+// Employee fingerprint editing with token authentication (for local registration page)
+Route::post('/get-employee', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'getEmployee']);
+Route::post('/update-fingerprints', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'updateFingerprints']);

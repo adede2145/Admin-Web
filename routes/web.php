@@ -52,10 +52,27 @@ Route::prefix('api/kiosk')->group(function () {
 Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/attendance/logs', [App\Http\Controllers\Api\AttendanceController::class, 'getLogs'])->name('api.attendance.logs');
     Route::get('/attendance/{id}/verification-data', [AttendanceController::class, 'getVerificationData'])->name('api.attendance.verification-data');
+    
+    // Token generation for local registration (uses web session auth)
+    Route::post('/generate-token', [App\Http\Controllers\Api\RegistrationTokenController::class, 'generateToken'])->name('api.generate-token');
 });
 
 // Admin Routes
 Route::middleware(['auth'])->group(function () {
+    // Debug token generation page
+    Route::get('/debug-token', function () {
+        return view('debug-token');
+    })->name('debug.token');
+    
+// Debug token flow (complete step-by-step debugging)
+Route::get('/debug-token-flow', function () {
+    return view('debug-token-flow');
+})->middleware(['auth']);
+
+// Simple token test
+Route::get('/test-token-simple', function () {
+    return view('test-token-simple');
+})->middleware(['auth']);
     // Attendance Management
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance/dtr', [AttendanceController::class, 'generateDTR'])->name('attendance.dtr');

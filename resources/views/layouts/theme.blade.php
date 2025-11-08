@@ -78,7 +78,7 @@
                 <a class="nav-link {{ request()->is('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}"><i class="bi bi-graph-up"></i> Generate Reports</a>
                 <a class="nav-link {{ request()->is('employees') ? 'active' : '' }}" href="{{ route('employees.index') }}"><i class="bi bi-people"></i> Manage Employees</a>
                 @if(auth()->check() && auth()->user()->role && in_array(auth()->user()->role->role_name, ['admin','super_admin']))
-                    <a class="nav-link {{ request()->is('employees/register') ? 'active' : '' }}" href="{{ route('employees.register') }}"><i class="bi bi-person-plus"></i> Register Employee</a>
+                    <a class="nav-link" href="#" id="openLocalRegistrationBtn"><i class="bi bi-fingerprint"></i> Register Employee <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.75rem;"></i></a>
                 @endif
                 <a class="nav-link {{ request()->is('audit-logs*') ? 'active' : '' }}" href="{{ route('audit.index') }}" id="recentAuditsLink">
                     <i class="bi bi-clock-history"></i> Recent Audits
@@ -143,6 +143,61 @@
 
     function toggleSidebar(){
         document.getElementById('aaSidebar').classList.toggle('show');
+    }
+
+    // Handle Local Registration Station button
+    const localRegistrationBtn = document.getElementById('openLocalRegistrationBtn');
+    if (localRegistrationBtn) {
+        localRegistrationBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            // Show loading indicator
+            const originalHtml = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating token...';
+            this.style.pointerEvents = 'none';
+            
+            try {
+                // Get CSRF token from meta tag
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                // Generate token from backend (uses session auth, no bearer token needed)
+                const response = await fetch('/api/generate-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin' // Important for session cookies
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.token) {
+                    // Open local registration page with token
+                    const localUrl = 'http://localhost/Admin-Web/public/local_registration/register.html';
+                    const urlWithToken = `${localUrl}?token=${encodeURIComponent(data.token)}`;
+                    
+                    window.open(urlWithToken, '_blank');
+                    
+                    // Reset button
+                    setTimeout(() => {
+                        this.innerHTML = originalHtml;
+                        this.style.pointerEvents = 'auto';
+                    }, 1000);
+                } else {
+                    alert('Failed to generate token: ' + (data.message || 'Unknown error'));
+                    this.innerHTML = originalHtml;
+                    this.style.pointerEvents = 'auto';
+                }
+            } catch (error) {
+                console.error('Token generation error:', error);
+                alert('Failed to generate token. Please try again.');
+                this.innerHTML = originalHtml;
+                this.style.pointerEvents = 'auto';
+            }
+        });
     }
 </script>
 </body>

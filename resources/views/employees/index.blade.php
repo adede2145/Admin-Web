@@ -278,6 +278,7 @@
                     <div class="modal-footer border-0 p-4" style="background: white;">
                         <a href="{{ route('employees.fingerprints.edit', $employee->employee_id) }}" 
                            class="btn btn-lg px-4 fw-semibold"
+                           target="_blank"
                            style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);"
                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(40, 167, 69, 0.4)'"
                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(40, 167, 69, 0.3)'">
