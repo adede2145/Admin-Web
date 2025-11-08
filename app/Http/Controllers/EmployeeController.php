@@ -281,53 +281,131 @@ class EmployeeController extends Controller
     // Update employee
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'full_name' => 'required|string|max:100',
-            'employment_type' => 'required|in:full_time,part_time,cos',
-            'department_id' => 'required|exists:departments,department_id',
-            'photo' => 'nullable|image|max:5120',
-        ]);
+        try {
+            $request->validate([
+                'full_name' => 'required|string|max:100',
+                'employment_type' => 'required|in:full_time,part_time,cos',
+                'department_id' => 'required|exists:departments,department_id',
+                'photo' => 'nullable|image|max:5120',
+            ]);
 
-        $employee = Employee::findOrFail($id);
+            $employee = Employee::findOrFail($id);
 
-        // Check if user can edit this employee
-        if (
-            auth()->user()->role->role_name !== 'super_admin' &&
-            auth()->user()->department_id !== $employee->department_id
-        ) {
-            abort(403, 'You can only edit employees from your department.');
-        }
-
-        // Department admins can only assign employees to their own department
-        if (
-            auth()->user()->role->role_name !== 'super_admin' &&
-            $request->department_id != auth()->user()->department_id
-        ) {
-            abort(403, 'You can only assign employees to your department.');
-        }
-
-        $updateData = [
-            'full_name' => $request->full_name,
-            'employment_type' => $request->employment_type,
-            'department_id' => $request->department_id,
-        ];
-
-        // Handle optional photo upload
-        if ($request->hasFile('photo')) {
-            try {
-                $file = $request->file('photo');
-                $updateData['photo_data'] = file_get_contents($file->getRealPath());
-                $updateData['photo_content_type'] = $file->getMimeType();
-                $updateData['photo_path'] = null;
-            } catch (\Exception $e) {
-                Log::error('Error uploading employee photo: ' . $e->getMessage());
-                return back()->with('error', 'Failed to upload photo. Employee updated without photo.');
+            // Check if user can edit this employee
+            if (
+                auth()->user()->role->role_name !== 'super_admin' &&
+                auth()->user()->department_id !== $employee->department_id
+            ) {
+                abort(403, 'You can only edit employees from your department.');
             }
+
+            // Department admins can only assign employees to their own department
+            if (
+                auth()->user()->role->role_name !== 'super_admin' &&
+                $request->department_id != auth()->user()->department_id
+            ) {
+                abort(403, 'You can only assign employees to your department.');
+            }
+
+            $updateData = [
+                'full_name' => $request->full_name,
+                'employment_type' => $request->employment_type,
+                'department_id' => $request->department_id,
+            ];
+
+            // Handle optional photo upload
+            if ($request->hasFile('photo')) {
+                try {
+                    $file = $request->file('photo');
+                    
+                    // Validate file
+                    if (!$file->isValid()) {
+                        throw new \Exception('Invalid file upload');
+                    }
+                    
+                    // Check file size (5MB max)
+                    if ($file->getSize() > 5242880) {
+                        throw new \Exception('File size exceeds 5MB limit');
+                    }
+                    
+                    // Verify it's an image
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+                    if (!in_array($file->getMimeType(), $allowedMimes)) {
+                        throw new \Exception('File must be an image (JPEG, PNG, JPG, or GIF)');
+                    }
+                    
+                    $updateData['photo_data'] = file_get_contents($file->getRealPath());
+                    $updateData['photo_content_type'] = $file->getMimeType();
+                    $updateData['photo_path'] = null;
+                    
+                    Log::info("Photo uploaded successfully for employee ID: {$id}", [
+                        'size' => $file->getSize(),
+                        'mime' => $file->getMimeType()
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error uploading employee photo', [
+                        'employee_id' => $id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    
+                    // Return JSON for AJAX requests
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Failed to upload photo: ' . $e->getMessage()
+                        ], 400);
+                    }
+                    
+                    return back()->with('error', 'Failed to upload photo: ' . $e->getMessage());
+                }
+            }
+
+            $employee->update($updateData);
+            
+            Log::info("Employee updated successfully: ID {$id}");
+
+            // Return JSON for AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employee updated successfully!'
+                ]);
+            }
+
+            return back()->with('success', 'Employee updated successfully!');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error updating employee', [
+                'employee_id' => $id,
+                'errors' => $e->errors()
+            ]);
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed: ' . implode(', ', array_map(fn($errors) => implode(', ', $errors), $e->errors()))
+                ], 422);
+            }
+            
+            throw $e;
+            
+        } catch (\Exception $e) {
+            Log::error('Error updating employee', [
+                'employee_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update employee: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->with('error', 'Failed to update employee: ' . $e->getMessage());
         }
-
-        $employee->update($updateData);
-
-        return back()->with('success', 'Employee updated successfully!');
     }
 
     // Delete employee

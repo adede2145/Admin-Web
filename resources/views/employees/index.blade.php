@@ -828,42 +828,76 @@
                         method: 'POST',
                         body: formData,
                         headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formData.get('_token')
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formData.get('_token'),
+                            'Accept': 'application/json'
                         }
                     })
-                    .then(response => response.text())
-                    .then(html => {
-                        // Parse the response to extract messages
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        
-                        // Check for success message
-                        const successAlert = doc.querySelector('.alert-success');
-                        const errorAlert = doc.querySelector('.alert-danger');
-                        
-                        if (successAlert) {
-                            const message = successAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
-                            showNotification('success', message);
-                            
-                            // Close modal and reload page after short delay
-                            if (modal) modal.hide();
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
-                        } else if (errorAlert) {
-                            const message = errorAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
-                            showNotification('error', message);
+                    .then(response => {
+                        // Check if response is JSON or HTML
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            return response.json().then(data => ({
+                                ok: response.ok,
+                                status: response.status,
+                                data: data,
+                                isJson: true
+                            }));
                         } else {
-                            showNotification('success', 'Employee updated successfully!');
-                            if (modal) modal.hide();
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
+                            return response.text().then(html => ({
+                                ok: response.ok,
+                                status: response.status,
+                                data: html,
+                                isJson: false
+                            }));
+                        }
+                    })
+                    .then(result => {
+                        if (result.isJson) {
+                            // Handle JSON response
+                            if (result.ok) {
+                                showNotification('success', result.data.message || 'Employee updated successfully!');
+                                if (modal) modal.hide();
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showNotification('error', result.data.message || 'Failed to update employee.');
+                            }
+                        } else {
+                            // Handle HTML response
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(result.data, 'text/html');
+                            
+                            // Check for success message
+                            const successAlert = doc.querySelector('.alert-success');
+                            const errorAlert = doc.querySelector('.alert-danger');
+                            
+                            if (successAlert) {
+                                const message = successAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
+                                showNotification('success', message);
+                                
+                                // Close modal and reload page after short delay
+                                if (modal) modal.hide();
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1500);
+                            } else if (errorAlert) {
+                                const message = errorAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
+                                showNotification('error', message);
+                            } else if (result.ok) {
+                                showNotification('success', 'Employee updated successfully!');
+                                if (modal) modal.hide();
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showNotification('error', 'Failed to update employee. Please check the server logs.');
+                            }
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        showNotification('error', 'An error occurred while updating employee.');
+                        showNotification('error', 'An error occurred while updating employee: ' + error.message);
                     })
                     .finally(() => {
                         // Restore button state

@@ -188,7 +188,7 @@
                     });
                     
                     // Open in new window
-                    window.open(registrationUrl, '_blank', 'width=1200,height=800');
+                    window.open(registrationUrl, '_blank');
                     
                     // Reset button
                     setTimeout(() => {
