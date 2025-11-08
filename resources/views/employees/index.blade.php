@@ -49,6 +49,7 @@
                         <table class="table table-hover align-middle employee-table mb-0">
                                 <thead>
                                     <tr>
+                                        <th scope="col"><i class="bi bi-list-ol me-1"></i>No.</th>
                                         <th scope="col"><i class="bi bi-image me-1"></i>Photo</th>
                                         <th scope="col"><i class="bi bi-hash me-1"></i>Employee ID</th>
                                         <th scope="col"><i class="bi bi-person me-1"></i>Full Name</th>
@@ -62,10 +63,13 @@
                                     @forelse($employees as $employee)
                                         <tr class="emp-row" data-employee-id="{{ $employee->employee_id }}" data-href="{{ request()->fullUrlWithQuery(['employee_id' => $employee->employee_id]) }}">
                                             <td>
-                                                <img src="{{ route('employees.photo', $employee->employee_id) }}" alt="{{ $employee->full_name }}" class="rounded-circle" style="width:40px;height:40px;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/40x40?text=%20';">
+                                                <span class="text-muted">{{ $employee->employee_id }}</span>
+                                            </td>
+                                            <td>
+                                                <img src="{{ route('employees.photo', $employee->employee_id) }}?v={{ $employee->updated_at ? $employee->updated_at->timestamp : time() }}" alt="{{ $employee->full_name }}" class="rounded-circle" style="width:40px;height:40px;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/40x40?text=%20';">
                                             </td>
                                     <td>
-                                        <code class="text-primary">#{{ $employee->employee_id }}</code>
+                                        <code class="text-primary">{{ $employee->employee_code ?? 'N/A' }}</code>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -102,7 +106,7 @@
                                     </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted py-4">
+                                            <td colspan="8" class="text-center text-muted py-4">
                                                 <i class="bi bi-inbox display-4 d-block mb-2"></i>
                                                 No employees found
                                             </td>
@@ -125,7 +129,7 @@
                     <div class="card-body text-center p-4">
                         <div class="mx-auto rounded-circle mb-3" style="width:140px;height:140px;background:#eee;overflow:hidden;display:flex;align-items:center;justify-content:center;">
                             @if($selectedEmployee)
-                                <img src="{{ route('employees.photo', $selectedEmployee->employee_id) }}" alt="{{ $selectedEmployee->full_name }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/140x140?text=%20';">
+                                <img src="{{ route('employees.photo', $selectedEmployee->employee_id) }}?v={{ $selectedEmployee->updated_at ? $selectedEmployee->updated_at->timestamp : time() }}" alt="{{ $selectedEmployee->full_name }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/140x140?text=%20';">
                             @else
                                 <i class="bi bi-person" style="font-size:64px;color:#aaa"></i>
                             @endif
@@ -178,14 +182,16 @@
                     @method('PUT')
                     <div class="modal-body p-4" style="background: #fafbfc;">
                         <div class="row g-4">
-                            <!-- Employee ID (Read-only) -->
+                            <!-- Employee ID/Code (Editable in modal) -->
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                    <i class="bi bi-person-badge me-2 fs-6"></i>Employee ID
+                                    <i class="bi bi-person-badge me-2 fs-6"></i>Employee ID/Code
                                 </label>
-                                <input type="text" class="form-control form-control-lg border-2" 
-                                       value="#{{ $employee->employee_id }}" readonly
-                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                                <input type="text" name="employee_code" class="form-control form-control-lg border-2" 
+                                       value="{{ $employee->employee_code ?? '' }}" required
+                                       style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                       onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                       onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
                             </div>
 
                             <!-- Employment Type -->
@@ -250,7 +256,7 @@
                                 <div class="d-flex align-items-center gap-4 p-3" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; border-style: dashed;">
                                     <div class="position-relative">
                                         <img id="preview_{{ $employee->employee_id }}" 
-                                             src="{{ route('employees.photo', $employee->employee_id) }}" 
+                                             src="{{ route('employees.photo', $employee->employee_id) }}?v={{ $employee->updated_at ? $employee->updated_at->timestamp : time() }}" 
                                              alt="Preview" 
                                              class="rounded-circle border-3 border-white shadow-sm" 
                                              style="width: 100px; height: 100px; object-fit: cover;" 
@@ -820,6 +826,12 @@
                     const originalText = submitBtn.innerHTML;
                     const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
                     
+                    // Debug: Log form data
+                    console.log('Form Data Contents:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(key + ':', value);
+                    }
+                    
                     // Show loading state
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating...';
@@ -857,9 +869,99 @@
                             if (result.ok) {
                                 showNotification('success', result.data.message || 'Employee updated successfully!');
                                 if (modal) modal.hide();
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 1500);
+                                
+                                // Update all images for this employee with cache-busting timestamp
+                                const timestamp = new Date().getTime();
+                                const employeeId = form.closest('.modal').id.replace('editEmployee', '');
+                                
+                                // Construct the proper photo URL
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + timestamp;
+                                
+                                // Update modal preview image
+                                const previewImg = document.getElementById('preview_' + employeeId);
+                                if (previewImg) {
+                                    previewImg.src = photoUrl;
+                                }
+                                
+                                // Update summary panel image (right sidebar)
+                                const summaryImg = document.querySelector('.col-lg-3 .aa-card .card-body img');
+                                if (summaryImg) {
+                                    summaryImg.src = photoUrl;
+                                }
+                                
+                                // Update table row - ALL COLUMNS except Primary Employee ID (No. column)
+                                const tableRow = document.querySelector(`tr[data-employee-id="${employeeId}"]`);
+                                if (tableRow) {
+                                    // Update photo (column 2)
+                                    const tableImg = tableRow.querySelector('img');
+                                    if (tableImg) {
+                                        tableImg.src = photoUrl;
+                                    }
+                                    
+                                    // Update employee code (column 3)
+                                    const employeeCode = formData.get('employee_code');
+                                    if (employeeCode) {
+                                        const codeCell = tableRow.querySelector('td:nth-child(3) code');
+                                        if (codeCell) {
+                                            codeCell.textContent = employeeCode;
+                                        }
+                                    }
+                                    
+                                    // Update employee name (column 4)
+                                    const fullName = formData.get('full_name');
+                                    if (fullName) {
+                                        const nameCell = tableRow.querySelector('td:nth-child(4)');
+                                        if (nameCell) {
+                                            nameCell.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + fullName + '</div>';
+                                        }
+                                    }
+                                    
+                                    // Update employment type (column 5)
+                                    const empType = formData.get('employment_type');
+                                    if (empType) {
+                                        const typeCell = tableRow.querySelector('td:nth-child(5) .badge');
+                                        if (typeCell) {
+                                            typeCell.textContent = empType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                        }
+                                    }
+                                    
+                                    // Update office/department (column 6)
+                                    const deptId = formData.get('department_id');
+                                    if (deptId) {
+                                        // Get department name from the select dropdown
+                                        const deptSelect = form.querySelector('select[name="department_id"]');
+                                        if (deptSelect) {
+                                            const selectedOption = deptSelect.options[deptSelect.selectedIndex];
+                                            const deptName = selectedOption.text;
+                                            const officeCell = tableRow.querySelector('td:nth-child(6) .badge');
+                                            if (officeCell) {
+                                                officeCell.textContent = deptName;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Update summary panel name and department
+                                const summaryName = document.querySelector('.col-lg-3 .fw-bold.fs-5');
+                                if (summaryName) {
+                                    const fullName = formData.get('full_name');
+                                    if (fullName) {
+                                        summaryName.textContent = fullName;
+                                    }
+                                }
+                                
+                                // Update summary panel department
+                                const summaryDept = document.querySelector('.col-lg-3 .text-muted.small.mb-3');
+                                if (summaryDept) {
+                                    const deptId = formData.get('department_id');
+                                    if (deptId) {
+                                        const deptSelect = form.querySelector('select[name="department_id"]');
+                                        if (deptSelect) {
+                                            const selectedOption = deptSelect.options[deptSelect.selectedIndex];
+                                            summaryDept.textContent = selectedOption.text;
+                                        }
+                                    }
+                                }
                             } else {
                                 showNotification('error', result.data.message || 'Failed to update employee.');
                             }
@@ -876,20 +978,200 @@
                                 const message = successAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
                                 showNotification('success', message);
                                 
-                                // Close modal and reload page after short delay
+                                // Close modal
                                 if (modal) modal.hide();
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 1500);
+                                
+                                // Update all images for this employee with cache-busting timestamp
+                                const timestamp = new Date().getTime();
+                                const employeeId = form.closest('.modal').id.replace('editEmployee', '');
+                                
+                                // Construct the proper photo URL
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + timestamp;
+                                
+                                // Update modal preview image
+                                const previewImg = document.getElementById('preview_' + employeeId);
+                                if (previewImg) {
+                                    previewImg.src = photoUrl;
+                                }
+                                
+                                // Update summary panel image (right sidebar)
+                                const summaryImg = document.querySelector('.col-lg-3 .aa-card .card-body img');
+                                if (summaryImg) {
+                                    summaryImg.src = photoUrl;
+                                }
+                                
+                                // Update table row - ALL COLUMNS except Primary Employee ID (No. column)
+                                const tableRow = document.querySelector(`tr[data-employee-id="${employeeId}"]`);
+                                if (tableRow) {
+                                    // Update photo (column 2)
+                                    const tableImg = tableRow.querySelector('img');
+                                    if (tableImg) {
+                                        tableImg.src = photoUrl;
+                                    }
+                                    
+                                    // Update employee code (column 3)
+                                    const employeeCode = formData.get('employee_code');
+                                    if (employeeCode) {
+                                        const codeCell = tableRow.querySelector('td:nth-child(3) code');
+                                        if (codeCell) {
+                                            codeCell.textContent = employeeCode;
+                                        }
+                                    }
+                                    
+                                    // Update employee name (column 4)
+                                    const fullName = formData.get('full_name');
+                                    if (fullName) {
+                                        const nameCell = tableRow.querySelector('td:nth-child(4)');
+                                        if (nameCell) {
+                                            nameCell.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + fullName + '</div>';
+                                        }
+                                    }
+                                    
+                                    // Update employment type (column 5)
+                                    const empType = formData.get('employment_type');
+                                    if (empType) {
+                                        const typeCell = tableRow.querySelector('td:nth-child(5) .badge');
+                                        if (typeCell) {
+                                            typeCell.textContent = empType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                        }
+                                    }
+                                    
+                                    // Update office/department (column 6)
+                                    const deptId = formData.get('department_id');
+                                    if (deptId) {
+                                        // Get department name from the select dropdown
+                                        const deptSelect = form.querySelector('select[name="department_id"]');
+                                        if (deptSelect) {
+                                            const selectedOption = deptSelect.options[deptSelect.selectedIndex];
+                                            const deptName = selectedOption.text;
+                                            const officeCell = tableRow.querySelector('td:nth-child(6) .badge');
+                                            if (officeCell) {
+                                                officeCell.textContent = deptName;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Update summary panel name and department
+                                const summaryName = document.querySelector('.col-lg-3 .fw-bold.fs-5');
+                                if (summaryName) {
+                                    const fullName = formData.get('full_name');
+                                    if (fullName) {
+                                        summaryName.textContent = fullName;
+                                    }
+                                }
+                                
+                                // Update summary panel department
+                                const summaryDept = document.querySelector('.col-lg-3 .text-muted.small.mb-3');
+                                if (summaryDept) {
+                                    const deptId = formData.get('department_id');
+                                    if (deptId) {
+                                        const deptSelect = form.querySelector('select[name="department_id"]');
+                                        if (deptSelect) {
+                                            const selectedOption = deptSelect.options[deptSelect.selectedIndex];
+                                            summaryDept.textContent = selectedOption.text;
+                                        }
+                                    }
+                                }
                             } else if (errorAlert) {
                                 const message = errorAlert.textContent.trim().replace(/^\s*[×]\s*/, '');
                                 showNotification('error', message);
                             } else if (result.ok) {
                                 showNotification('success', 'Employee updated successfully!');
                                 if (modal) modal.hide();
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 1500);
+                                
+                                // Update all images for this employee with cache-busting timestamp
+                                const timestamp = new Date().getTime();
+                                const employeeId = form.closest('.modal').id.replace('editEmployee', '');
+                                
+                                // Construct the proper photo URL
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + timestamp;
+                                
+                                // Update modal preview image
+                                const previewImg = document.getElementById('preview_' + employeeId);
+                                if (previewImg) {
+                                    previewImg.src = photoUrl;
+                                }
+                                
+                                // Update summary panel image (right sidebar)
+                                const summaryImg = document.querySelector('.col-lg-3 .aa-card .card-body img');
+                                if (summaryImg) {
+                                    summaryImg.src = photoUrl;
+                                }
+                                
+                                // Update table row - ALL COLUMNS except Primary Employee ID (No. column)
+                                const tableRow = document.querySelector(`tr[data-employee-id="${employeeId}"]`);
+                                if (tableRow) {
+                                    // Update photo (column 2)
+                                    const tableImg = tableRow.querySelector('img');
+                                    if (tableImg) {
+                                        tableImg.src = photoUrl;
+                                    }
+                                    
+                                    // Update employee code (column 3)
+                                    const employeeCode = formData.get('employee_code');
+                                    if (employeeCode) {
+                                        const codeCell = tableRow.querySelector('td:nth-child(3) code');
+                                        if (codeCell) {
+                                            codeCell.textContent = employeeCode;
+                                        }
+                                    }
+                                    
+                                    // Update employee name (column 4)
+                                    const fullName = formData.get('full_name');
+                                    if (fullName) {
+                                        const nameCell = tableRow.querySelector('td:nth-child(4)');
+                                        if (nameCell) {
+                                            nameCell.innerHTML = '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + fullName + '</div>';
+                                        }
+                                    }
+                                    
+                                    // Update employment type (column 5)
+                                    const empType = formData.get('employment_type');
+                                    if (empType) {
+                                        const typeCell = tableRow.querySelector('td:nth-child(5) .badge');
+                                        if (typeCell) {
+                                            typeCell.textContent = empType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                        }
+                                    }
+                                    
+                                    // Update office/department (column 6)
+                                    const deptId = formData.get('department_id');
+                                    if (deptId) {
+                                        // Get department name from the select dropdown
+                                        const deptSelect = form.querySelector('select[name="department_id"]');
+                                        if (deptSelect) {
+                                            const selectedOption = deptSelect.options[deptSelect.selectedIndex];
+                                            const deptName = selectedOption.text;
+                                            const officeCell = tableRow.querySelector('td:nth-child(6) .badge');
+                                            if (officeCell) {
+                                                officeCell.textContent = deptName;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Update summary panel name and department
+                                const summaryName = document.querySelector('.col-lg-3 .fw-bold.fs-5');
+                                if (summaryName) {
+                                    const fullName = formData.get('full_name');
+                                    if (fullName) {
+                                        summaryName.textContent = fullName;
+                                    }
+                                }
+                                
+                                // Update summary panel department
+                                const summaryDept = document.querySelector('.col-lg-3 .text-muted.small.mb-3');
+                                if (summaryDept) {
+                                    const deptId = formData.get('department_id');
+                                    if (deptId) {
+                                        const deptSelect = form.querySelector('select[name="department_id"]');
+                                        if (deptSelect) {
+                                            const selectedOption = deptSelect.options[deptSelect.selectedIndex];
+                                            summaryDept.textContent = selectedOption.text;
+                                        }
+                                    }
+                                }
                             } else {
                                 showNotification('error', 'Failed to update employee. Please check the server logs.');
                             }
@@ -1197,7 +1479,7 @@
             vertical-align: middle;
             white-space: nowrap;
         }
-        .employee-table td:nth-child(3) {
+        .employee-table td:nth-child(4) {
             text-align: left;
             white-space: normal;
         }
@@ -1205,23 +1487,25 @@
         .employee-table {
             table-layout: fixed;
             width: 100%;
-            min-width: 800px;
+            min-width: 900px;
         }
         /* Column widths for better layout */
         .employee-table th:nth-child(1),
-        .employee-table td:nth-child(1) { width: 80px; }
+        .employee-table td:nth-child(1) { width: 60px; }
         .employee-table th:nth-child(2),
-        .employee-table td:nth-child(2) { width: 120px; }
+        .employee-table td:nth-child(2) { width: 80px; }
         .employee-table th:nth-child(3),
-        .employee-table td:nth-child(3) { width: 200px; }
+        .employee-table td:nth-child(3) { width: 120px; }
         .employee-table th:nth-child(4),
-        .employee-table td:nth-child(4) { width: 120px; }
+        .employee-table td:nth-child(4) { width: 200px; }
         .employee-table th:nth-child(5),
         .employee-table td:nth-child(5) { width: 120px; }
         .employee-table th:nth-child(6),
         .employee-table td:nth-child(6) { width: 120px; }
         .employee-table th:nth-child(7),
-        .employee-table td:nth-child(7) { width: 140px; }
+        .employee-table td:nth-child(7) { width: 120px; }
+        .employee-table th:nth-child(8),
+        .employee-table td:nth-child(8) { width: 140px; }
         
         /* Responsive adjustments */
         @media (max-width: 1200px) {

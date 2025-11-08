@@ -190,7 +190,7 @@ class RegistrationTokenController extends Controller
             // Validate request (same rules as StoreEmployeeRequest)
             $validatedData = $request->validate([
                 'emp_name' => 'required|string|max:100',
-                'emp_id' => 'required|string|max:50|unique:employees,employee_id',
+                'emp_id' => 'required|string|max:50|unique:employees,employee_code',
                 'department_id' => 'required|exists:departments,department_id',
                 'employment_type' => 'required|in:full_time,part_time',
                 'rfid_uid' => 'required|string|max:100',
@@ -201,7 +201,7 @@ class RegistrationTokenController extends Controller
 
             // Prepare employee data (exactly like EmployeeController)
             $employeeData = [
-                'employee_id' => $request->emp_id,
+                'employee_code' => $request->emp_id, // Custom employee ID/code
                 'full_name' => $request->emp_name,
                 'employment_type' => $request->employment_type,
                 'rfid_code' => $request->rfid_uid,
@@ -337,6 +337,7 @@ class RegistrationTokenController extends Controller
                 'success' => true,
                 'employee' => [
                     'employee_id' => $employee->employee_id,
+                    'employee_code' => $employee->employee_code,
                     'full_name' => $employee->full_name,
                     'employment_type' => $employee->employment_type,
                     'rfid_code' => $employee->rfid_code,

@@ -630,7 +630,7 @@
                     document.getElementById('empName').value = emp.full_name;
                     document.getElementById('empName').readOnly = true;
                     
-                    document.getElementById('empId').value = emp.employee_id;
+                    document.getElementById('empId').value = emp.employee_code || emp.employee_id;
                     document.getElementById('empId').readOnly = true;
                     
                     document.getElementById('rfidUid').value = emp.rfid_code;

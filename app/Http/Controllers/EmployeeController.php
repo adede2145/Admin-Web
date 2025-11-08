@@ -215,7 +215,7 @@ class EmployeeController extends Controller
         try {
             // Prepare employee data
             $employeeData = [
-                'employee_id' => $request->emp_id,
+                'employee_code' => $request->emp_id, // Custom employee ID/code
                 'full_name' => $request->emp_name,
                 'employment_type' => 'full_time', // Default, can be made configurable
                 'rfid_code' => $request->rfid_uid,
@@ -282,8 +282,16 @@ class EmployeeController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            Log::info("Update employee request received", [
+                'employee_id' => $id,
+                'has_photo' => $request->hasFile('photo'),
+                'all_files' => $request->allFiles(),
+                'request_method' => $request->method()
+            ]);
+
             $request->validate([
                 'full_name' => 'required|string|max:100',
+                'employee_code' => 'required|string|max:50|unique:employees,employee_code,' . $id . ',employee_id',
                 'employment_type' => 'required|in:full_time,part_time,cos',
                 'department_id' => 'required|exists:departments,department_id',
                 'photo' => 'nullable|image|max:5120',
@@ -308,6 +316,7 @@ class EmployeeController extends Controller
             }
 
             $updateData = [
+                'employee_code' => $request->employee_code,
                 'full_name' => $request->full_name,
                 'employment_type' => $request->employment_type,
                 'department_id' => $request->department_id,
@@ -363,7 +372,10 @@ class EmployeeController extends Controller
 
             $employee->update($updateData);
             
-            Log::info("Employee updated successfully: ID {$id}");
+            Log::info("Employee updated successfully: ID {$id}", [
+                'updated_fields' => array_keys($updateData),
+                'photo_updated' => isset($updateData['photo_data'])
+            ]);
 
             // Return JSON for AJAX requests
             if ($request->ajax() || $request->wantsJson()) {

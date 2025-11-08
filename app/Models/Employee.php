@@ -16,6 +16,7 @@ class Employee extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'employee_code',
         'full_name',
         'employment_type',
         'fingerprint_hash',

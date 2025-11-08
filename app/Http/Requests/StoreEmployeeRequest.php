@@ -27,7 +27,7 @@ class StoreEmployeeRequest extends FormRequest
     {
         return [
             'emp_name' => 'required|string|max:100',
-            'emp_id' => 'required|string|max:50|unique:employees,employee_id',
+            'emp_id' => 'required|string|max:50|unique:employees,employee_code',
             'department_id' => 'required|exists:departments,department_id',
             // Be permissive on content; length mainly to protect DB index sizes
             'rfid_uid' => 'required|string|max:191|unique:employees,rfid_code',
