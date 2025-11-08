@@ -23,6 +23,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/attendance-logs', [\App\Http\Controllers\Api\AttendanceController::class, 'getLogs']);
     Route::get('/employees', [\App\Http\Controllers\Api\EmployeeController::class, 'getList']);
     Route::get('/dtr-reports', [\App\Http\Controllers\Api\DTRController::class, 'getReports']);
+    
+    // Token generation endpoint (requires authentication)
+    Route::post('/generate-token', [\App\Http\Controllers\Api\TokenController::class, 'generate']);
 });
 
 // Public token validation endpoints (no auth required, token validates itself)

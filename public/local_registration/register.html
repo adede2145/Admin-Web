@@ -312,10 +312,26 @@
         }
 
         /**
-         * Get the backend API URL - hardcoded for production
-         * Update this URL to match your production backend
+         * Get the backend API URL from URL parameter or use default
+         * Priority: URL parameter > localStorage > hardcoded default
          */
         function getBackendUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const backendFromUrl = urlParams.get('backend');
+            
+            if (backendFromUrl) {
+                // Use the backend URL passed from the web app
+                localStorage.setItem('backendUrl', backendFromUrl);
+                return backendFromUrl;
+            }
+            
+            // Try localStorage
+            const storedBackend = localStorage.getItem('backendUrl');
+            if (storedBackend) {
+                return storedBackend;
+            }
+            
+            // Fallback to default (update this for your production backend)
             return 'http://localhost/Admin-Web/public';
         }
 

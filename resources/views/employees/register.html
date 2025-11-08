@@ -312,29 +312,64 @@
         let bridgeBase = 'http://127.0.0.1:18420';
         
         /**
-         * Get the backend API URL from the configuration input field
-         * This should be your hosted Laravel backend URL
-         * Example: https://your-linode-ip-or-domain or http://localhost/Admin-Web/public
+         * Get the backend API URL from URL parameter or use default
+         * Priority: URL parameter > localStorage > hardcoded default
          */
         function getBackendUrl() {
-            return document.getElementById('backendApiUrl').value.trim() || 'http://localhost/Admin-Web/public';
+            const urlParams = new URLSearchParams(window.location.search);
+            const backendFromUrl = urlParams.get('backend');
+            
+            if (backendFromUrl) {
+                // Use the backend URL passed from the web app
+                localStorage.setItem('backendUrl', backendFromUrl);
+                return backendFromUrl;
+            }
+            
+            // Try localStorage
+            const storedBackend = localStorage.getItem('backendUrl');
+            if (storedBackend) {
+                return storedBackend;
+            }
+            
+            // Fallback to default (update this for your production backend)
+            return 'http://localhost/Admin-Web/public';
         }
 
         /**
-         * Get the admin authentication token from the input field or localStorage
+         * Extract token from URL query parameter
+         */
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            return token ? decodeURIComponent(token) : null;
+        }
+
+        /**
+         * Get the admin authentication token from URL or localStorage
+         * Priority: URL token > localStorage
          * This token is required for RBAC and authenticating API requests
-         * The token should be obtained after successful login on the hosted backend
          */
         function getAuthToken() {
-            // Try to get from input field first
-            let token = document.getElementById('adminToken').value.trim();
-            
-            // If not in input, try localStorage
-            if (!token) {
-                token = localStorage.getItem('adminToken') || '';
+            // First, check URL parameter
+            const urlToken = getTokenFromUrl();
+            if (urlToken) {
+                saveAuthToken(urlToken);
+                return urlToken;
             }
             
+            // Try localStorage
+            const token = localStorage.getItem('adminToken') || '';
+            
             return token;
+        }
+
+        /**
+         * Save auth token to localStorage for persistence across page reloads
+         */
+        function saveAuthToken(token) {
+            if (token) {
+                localStorage.setItem('adminToken', token);
+            }
         }
 
         /**

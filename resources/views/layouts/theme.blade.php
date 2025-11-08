@@ -175,11 +175,23 @@
                 const data = await response.json();
                 
                 if (data.success && data.token) {
-                    // Open local registration page with token
-                    const localUrl = 'http://localhost/Admin-Web/public/local_registration/register.html';
-                    const urlWithToken = `${localUrl}?token=${encodeURIComponent(data.token)}`;
+                    // Path to local registration file (installed with Fingerprint Device Bridge)
+                    const localFilePath = 'C:/Program Files (x86)/Tresmongos/Fingerprint Device Bridge/local_registration/register.html';
                     
-                    window.open(urlWithToken, '_blank');
+                    // Get current backend URL (your hosted app URL)
+                    const backendUrl = window.location.origin; // e.g., https://yourapp.com or http://localhost/Admin-Web/public
+                    
+                    // Build file:// URL with parameters
+                    const fileUrl = `file:///${localFilePath}?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
+                    
+                    console.log('Opening local registration with:', {
+                        filePath: localFilePath,
+                        backend: backendUrl,
+                        token: data.token.substring(0, 20) + '...'
+                    });
+                    
+                    // Open in new window
+                    window.open(fileUrl, '_blank');
                     
                     // Reset button
                     setTimeout(() => {
