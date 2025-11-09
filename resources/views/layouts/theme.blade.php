@@ -145,22 +145,70 @@
         document.getElementById('aaSidebar').classList.toggle('show');
     }
 
-    // Function to check if Device Bridge is running
-    async function checkDeviceBridge() {
+    // Function to check if Device Bridge is running using Image technique (works with CORS)
+    function checkDeviceBridge() {
+        return new Promise((resolve) => {
+            const img = new Image();
+            const timeout = setTimeout(() => {
+                img.src = ''; // Cancel the request
+                resolve(false);
+            }, 3000); // 3 second timeout
+
+            img.onload = () => {
+                clearTimeout(timeout);
+                resolve(true);
+            };
+
+            img.onerror = () => {
+                clearTimeout(timeout);
+                // Check if it's a CORS error (which means server is running)
+                // or a network error (server not running)
+                fetch('http://127.0.0.1:18426/health', { 
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    cache: 'no-cache'
+                })
+                .then(() => resolve(true))
+                .catch(() => resolve(false));
+            };
+
+            // Try to load a favicon or health endpoint
+            img.src = 'http://127.0.0.1:18426/favicon.ico?' + Date.now();
+        });
+    }
+
+    // Alternative method: Use fetch with no-cors mode
+    async function checkDeviceBridgeAlt() {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-            
-            const response = await fetch('http://127.0.0.1:18426/health', {
-                method: 'GET',
-                signal: controller.signal,
-                mode: 'cors'
+            // Use no-cors mode - if server exists, fetch won't throw error
+            await fetch('http://127.0.0.1:18426/health', {
+                method: 'HEAD',
+                mode: 'no-cors',
+                cache: 'no-cache',
+                signal: AbortSignal.timeout(3000)
             });
-            
-            clearTimeout(timeoutId);
-            return response.ok;
+            return true;
         } catch (error) {
-            console.log('Device Bridge check failed:', error.message);
+            if (error.name === 'AbortError') {
+                // Timeout - server might be running but slow
+                return true;
+            }
+            return false;
+        }
+    }
+
+    // Combined check using both methods
+    async function isDeviceBridgeRunning() {
+        try {
+            // Try primary method
+            const check1 = await checkDeviceBridge();
+            if (check1) return true;
+
+            // Try alternative method
+            const check2 = await checkDeviceBridgeAlt();
+            return check2;
+        } catch (error) {
+            console.log('Device Bridge check error:', error);
             return false;
         }
     }
@@ -182,22 +230,23 @@
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <p class="mb-3">The Device Bridge service is not running or not reachable.</p>
-                                <p class="mb-3">Please ensure:</p>
+                                <p class="mb-3">The Device Bridge service is not running or not reachable on your local machine.</p>
+                                <p class="mb-3"><strong>Please ensure:</strong></p>
                                 <ul>
-                                    <li>Device Bridge application is installed</li>
+                                    <li>Device Bridge application is installed on your computer</li>
                                     <li>The service is running on port 18426</li>
-                                    <li>Your firewall allows local connections</li>
+                                    <li>Your firewall or antivirus is not blocking port 18426</li>
+                                    <li>You're accessing this from the same machine where Device Bridge is installed</li>
                                 </ul>
                                 <div class="alert alert-info mb-0">
                                     <i class="bi bi-info-circle me-2"></i>
-                                    <strong>Note:</strong> The Device Bridge must be running to register employees with biometric devices.
+                                    <strong>Note:</strong> The Device Bridge must be running on your local machine to register employees with biometric devices.
                                 </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary" onclick="location.reload()">
-                                    <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                                <button type="button" class="btn btn-primary" id="retryBridgeBtn">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Retry Connection
                                 </button>
                             </div>
                         </div>
@@ -206,6 +255,26 @@
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             modal = document.getElementById('bridgeNotificationModal');
+            
+            // Add retry functionality
+            document.getElementById('retryBridgeBtn').addEventListener('click', async function() {
+                const btn = this;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Checking...';
+                btn.disabled = true;
+                
+                const isRunning = await isDeviceBridgeRunning();
+                
+                if (isRunning) {
+                    bootstrap.Modal.getInstance(modal).hide();
+                    // Trigger registration again
+                    document.getElementById('openLocalRegistrationBtn').click();
+                } else {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    alert('Device Bridge is still not reachable. Please start the service and try again.');
+                }
+            });
         }
         
         const bsModal = new bootstrap.Modal(modal);
@@ -225,7 +294,7 @@
             
             try {
                 // Check if Device Bridge is running
-                const bridgeRunning = await checkDeviceBridge();
+                const bridgeRunning = await isDeviceBridgeRunning();
                 
                 if (!bridgeRunning) {
                     // Show notification that bridge is not running
@@ -269,7 +338,11 @@
                     });
                     
                     // Open in new window
-                    window.open(registrationUrl, '_blank');
+                    const newWindow = window.open(registrationUrl, '_blank', 'width=1200,height=800');
+                    
+                    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                        alert('Popup blocked! Please allow popups for this site and try again.');
+                    }
                     
                     // Reset button
                     setTimeout(() => {
