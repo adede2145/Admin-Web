@@ -150,61 +150,11 @@
     if (localRegistrationBtn) {
         localRegistrationBtn.addEventListener('click', async function(e) {
             e.preventDefault();
-            const originalHtml = this.innerHTML;
             
-            // Check if we're on localhost or a remote server
-            const isLocalhost = window.location.hostname === 'localhost' || 
-                              window.location.hostname === '127.0.0.1' ||
-                              window.location.hostname === '::1';
-            
-            if (!isLocalhost) {
-                // Running on remote server (like Linode) - show warning immediately
-                showServerNotRunningModal(async () => {
-                    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
-                    this.style.pointerEvents = 'none';
-                    await openRegistrationPage();
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
-                });
-                return;
-            }
-
-            // On localhost - try to detect the server
-            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
-            this.style.pointerEvents = 'none';
-
-            try {
-                const isServerRunning = await checkLocalServerHealth();
-
-                if (!isServerRunning) {
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
-                    showServerNotRunningModal(async () => {
-                        this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
-                        this.style.pointerEvents = 'none';
-                        await openRegistrationPage();
-                        this.innerHTML = originalHtml;
-                        this.style.pointerEvents = 'auto';
-                    });
-                    return;
-                }
-
-                // Server is running, proceed normally
+            // Always show the setup reminder modal
+            showSetupReminderModal(async () => {
                 await openRegistrationPage();
-                this.innerHTML = originalHtml;
-                this.style.pointerEvents = 'auto';
-            } catch (error) {
-                console.error('Error:', error);
-                this.innerHTML = originalHtml;
-                this.style.pointerEvents = 'auto';
-                showServerNotRunningModal(async () => {
-                    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
-                    this.style.pointerEvents = 'none';
-                    await openRegistrationPage();
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
-                });
-            }
+            });
 
             async function openRegistrationPage() {
                 try {
@@ -215,7 +165,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': csrfToken,
                             'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-REQUESTED-With': 'XMLHttpRequest'
                         },
                         credentials: 'same-origin'
                     });
@@ -229,7 +179,7 @@
                         
                         // If popup was blocked or failed to open, show a message
                         if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                            alert('Registration window was blocked. Please ensure:\n\n1. The Device Bridge is running on YOUR LOCAL COMPUTER (not the server)\n2. Pop-up blocker is disabled for this site\n3. You allow the registration window to open');
+                            alert('Registration window was blocked. Please ensure:\n\n1. The Device Bridge is running on your local computer\n2. Pop-up blocker is disabled for this site\n3. You allow the registration window to open');
                         }
                     } else {
                         alert('Failed to generate token: ' + (data.message || 'Unknown error'));
@@ -242,165 +192,42 @@
         });
     }
 
-    // Check if local server is running - tries multiple methods to bypass ad blockers
-    async function checkLocalServerHealth() {
-        // Method 1: Try WebSocket connection (less likely to be blocked)
-        try {
-            const wsResult = await checkWebSocket();
-            if (wsResult) return true;
-        } catch (e) {
-            console.log('WebSocket check failed, trying alternatives...');
-        }
-
-        // Method 2: Try fetch with no-cors mode
-        try {
-            const fetchResult = await checkFetchNoCors();
-            if (fetchResult) return true;
-        } catch (e) {
-            console.log('Fetch check failed, trying alternatives...');
-        }
-
-        // Method 3: Try iframe approach
-        try {
-            const iframeResult = await checkIframe();
-            if (iframeResult) return true;
-        } catch (e) {
-            console.log('Iframe check failed, trying alternatives...');
-        }
-
-        // If all methods fail, we'll assume it's not running
-        // But we'll still give the user the option to try opening it
-        return false;
-    }
-
-    function checkWebSocket() {
-        return new Promise((resolve) => {
-            const ws = new WebSocket('ws://127.0.0.1:18426');
-            const timeout = setTimeout(() => {
-                ws.close();
-                resolve(false);
-            }, 2000);
-
-            ws.onopen = () => {
-                clearTimeout(timeout);
-                ws.close();
-                resolve(true);
-            };
-
-            ws.onerror = () => {
-                clearTimeout(timeout);
-                resolve(false);
-            };
-        });
-    }
-
-    function checkFetchNoCors() {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(false), 2000);
-            
-            fetch('http://127.0.0.1:18426/register.html', { 
-                mode: 'no-cors',
-                cache: 'no-store'
-            })
-            .then(() => {
-                clearTimeout(timeout);
-                resolve(true);
-            })
-            .catch(() => {
-                clearTimeout(timeout);
-                resolve(false);
-            });
-        });
-    }
-
-    function checkIframe() {
-        return new Promise((resolve) => {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = 'http://127.0.0.1:18426/register.html';
-            
-            const timeout = setTimeout(() => {
-                document.body.removeChild(iframe);
-                resolve(false);
-            }, 2000);
-
-            iframe.onload = () => {
-                clearTimeout(timeout);
-                document.body.removeChild(iframe);
-                resolve(true);
-            };
-
-            iframe.onerror = () => {
-                clearTimeout(timeout);
-                document.body.removeChild(iframe);
-                resolve(false);
-            };
-
-            document.body.appendChild(iframe);
-        });
-    }
-
-    function showServerNotRunningModal(tryAnywayCallback) {
-        // Detect if we're on a remote server
-        const isRemote = window.location.hostname !== 'localhost' && 
-                        window.location.hostname !== '127.0.0.1' &&
-                        window.location.hostname !== '::1';
-        
-        const modalTitle = isRemote ? 'Setup Required' : 'Registration Server Not Detected';
-        const modalIcon = isRemote ? 'bi-exclamation-circle' : 'bi-exclamation-triangle-fill';
-        
-        // Create modal HTML
+    function showSetupReminderModal(continueCallback) {
+        // Create simple informational modal
         const modalHtml = `
-            <div class="modal fade" id="serverNotRunningModal" tabindex="-1" aria-labelledby="serverNotRunningModalLabel" aria-hidden="true">
+            <div class="modal fade" id="setupReminderModal" tabindex="-1" aria-labelledby="setupReminderModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark">
-                            <h5 class="modal-title" id="serverNotRunningModalLabel">
-                                <i class="${modalIcon} me-2"></i>${modalTitle}
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title" id="setupReminderModalLabel">
+                                <i class="bi bi-info-circle me-2"></i>Before You Continue
                             </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            ${isRemote ? `
-                                <div class="alert alert-primary mb-3">
-                                    <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Important Information</h6>
-                                    <p class="mb-0">The Device Bridge application must be installed and running on <strong>your local computer</strong> to use the fingerprint scanner. The registration interface will open on your local device at <code>http://127.0.0.1:18426</code>.</p>
-                                </div>
-                                <div class="alert alert-success mb-0">
-                                    <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Before clicking "Open Registration Page":</h6>
-                                    <ul class="mb-0">
-                                        <li>✓ Install the Device Bridge on <strong>your local computer</strong></li>
-                                        <li>✓ Launch the Device Bridge application</li>
-                                        <li>✓ Connect the fingerprint scanner to <strong>your computer</strong></li>
-                                        <li>✓ Allow pop-ups for this site</li>
-                                    </ul>
-                                </div>
-                            ` : `
-                                <p class="mb-3">The local registration server could not be detected. This may be because:</p>
-                                <ul class="mb-3">
-                                    <li>The Device Bridge is not running</li>
-                                    <li>A browser extension (like an ad blocker) is blocking the connection</li>
-                                    <li>A firewall is blocking port 18426</li>
+                            <div class="alert alert-primary mb-3">
+                                <h6 class="alert-heading"><i class="bi bi-fingerprint me-2"></i>Device Bridge Required</h6>
+                                <p class="mb-0">The Device Bridge application must be running on <strong>your local computer</strong> to register employees using the fingerprint scanner.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="bi bi-check-circle-fill text-success me-2"></i>Make sure:</h6>
+                                <ul class="mb-0">
+                                    <li>Device Bridge is installed and running on your computer</li>
+                                    <li>Fingerprint scanner is connected</li>
+
                                 </ul>
-                                <div class="alert alert-info mb-3">
-                                    <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Recommended steps:</h6>
-                                    <ol class="mb-0 ps-3">
-                                        <li>Make sure the Device Bridge is installed on <strong>this computer</strong></li>
-                                        <li>Launch the Device Bridge application</li>
-                                        <li>Wait for the registration server to start (port 18426)</li>
-                                        <li>Disable ad blockers for this site if necessary</li>
-                                        <li>Ensure no firewall is blocking port 18426</li>
-                                    </ol>
-                                </div>
-                                <div class="alert alert-success mb-0">
-                                    <small><i class="bi bi-lightbulb me-2"></i><strong>Tip:</strong> If you're sure the Device Bridge is running, click "Open Registration Page" below. The connection might still work despite the detection issue.</small>
-                                </div>
-                            `}
+                            </div>
+                            <div class="alert alert-light border mb-0">
+                                <small class="text-muted">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    The registration interface will open at <code>http://127.0.0.1:18426</code>
+                                </small>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="tryAnywayBtn">
-                                <i class="bi bi-arrow-right-circle me-2"></i>Open Registration Page
+                            <button type="button" class="btn btn-primary" id="continueBtn">
+                                <i class="bi bi-arrow-right-circle me-2"></i>Continue
                             </button>
                         </div>
                     </div>
@@ -409,7 +236,7 @@
         `;
         
         // Remove existing modal if any
-        const existingModal = document.getElementById('serverNotRunningModal');
+        const existingModal = document.getElementById('setupReminderModal');
         if (existingModal) {
             existingModal.remove();
         }
@@ -418,16 +245,16 @@
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         
         // Show modal
-        const modalElement = document.getElementById('serverNotRunningModal');
+        const modalElement = document.getElementById('setupReminderModal');
         const modal = new bootstrap.Modal(modalElement);
         modal.show();
         
-        // Add event listener for "Open Registration Page" button
-        const tryAnywayBtn = document.getElementById('tryAnywayBtn');
-        if (tryAnywayBtn && tryAnywayCallback) {
-            tryAnywayBtn.addEventListener('click', function() {
+        // Add event listener for "Continue" button
+        const continueBtn = document.getElementById('continueBtn');
+        if (continueBtn && continueCallback) {
+            continueBtn.addEventListener('click', function() {
                 modal.hide();
-                tryAnywayCallback();
+                continueCallback();
             });
         }
         
