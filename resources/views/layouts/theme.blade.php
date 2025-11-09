@@ -151,11 +151,6 @@
         localRegistrationBtn.addEventListener('click', async function(e) {
             e.preventDefault();
             const originalHtml = this.innerHTML;
-<<<<<<< HEAD
-            
-            // Always try to detect the server first (even on remote servers)
-=======
->>>>>>> parent of 5b37d34 (testing)
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
             this.style.pointerEvents = 'none';
 
@@ -179,12 +174,9 @@
                         await openRegistrationPage();
                     });
                 }
-<<<<<<< HEAD
-=======
 
                 // Server is running, proceed normally
                 await openRegistrationPage();
->>>>>>> parent of 5b37d34 (testing)
             } catch (error) {
                 console.error('Error:', error);
                 this.innerHTML = originalHtml;
