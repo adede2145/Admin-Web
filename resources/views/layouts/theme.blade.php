@@ -145,142 +145,6 @@
         document.getElementById('aaSidebar').classList.toggle('show');
     }
 
-    // Function to check if Device Bridge is running using Image technique (works with CORS)
-    function checkDeviceBridge() {
-        return new Promise((resolve) => {
-            const img = new Image();
-            const timeout = setTimeout(() => {
-                img.src = ''; // Cancel the request
-                resolve(false);
-            }, 3000); // 3 second timeout
-
-            img.onload = () => {
-                clearTimeout(timeout);
-                resolve(true);
-            };
-
-            img.onerror = () => {
-                clearTimeout(timeout);
-                // Check if it's a CORS error (which means server is running)
-                // or a network error (server not running)
-                fetch('http://127.0.0.1:18426/health', { 
-                    method: 'HEAD',
-                    mode: 'no-cors',
-                    cache: 'no-cache'
-                })
-                .then(() => resolve(true))
-                .catch(() => resolve(false));
-            };
-
-            // Try to load a favicon or health endpoint
-            img.src = 'http://127.0.0.1:18426/favicon.ico?' + Date.now();
-        });
-    }
-
-    // Alternative method: Use fetch with no-cors mode
-    async function checkDeviceBridgeAlt() {
-        try {
-            // Use no-cors mode - if server exists, fetch won't throw error
-            await fetch('http://127.0.0.1:18426/health', {
-                method: 'HEAD',
-                mode: 'no-cors',
-                cache: 'no-cache',
-                signal: AbortSignal.timeout(3000)
-            });
-            return true;
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                // Timeout - server might be running but slow
-                return true;
-            }
-            return false;
-        }
-    }
-
-    // Combined check using both methods
-    async function isDeviceBridgeRunning() {
-        try {
-            // Try primary method
-            const check1 = await checkDeviceBridge();
-            if (check1) return true;
-
-            // Try alternative method
-            const check2 = await checkDeviceBridgeAlt();
-            return check2;
-        } catch (error) {
-            console.log('Device Bridge check error:', error);
-            return false;
-        }
-    }
-
-    // Show notification modal
-    function showBridgeNotification() {
-        // Create modal if it doesn't exist
-        let modal = document.getElementById('bridgeNotificationModal');
-        if (!modal) {
-            const modalHtml = `
-                <div class="modal fade" id="bridgeNotificationModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header bg-danger text-white">
-                                <h5 class="modal-title">
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                    Device Bridge Not Running
-                                </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p class="mb-3">The Device Bridge service is not running or not reachable on your local machine.</p>
-                                <p class="mb-3"><strong>Please ensure:</strong></p>
-                                <ul>
-                                    <li>Device Bridge application is installed on your computer</li>
-                                    <li>The service is running on port 18426</li>
-                                    <li>Your firewall or antivirus is not blocking port 18426</li>
-                                    <li>You're accessing this from the same machine where Device Bridge is installed</li>
-                                </ul>
-                                <div class="alert alert-info mb-0">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    <strong>Note:</strong> The Device Bridge must be running on your local machine to register employees with biometric devices.
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary" id="retryBridgeBtn">
-                                    <i class="bi bi-arrow-clockwise me-1"></i>Retry Connection
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            modal = document.getElementById('bridgeNotificationModal');
-            
-            // Add retry functionality
-            document.getElementById('retryBridgeBtn').addEventListener('click', async function() {
-                const btn = this;
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Checking...';
-                btn.disabled = true;
-                
-                const isRunning = await isDeviceBridgeRunning();
-                
-                if (isRunning) {
-                    bootstrap.Modal.getInstance(modal).hide();
-                    // Trigger registration again
-                    document.getElementById('openLocalRegistrationBtn').click();
-                } else {
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                    alert('Device Bridge is still not reachable. Please start the service and try again.');
-                }
-            });
-        }
-        
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-    }
-
     // Handle Local Registration Station button
     const localRegistrationBtn = document.getElementById('openLocalRegistrationBtn');
     if (localRegistrationBtn) {
@@ -289,25 +153,35 @@
             
             // Show loading indicator
             const originalHtml = this.innerHTML;
-            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking connection...';
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
             this.style.pointerEvents = 'none';
             
             try {
-                // Check if Device Bridge is running
-                const bridgeRunning = await isDeviceBridgeRunning();
-                
-                if (!bridgeRunning) {
-                    // Show notification that bridge is not running
-                    showBridgeNotification();
+                // First, check if local registration server is running
+                const serverCheck = await fetch('http://127.0.0.1:18426/health', {
+                    method: 'GET',
+                    mode: 'no-cors',
+                    cache: 'no-cache'
+                }).catch(() => null);
+
+                // Since no-cors doesn't give us response status, we'll use a timeout approach
+                const isServerRunning = await Promise.race([
+                    fetch('http://127.0.0.1:18426/register.html', { 
+                        method: 'HEAD',
+                        mode: 'no-cors'
+                    }).then(() => true).catch(() => false),
+                    new Promise(resolve => setTimeout(() => resolve(false), 2000))
+                ]);
+
+                if (!isServerRunning) {
+                    // Server is not running - show modal
                     this.innerHTML = originalHtml;
                     this.style.pointerEvents = 'auto';
+                    showServerNotRunningModal();
                     return;
                 }
-                
-                // Update loading text
-                this.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating token...';
-                
-                // Get CSRF token from meta tag
+
+                // Get CSRF token from meta tag~
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 
                 // Generate token from backend (uses session auth, no bearer token needed)
@@ -319,7 +193,7 @@
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    credentials: 'same-origin' // Important for session cookies
+                    credentials: 'same-origin'
                 });
                 
                 const data = await response.json();
@@ -338,11 +212,7 @@
                     });
                     
                     // Open in new window
-                    const newWindow = window.open(registrationUrl, '_blank', 'width=1200,height=800');
-                    
-                    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                        alert('Popup blocked! Please allow popups for this site and try again.');
-                    }
+                    window.open(registrationUrl, '_blank');
                     
                     // Reset button
                     setTimeout(() => {
@@ -355,11 +225,62 @@
                     this.style.pointerEvents = 'auto';
                 }
             } catch (error) {
-                console.error('Token generation error:', error);
-                alert('Failed to generate token. Please try again.');
+                console.error('Error:', error);
                 this.innerHTML = originalHtml;
                 this.style.pointerEvents = 'auto';
+                showServerNotRunningModal();
             }
+        });
+    }
+
+    function showServerNotRunningModal() {
+        // Create modal HTML
+        const modalHtml = `
+            <div class="modal fade" id="serverNotRunningModal" tabindex="-1" aria-labelledby="serverNotRunningModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="serverNotRunningModalLabel">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Registration Server Not Running
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">The local registration server is not running. Please ensure the Device Bridge application is installed and running.</p>
+                            <div class="alert alert-info mb-0">
+                                <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Steps to fix:</h6>
+                                <ol class="mb-0 ps-3">
+                                    <li>Make sure the Device Bridge is installed on this computer</li>
+                                    <li>Launch the Device Bridge application</li>
+                                    <li>Wait for the registration server to start (port 18426)</li>
+                                    <li>Try again</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('serverNotRunningModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('serverNotRunningModal'));
+        modal.show();
+        
+        // Clean up modal after it's hidden
+        document.getElementById('serverNotRunningModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
         });
     }
 </script>
