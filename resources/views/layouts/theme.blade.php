@@ -200,46 +200,57 @@
         });
     }
 
-    // Check if local server is running using HTTP fetch to register.html
+    // Check if local server is running using image loading (bypasses ad blockers)
     async function checkLocalServerHealth() {
         return new Promise((resolve) => {
             let resolved = false;
 
+            // Overall timeout
             const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
+                    cleanup();
                     resolve(false);
                 }
-            }, 3000); // 3 second timeout
+            }, 3000);
 
-            // Try HTTP fetch request to register.html with ping parameter
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-            fetch('http://127.0.0.1:18426/register.html?ping=true', {
-                method: 'GET',
-                signal: controller.signal,
-                cache: 'no-cache',
-                mode: 'no-cors' // Important: allows request without CORS errors
-            })
-            .then(response => {
-                clearTimeout(timeoutId);
-                clearTimeout(timeout);
+            // Create an image element to test if server is accessible
+            const img = new Image();
+            const imgTimeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
-                    // If request completes (even with opaque response), server is accessible
-                    resolve(true);
-                }
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                clearTimeout(timeout);
-                if (!resolved) {
-                    resolved = true;
-                    // If request fails, server is not accessible
+                    cleanup();
                     resolve(false);
                 }
-            });
+            }, 2500);
+
+            function cleanup() {
+                clearTimeout(timeout);
+                clearTimeout(imgTimeout);
+                img.onload = null;
+                img.onerror = null;
+                img.src = '';
+            }
+
+            img.onload = () => {
+                if (!resolved) {
+                    resolved = true;
+                    cleanup();
+                    resolve(true); // Server is accessible
+                }
+            };
+
+            img.onerror = () => {
+                if (!resolved) {
+                    resolved = true;
+                    cleanup();
+                    resolve(false); // Server not accessible
+                }
+            };
+
+            // Try to load favicon or any static file from the server
+            // Add timestamp to bypass cache
+            img.src = `http://127.0.0.1:18426/register.html?ping=true&t=${Date.now()}`;
         });
     }
 

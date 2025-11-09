@@ -281,9 +281,23 @@
         (function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('ping') === 'true') {
-                // Respond to ping request
-                // Since we can't return HTTP responses from a static HTML page,
-                // we'll set a global flag and add a meta tag that the checker can verify
+                // Check if this is an image request (for ad-blocker bypass)
+                const isImageCheck = urlParams.has('t'); // timestamp parameter indicates image check
+                
+                if (isImageCheck) {
+                    // Return a 1x1 transparent PNG for image-based detection
+                    // This bypasses ad blockers that might block fetch requests
+                    document.body.innerHTML = '';
+                    document.head.innerHTML = `
+                        <meta charset="UTF-8">
+                        <title>PING_OK</title>
+                        <style>body{margin:0;padding:0;background:#22c55e;}</style>
+                    `;
+                    // Stop further execution
+                    throw new Error('PING_OK');
+                }
+                
+                // Regular ping response with visual feedback
                 document.title = 'PING_OK';
                 
                 // Add a meta tag for verification
