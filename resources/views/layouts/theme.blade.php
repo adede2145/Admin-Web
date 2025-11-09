@@ -346,8 +346,8 @@
                         window.location.hostname !== '127.0.0.1' &&
                         window.location.hostname !== '::1';
         
-        const modalTitle = isRemote ? 'Remote Server Detected' : 'Registration Server Not Detected';
-        const modalIcon = isRemote ? 'bi-globe' : 'bi-exclamation-triangle-fill';
+        const modalTitle = isRemote ? 'Setup Required' : 'Registration Server Not Detected';
+        const modalIcon = isRemote ? 'bi-exclamation-circle' : 'bi-exclamation-triangle-fill';
         
         // Create modal HTML
         const modalHtml = `
@@ -364,16 +364,8 @@
                             ${isRemote ? `
                                 <div class="alert alert-primary mb-3">
                                     <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Important Information</h6>
-                                    <p class="mb-0">You are accessing this web application from a <strong>remote server</strong> (${window.location.hostname}). The Device Bridge must be running on <strong>YOUR LOCAL COMPUTER</strong>, not on the server.</p>
+                                    <p class="mb-0">The Device Bridge application must be installed and running on <strong>your local computer</strong> to use the fingerprint scanner. The registration interface will open on your local device at <code>http://127.0.0.1:18426</code>.</p>
                                 </div>
-                                <p class="mb-3"><strong>How this works:</strong></p>
-                                <ol class="mb-3">
-                                    <li>You click "Open Registration Page" on this remote web app</li>
-                                    <li>The system generates a secure token and tries to open <code>http://127.0.0.1:18426</code></li>
-                                    <li>This URL points to <strong>your local computer</strong> (127.0.0.1 = localhost)</li>
-                                    <li>The Device Bridge on <strong>your computer</strong> receives the request</li>
-                                    <li>The fingerprint scanner connected to <strong>your computer</strong> can then be used</li>
-                                </ol>
                                 <div class="alert alert-success mb-0">
                                     <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Before clicking "Open Registration Page":</h6>
                                     <ul class="mb-0">
