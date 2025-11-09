@@ -157,21 +157,8 @@
             this.style.pointerEvents = 'none';
             
             try {
-                // First, check if local registration server is running
-                const serverCheck = await fetch('http://127.0.0.1:18426/health', {
-                    method: 'GET',
-                    mode: 'no-cors',
-                    cache: 'no-cache'
-                }).catch(() => null);
-
-                // Since no-cors doesn't give us response status, we'll use a timeout approach
-                const isServerRunning = await Promise.race([
-                    fetch('http://127.0.0.1:18426/register.html', { 
-                        method: 'HEAD',
-                        mode: 'no-cors'
-                    }).then(() => true).catch(() => false),
-                    new Promise(resolve => setTimeout(() => resolve(false), 2000))
-                ]);
+                // Check if local registration server is running using health check endpoint
+                const isServerRunning = await checkLocalServerHealth();
 
                 if (!isServerRunning) {
                     // Server is not running - show modal
@@ -181,7 +168,7 @@
                     return;
                 }
 
-                // Get CSRF token from meta tag~
+                // Get CSRF token from meta tag
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 
                 // Generate token from backend (uses session auth, no bearer token needed)
@@ -233,6 +220,47 @@
         });
     }
 
+    // Check if local server is running via JSONP health check
+    async function checkLocalServerHealth() {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                cleanup();
+                resolve(false);
+            }, 3000); // 3 second timeout
+
+            // Use JSONP to bypass CORS
+            const script = document.createElement('script');
+            const callbackName = 'healthCheck_' + Date.now();
+            
+            // Define callback function
+            window[callbackName] = function(data) {
+                cleanup();
+                if (data && data.status === 'ok') {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            };
+
+            function cleanup() {
+                clearTimeout(timeout);
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+                delete window[callbackName];
+            }
+
+            script.onerror = function() {
+                cleanup();
+                resolve(false);
+            };
+
+            // Call health endpoint with JSONP callback
+            script.src = `http://127.0.0.1:18426/api/health?callback=${callbackName}`;
+            document.head.appendChild(script);
+        });
+    }
+
     function showServerNotRunningModal() {
         // Create modal HTML
         const modalHtml = `
@@ -246,15 +274,19 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">The local registration server is not running. Please ensure the Device Bridge application is installed and running.</p>
+                            <p class="mb-3">The local registration server is not running or not accessible. Please ensure the Device Bridge application is installed and running on this computer.</p>
                             <div class="alert alert-info mb-0">
                                 <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Steps to fix:</h6>
                                 <ol class="mb-0 ps-3">
-                                    <li>Make sure the Device Bridge is installed on this computer</li>
+                                    <li>Make sure the Device Bridge is installed on <strong>this computer</strong></li>
                                     <li>Launch the Device Bridge application</li>
                                     <li>Wait for the registration server to start (port 18426)</li>
+                                    <li>Ensure no firewall is blocking port 18426</li>
                                     <li>Try again</li>
                                 </ol>
+                            </div>
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <small><i class="bi bi-exclamation-circle me-2"></i><strong>Note:</strong> The Device Bridge must be running on the same computer where you're accessing this web page.</small>
                             </div>
                         </div>
                         <div class="modal-footer">
