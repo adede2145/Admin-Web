@@ -160,130 +160,205 @@
                 if (!isServerRunning) {
                     this.innerHTML = originalHtml;
                     this.style.pointerEvents = 'auto';
-                    showServerNotRunningModal();
+                    showServerNotRunningModal(async () => {
+                        // User chose to try anyway - generate token and open
+                        await openRegistrationPage();
+                    });
                     return;
                 }
 
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                const response = await fetch('/api/generate-token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin'
-                });
-
-                const data = await response.json();
-
-                if (data.success && data.token) {
-                    const backendUrl = window.location.origin;
-                    const registrationUrl = `http://127.0.0.1:18426/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
-                    window.open(registrationUrl, '_blank');
-                    setTimeout(() => {
-                        this.innerHTML = originalHtml;
-                        this.style.pointerEvents = 'auto';
-                    }, 1000);
-                } else {
-                    alert('Failed to generate token: ' + (data.message || 'Unknown error'));
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
-                }
+                // Server is running, proceed normally
+                await openRegistrationPage();
             } catch (error) {
                 console.error('Error:', error);
                 this.innerHTML = originalHtml;
                 this.style.pointerEvents = 'auto';
-                showServerNotRunningModal();
+                showServerNotRunningModal(async () => {
+                    await openRegistrationPage();
+                });
+            }
+
+            async function openRegistrationPage() {
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    const response = await fetch('/api/generate-token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.token) {
+                        const backendUrl = window.location.origin;
+                        const registrationUrl = `http://127.0.0.1:18426/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
+                        window.open(registrationUrl, '_blank');
+                        setTimeout(() => {
+                            if (localRegistrationBtn) {
+                                localRegistrationBtn.innerHTML = originalHtml;
+                                localRegistrationBtn.style.pointerEvents = 'auto';
+                            }
+                        }, 1000);
+                    } else {
+                        alert('Failed to generate token: ' + (data.message || 'Unknown error'));
+                        if (localRegistrationBtn) {
+                            localRegistrationBtn.innerHTML = originalHtml;
+                            localRegistrationBtn.style.pointerEvents = 'auto';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error generating token:', error);
+                    alert('Failed to generate token. Please try again.');
+                    if (localRegistrationBtn) {
+                        localRegistrationBtn.innerHTML = originalHtml;
+                        localRegistrationBtn.style.pointerEvents = 'auto';
+                    }
+                }
             }
         });
     }
 
-    // Check if local server is running using image loading (bypasses ad blockers)
+    // Check if local server is running - tries multiple methods to bypass ad blockers
     async function checkLocalServerHealth() {
+        // Method 1: Try WebSocket connection (less likely to be blocked)
+        try {
+            const wsResult = await checkWebSocket();
+            if (wsResult) return true;
+        } catch (e) {
+            console.log('WebSocket check failed, trying alternatives...');
+        }
+
+        // Method 2: Try fetch with no-cors mode
+        try {
+            const fetchResult = await checkFetchNoCors();
+            if (fetchResult) return true;
+        } catch (e) {
+            console.log('Fetch check failed, trying alternatives...');
+        }
+
+        // Method 3: Try iframe approach
+        try {
+            const iframeResult = await checkIframe();
+            if (iframeResult) return true;
+        } catch (e) {
+            console.log('Iframe check failed, trying alternatives...');
+        }
+
+        // If all methods fail, we'll assume it's not running
+        // But we'll still give the user the option to try opening it
+        return false;
+    }
+
+    function checkWebSocket() {
         return new Promise((resolve) => {
-            let resolved = false;
-
-            // Overall timeout
+            const ws = new WebSocket('ws://127.0.0.1:18426');
             const timeout = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve(false);
-                }
-            }, 3000);
+                ws.close();
+                resolve(false);
+            }, 2000);
 
-            // Create an image element to test if server is accessible
-            const img = new Image();
-            const imgTimeout = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve(false);
-                }
-            }, 2500);
-
-            function cleanup() {
+            ws.onopen = () => {
                 clearTimeout(timeout);
-                clearTimeout(imgTimeout);
-                img.onload = null;
-                img.onerror = null;
-                img.src = '';
-            }
-
-            img.onload = () => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve(true); // Server is accessible
-                }
+                ws.close();
+                resolve(true);
             };
 
-            img.onerror = () => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve(false); // Server not accessible
-                }
+            ws.onerror = () => {
+                clearTimeout(timeout);
+                resolve(false);
             };
-
-            // Try to load favicon or any static file from the server
-            // Add timestamp to bypass cache
-            img.src = `http://127.0.0.1:18426/register.html?ping=true&t=${Date.now()}`;
         });
     }
 
-    function showServerNotRunningModal() {
+    function checkFetchNoCors() {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(false), 2000);
+            
+            fetch('http://127.0.0.1:18426/register.html', { 
+                mode: 'no-cors',
+                cache: 'no-store'
+            })
+            .then(() => {
+                clearTimeout(timeout);
+                resolve(true);
+            })
+            .catch(() => {
+                clearTimeout(timeout);
+                resolve(false);
+            });
+        });
+    }
+
+    function checkIframe() {
+        return new Promise((resolve) => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'http://127.0.0.1:18426/register.html';
+            
+            const timeout = setTimeout(() => {
+                document.body.removeChild(iframe);
+                resolve(false);
+            }, 2000);
+
+            iframe.onload = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(iframe);
+                resolve(true);
+            };
+
+            iframe.onerror = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(iframe);
+                resolve(false);
+            };
+
+            document.body.appendChild(iframe);
+        });
+    }
+
+    function showServerNotRunningModal(tryAnywayCallback) {
         // Create modal HTML
         const modalHtml = `
             <div class="modal fade" id="serverNotRunningModal" tabindex="-1" aria-labelledby="serverNotRunningModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
+                        <div class="modal-header bg-warning text-dark">
                             <h5 class="modal-title" id="serverNotRunningModalLabel">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Registration Server Not Running
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Registration Server Not Detected
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">The local registration server is not running or not accessible. Please ensure the Device Bridge application is installed and running on this computer.</p>
+                            <p class="mb-3">The local registration server could not be detected. This may be because:</p>
+                            <ul class="mb-3">
+                                <li>The Device Bridge is not running</li>
+                                <li>A browser extension (like an ad blocker) is blocking the connection</li>
+                                <li>A firewall is blocking port 18426</li>
+                            </ul>
                             <div class="alert alert-info mb-0">
-                                <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Steps to fix:</h6>
+                                <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Recommended steps:</h6>
                                 <ol class="mb-0 ps-3">
                                     <li>Make sure the Device Bridge is installed on <strong>this computer</strong></li>
                                     <li>Launch the Device Bridge application</li>
                                     <li>Wait for the registration server to start (port 18426)</li>
+                                    <li>Disable ad blockers for this site if necessary</li>
                                     <li>Ensure no firewall is blocking port 18426</li>
-                                    <li>Try again</li>
                                 </ol>
                             </div>
-                            <div class="alert alert-warning mt-3 mb-0">
-                                <small><i class="bi bi-exclamation-circle me-2"></i><strong>Note:</strong> The Device Bridge must be running on the same computer where you're accessing this web page.</small>
+                            <div class="alert alert-success mt-3 mb-0">
+                                <small><i class="bi bi-lightbulb me-2"></i><strong>Tip:</strong> If you're sure the Device Bridge is running, click "Try Anyway" below. The connection might still work despite the detection issue.</small>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="tryAnywayBtn">
+                                <i class="bi bi-arrow-right-circle me-2"></i>Try Anyway
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -300,11 +375,21 @@
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         
         // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('serverNotRunningModal'));
+        const modalElement = document.getElementById('serverNotRunningModal');
+        const modal = new bootstrap.Modal(modalElement);
         modal.show();
         
+        // Add event listener for "Try Anyway" button
+        const tryAnywayBtn = document.getElementById('tryAnywayBtn');
+        if (tryAnywayBtn && tryAnywayCallback) {
+            tryAnywayBtn.addEventListener('click', function() {
+                modal.hide();
+                tryAnywayCallback();
+            });
+        }
+        
         // Clean up modal after it's hidden
-        document.getElementById('serverNotRunningModal').addEventListener('hidden.bs.modal', function() {
+        modalElement.addEventListener('hidden.bs.modal', function() {
             this.remove();
         });
     }
