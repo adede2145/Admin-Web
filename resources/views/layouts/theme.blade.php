@@ -204,7 +204,7 @@
     async function checkLocalServerHealth() {
         return new Promise((resolve) => {
             let resolved = false;
-            
+
             const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
@@ -212,31 +212,30 @@
                 }
             }, 3000); // 3 second timeout
 
-            // Try to create a simple fetch request
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            // Try WebSocket connection
+            const ws = new WebSocket('ws://127.0.0.1:18426');
 
-            fetch('http://127.0.0.1:18426/ping', {
-                method: 'GET',
-                signal: controller.signal,
-                cache: 'no-cache'
-            })
-            .then(response => {
-                clearTimeout(timeoutId);
-                clearTimeout(timeout);
+            ws.onopen = () => {
                 if (!resolved) {
                     resolved = true;
-                    resolve(response.ok);
+                    resolve(true);
                 }
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                clearTimeout(timeout);
+                ws.close();
+            };
+
+            ws.onerror = () => {
                 if (!resolved) {
                     resolved = true;
                     resolve(false);
                 }
-            });
+            };
+
+            ws.onclose = () => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(false);
+                }
+            };
         });
     }
 
