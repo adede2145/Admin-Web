@@ -273,6 +273,44 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // ============================================
+        // PING ENDPOINT HANDLER (for health check)
+        // ============================================
+        // This allows the hosted Laravel app to check if this local page is accessible
+        // by making a request to: http://127.0.0.1:18426/register.html?ping=true
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('ping') === 'true') {
+                // Respond to ping request
+                // Since we can't return HTTP responses from a static HTML page,
+                // we'll set a global flag and add a meta tag that the checker can verify
+                document.title = 'PING_OK';
+                
+                // Add a meta tag for verification
+                const meta = document.createElement('meta');
+                meta.name = 'local-registration-status';
+                meta.content = 'active';
+                document.head.appendChild(meta);
+                
+                // Display a simple message
+                document.body.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: Arial, sans-serif; background: #d1d5db;">
+                        <div style="background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center;">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" style="margin-bottom: 1rem;">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            <h2 style="color: #22c55e; margin: 0 0 0.5rem 0;">Registration Server Active</h2>
+                            <p style="color: #6b7280; margin: 0;">Local fingerprint registration is ready.</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Stop further script execution
+                throw new Error('PING_OK');
+            }
+        })();
+
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode'); // 'edit' or null (for new registration)

@@ -200,7 +200,7 @@
         });
     }
 
-    // Check if local server is running using HTTP fetch and image fallback
+    // Check if local server is running using HTTP fetch to register.html
     async function checkLocalServerHealth() {
         return new Promise((resolve) => {
             let resolved = false;
@@ -212,21 +212,23 @@
                 }
             }, 3000); // 3 second timeout
 
-            // Try HTTP fetch request
+            // Try HTTP fetch request to register.html with ping parameter
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-            fetch('http://127.0.0.1:18426/ping', {
+            fetch('http://127.0.0.1:18426/register.html?ping=true', {
                 method: 'GET',
                 signal: controller.signal,
-                cache: 'no-cache'
+                cache: 'no-cache',
+                mode: 'no-cors' // Important: allows request without CORS errors
             })
             .then(response => {
                 clearTimeout(timeoutId);
                 clearTimeout(timeout);
                 if (!resolved) {
                     resolved = true;
-                    resolve(response.ok);
+                    // If request completes (even with opaque response), server is accessible
+                    resolve(true);
                 }
             })
             .catch(error => {
@@ -234,32 +236,11 @@
                 clearTimeout(timeout);
                 if (!resolved) {
                     resolved = true;
-                    // Fallback to image loading
-                    tryImageFallback(resolve);
+                    // If request fails, server is not accessible
+                    resolve(false);
                 }
             });
         });
-    }
-
-    function tryImageFallback(resolve) {
-        const img = new Image();
-        const imgTimeout = setTimeout(() => {
-            img.onload = null;
-            img.onerror = null;
-            resolve(false);
-        }, 1000);
-
-        img.onload = () => {
-            clearTimeout(imgTimeout);
-            resolve(true);
-        };
-
-        img.onerror = () => {
-            clearTimeout(imgTimeout);
-            resolve(false);
-        };
-
-        img.src = `http://127.0.0.1:18426/favicon.ico?${Date.now()}`;
     }
 
     function showServerNotRunningModal() {
