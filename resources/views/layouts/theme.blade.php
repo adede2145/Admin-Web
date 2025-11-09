@@ -145,6 +145,73 @@
         document.getElementById('aaSidebar').classList.toggle('show');
     }
 
+    // Function to check if Device Bridge is running
+    async function checkDeviceBridge() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+            
+            const response = await fetch('http://127.0.0.1:18426/health', {
+                method: 'GET',
+                signal: controller.signal,
+                mode: 'cors'
+            });
+            
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch (error) {
+            console.log('Device Bridge check failed:', error.message);
+            return false;
+        }
+    }
+
+    // Show notification modal
+    function showBridgeNotification() {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('bridgeNotificationModal');
+        if (!modal) {
+            const modalHtml = `
+                <div class="modal fade" id="bridgeNotificationModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Device Bridge Not Running
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="mb-3">The Device Bridge service is not running or not reachable.</p>
+                                <p class="mb-3">Please ensure:</p>
+                                <ul>
+                                    <li>Device Bridge application is installed</li>
+                                    <li>The service is running on port 18426</li>
+                                    <li>Your firewall allows local connections</li>
+                                </ul>
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Note:</strong> The Device Bridge must be running to register employees with biometric devices.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="location.reload()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('bridgeNotificationModal');
+        }
+        
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
     // Handle Local Registration Station button
     const localRegistrationBtn = document.getElementById('openLocalRegistrationBtn');
     if (localRegistrationBtn) {
@@ -153,10 +220,24 @@
             
             // Show loading indicator
             const originalHtml = this.innerHTML;
-            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating token...';
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking connection...';
             this.style.pointerEvents = 'none';
             
             try {
+                // Check if Device Bridge is running
+                const bridgeRunning = await checkDeviceBridge();
+                
+                if (!bridgeRunning) {
+                    // Show notification that bridge is not running
+                    showBridgeNotification();
+                    this.innerHTML = originalHtml;
+                    this.style.pointerEvents = 'auto';
+                    return;
+                }
+                
+                // Update loading text
+                this.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating token...';
+                
                 // Get CSRF token from meta tag
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 
