@@ -150,28 +150,21 @@
     if (localRegistrationBtn) {
         localRegistrationBtn.addEventListener('click', async function(e) {
             e.preventDefault();
-            
-            // Show loading indicator
             const originalHtml = this.innerHTML;
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
             this.style.pointerEvents = 'none';
-            
+
             try {
-                // Check if local registration server is running using health check endpoint
                 const isServerRunning = await checkLocalServerHealth();
 
                 if (!isServerRunning) {
-                    // Server is not running - show modal
                     this.innerHTML = originalHtml;
                     this.style.pointerEvents = 'auto';
                     showServerNotRunningModal();
                     return;
                 }
 
-                // Get CSRF token from meta tag
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                
-                // Generate token from backend (uses session auth, no bearer token needed)
                 const response = await fetch('/api/generate-token', {
                     method: 'POST',
                     headers: {
@@ -182,26 +175,13 @@
                     },
                     credentials: 'same-origin'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success && data.token) {
-                    // Use local embedded Python web server (port 18426)
                     const backendUrl = window.location.origin;
-                    
-                    // Local registration server (runs alongside Device Bridge)
                     const registrationUrl = `http://127.0.0.1:18426/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
-                    
-                    console.log('Opening local registration with:', {
-                        url: registrationUrl,
-                        backend: backendUrl,
-                        token: data.token.substring(0, 20) + '...'
-                    });
-                    
-                    // Open in new window
                     window.open(registrationUrl, '_blank');
-                    
-                    // Reset button
                     setTimeout(() => {
                         this.innerHTML = originalHtml;
                         this.style.pointerEvents = 'auto';
@@ -233,7 +213,6 @@
             }, 3000); // 3 second timeout
 
             // Try to create a simple fetch request
-            // Even if CORS blocks it, the connection attempt will tell us if server is up
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 2500);
 
@@ -247,8 +226,7 @@
                 clearTimeout(timeout);
                 if (!resolved) {
                     resolved = true;
-                    // If we get any response (even CORS error), server is running
-                    resolve(true);
+                    resolve(response.ok);
                 }
             })
             .catch(error => {
@@ -256,45 +234,10 @@
                 clearTimeout(timeout);
                 if (!resolved) {
                     resolved = true;
-                    // Check error type - if it's CORS, server is actually running
-                    // If it's network error, server is down
-                    if (error.name === 'AbortError') {
-                        resolve(false);
-                    } else if (error.message && error.message.includes('Failed to fetch')) {
-                        // Could be CORS (server running) or network error (server down)
-                        // Try image fallback
-                        tryImageFallback(resolve);
-                    } else {
-                        resolve(false);
-                    }
+                    resolve(false);
                 }
             });
         });
-    }
-
-    // Fallback method using image loading
-    function tryImageFallback(resolve) {
-        const img = new Image();
-        const imgTimeout = setTimeout(() => {
-            img.onload = null;
-            img.onerror = null;
-            resolve(false);
-        }, 1000);
-
-        img.onload = () => {
-            clearTimeout(imgTimeout);
-            resolve(true);
-        };
-
-        img.onerror = (e) => {
-            clearTimeout(imgTimeout);
-            // If we get an error event, server responded (even with 404)
-            // This means server is running
-            resolve(true);
-        };
-
-        // Try to load a resource from the server
-        img.src = `http://127.0.0.1:18426/ping?${Date.now()}`;
     }
 
     function showServerNotRunningModal() {
