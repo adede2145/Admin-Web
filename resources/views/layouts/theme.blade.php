@@ -151,8 +151,11 @@
         localRegistrationBtn.addEventListener('click', async function(e) {
             e.preventDefault();
             const originalHtml = this.innerHTML;
+<<<<<<< HEAD
             
             // Always try to detect the server first (even on remote servers)
+=======
+>>>>>>> parent of 5b37d34 (testing)
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
             this.style.pointerEvents = 'none';
 
@@ -172,23 +175,22 @@
                     
                     // Show modal immediately since we couldn't detect the server
                     showServerNotRunningModal(async () => {
-                        this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
-                        this.style.pointerEvents = 'none';
+                        // User chose to try anyway - generate token and open
                         await openRegistrationPage();
-                        this.innerHTML = originalHtml;
-                        this.style.pointerEvents = 'auto';
                     });
                 }
+<<<<<<< HEAD
+=======
+
+                // Server is running, proceed normally
+                await openRegistrationPage();
+>>>>>>> parent of 5b37d34 (testing)
             } catch (error) {
                 console.error('Error:', error);
                 this.innerHTML = originalHtml;
                 this.style.pointerEvents = 'auto';
                 showServerNotRunningModal(async () => {
-                    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
-                    this.style.pointerEvents = 'none';
                     await openRegistrationPage();
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
                 });
             }
 
@@ -211,18 +213,27 @@
                     if (data.success && data.token) {
                         const backendUrl = window.location.origin;
                         const registrationUrl = `http://127.0.0.1:18426/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
-                        const popup = window.open(registrationUrl, '_blank');
-                        
-                        // If popup was blocked or failed to open, show a message
-                        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                            alert('Registration window was blocked. Please ensure:\n\n1. The Device Bridge is running on YOUR LOCAL COMPUTER (not the server)\n2. Pop-up blocker is disabled for this site\n3. You allow the registration window to open');
-                        }
+                        window.open(registrationUrl, '_blank');
+                        setTimeout(() => {
+                            if (localRegistrationBtn) {
+                                localRegistrationBtn.innerHTML = originalHtml;
+                                localRegistrationBtn.style.pointerEvents = 'auto';
+                            }
+                        }, 1000);
                     } else {
                         alert('Failed to generate token: ' + (data.message || 'Unknown error'));
+                        if (localRegistrationBtn) {
+                            localRegistrationBtn.innerHTML = originalHtml;
+                            localRegistrationBtn.style.pointerEvents = 'auto';
+                        }
                     }
                 } catch (error) {
                     console.error('Error generating token:', error);
                     alert('Failed to generate token. Please try again.');
+                    if (localRegistrationBtn) {
+                        localRegistrationBtn.innerHTML = originalHtml;
+                        localRegistrationBtn.style.pointerEvents = 'auto';
+                    }
                 }
             }
         });
@@ -257,14 +268,6 @@
     }
 
     function showServerNotRunningModal(tryAnywayCallback) {
-        // Detect if we're on a remote server
-        const isRemote = window.location.hostname !== 'localhost' && 
-                        window.location.hostname !== '127.0.0.1' &&
-                        window.location.hostname !== '::1';
-        
-        const modalTitle = isRemote ? 'Remote Server Detected' : 'Registration Server Not Detected';
-        const modalIcon = isRemote ? 'bi-globe' : 'bi-exclamation-triangle-fill';
-        
         // Create modal HTML
         const modalHtml = `
             <div class="modal fade" id="serverNotRunningModal" tabindex="-1" aria-labelledby="serverNotRunningModalLabel" aria-hidden="true">
@@ -272,59 +275,35 @@
                     <div class="modal-content">
                         <div class="modal-header bg-warning text-dark">
                             <h5 class="modal-title" id="serverNotRunningModalLabel">
-                                <i class="${modalIcon} me-2"></i>${modalTitle}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Registration Server Not Detected
                             </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            ${isRemote ? `
-                                <div class="alert alert-primary mb-3">
-                                    <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Important Information</h6>
-                                    <p class="mb-0">You are accessing this web application from a <strong>remote server</strong> (${window.location.hostname}). The Device Bridge must be running on <strong>YOUR LOCAL COMPUTER</strong>, not on the server.</p>
-                                </div>
-                                <p class="mb-3"><strong>How this works:</strong></p>
-                                <ol class="mb-3">
-                                    <li>You click "Open Registration Page" on this remote web app</li>
-                                    <li>The system generates a secure token and tries to open <code>http://127.0.0.1:18426</code></li>
-                                    <li>This URL points to <strong>your local computer</strong> (127.0.0.1 = localhost)</li>
-                                    <li>The Device Bridge on <strong>your computer</strong> receives the request</li>
-                                    <li>The fingerprint scanner connected to <strong>your computer</strong> can then be used</li>
+                            <p class="mb-3">The local registration server could not be detected. This may be because:</p>
+                            <ul class="mb-3">
+                                <li>The Device Bridge is not running</li>
+                                <li>A browser extension (like an ad blocker) is blocking the connection</li>
+                                <li>A firewall is blocking port 18426</li>
+                            </ul>
+                            <div class="alert alert-info mb-0">
+                                <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Recommended steps:</h6>
+                                <ol class="mb-0 ps-3">
+                                    <li>Make sure the Device Bridge is installed on <strong>this computer</strong></li>
+                                    <li>Launch the Device Bridge application</li>
+                                    <li>Wait for the registration server to start (port 18426)</li>
+                                    <li>Disable ad blockers for this site if necessary</li>
+                                    <li>Ensure no firewall is blocking port 18426</li>
                                 </ol>
-                                <div class="alert alert-success mb-0">
-                                    <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Before clicking "Open Registration Page":</h6>
-                                    <ul class="mb-0">
-                                        <li>✓ Install the Device Bridge on <strong>your local computer</strong></li>
-                                        <li>✓ Launch the Device Bridge application</li>
-                                        <li>✓ Connect the fingerprint scanner to <strong>your computer</strong></li>
-                                        <li>✓ Allow pop-ups for this site</li>
-                                    </ul>
-                                </div>
-                            ` : `
-                                <p class="mb-3">The local registration server could not be detected. This may be because:</p>
-                                <ul class="mb-3">
-                                    <li>The Device Bridge is not running</li>
-                                    <li>A browser extension (like an ad blocker) is blocking the connection</li>
-                                    <li>A firewall is blocking port 18426</li>
-                                </ul>
-                                <div class="alert alert-info mb-3">
-                                    <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Recommended steps:</h6>
-                                    <ol class="mb-0 ps-3">
-                                        <li>Make sure the Device Bridge is installed on <strong>this computer</strong></li>
-                                        <li>Launch the Device Bridge application</li>
-                                        <li>Wait for the registration server to start (port 18426)</li>
-                                        <li>Disable ad blockers for this site if necessary</li>
-                                        <li>Ensure no firewall is blocking port 18426</li>
-                                    </ol>
-                                </div>
-                                <div class="alert alert-success mb-0">
-                                    <small><i class="bi bi-lightbulb me-2"></i><strong>Tip:</strong> If you're sure the Device Bridge is running, click "Open Registration Page" below. The connection might still work despite the detection issue.</small>
-                                </div>
-                            `}
+                            </div>
+                            <div class="alert alert-success mt-3 mb-0">
+                                <small><i class="bi bi-lightbulb me-2"></i><strong>Tip:</strong> If you're sure the Device Bridge is running, click "Try Anyway" below. The connection might still work despite the detection issue.</small>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                             <button type="button" class="btn btn-primary" id="tryAnywayBtn">
-                                <i class="bi bi-arrow-right-circle me-2"></i>Open Registration Page
+                                <i class="bi bi-arrow-right-circle me-2"></i>Try Anyway
                             </button>
                         </div>
                     </div>
@@ -346,7 +325,7 @@
         const modal = new bootstrap.Modal(modalElement);
         modal.show();
         
-        // Add event listener for "Open Registration Page" button
+        // Add event listener for "Try Anyway" button
         const tryAnywayBtn = document.getElementById('tryAnywayBtn');
         if (tryAnywayBtn && tryAnywayCallback) {
             tryAnywayBtn.addEventListener('click', function() {
