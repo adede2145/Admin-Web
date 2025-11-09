@@ -220,45 +220,81 @@
         });
     }
 
-    // Check if local server is running via JSONP health check
+    // Check if local server is running using WebSocket or fetch with timeout
     async function checkLocalServerHealth() {
         return new Promise((resolve) => {
-            const timeout = setTimeout(() => {
-                cleanup();
-                resolve(false);
-            }, 3000); // 3 second timeout
-
-            // Use JSONP to bypass CORS
-            const script = document.createElement('script');
-            const callbackName = 'healthCheck_' + Date.now();
+            let resolved = false;
             
-            // Define callback function
-            window[callbackName] = function(data) {
-                cleanup();
-                if (data && data.status === 'ok') {
-                    resolve(true);
-                } else {
+            const timeout = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
                     resolve(false);
                 }
-            };
+            }, 3000); // 3 second timeout
 
-            function cleanup() {
+            // Try to create a simple fetch request
+            // Even if CORS blocks it, the connection attempt will tell us if server is up
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+            fetch('http://127.0.0.1:18426/ping', {
+                method: 'GET',
+                signal: controller.signal,
+                cache: 'no-cache'
+            })
+            .then(response => {
+                clearTimeout(timeoutId);
                 clearTimeout(timeout);
-                if (script.parentNode) {
-                    script.parentNode.removeChild(script);
+                if (!resolved) {
+                    resolved = true;
+                    // If we get any response (even CORS error), server is running
+                    resolve(true);
                 }
-                delete window[callbackName];
-            }
-
-            script.onerror = function() {
-                cleanup();
-                resolve(false);
-            };
-
-            // Call health endpoint with JSONP callback
-            script.src = `http://127.0.0.1:18426/api/health?callback=${callbackName}`;
-            document.head.appendChild(script);
+            })
+            .catch(error => {
+                clearTimeout(timeoutId);
+                clearTimeout(timeout);
+                if (!resolved) {
+                    resolved = true;
+                    // Check error type - if it's CORS, server is actually running
+                    // If it's network error, server is down
+                    if (error.name === 'AbortError') {
+                        resolve(false);
+                    } else if (error.message && error.message.includes('Failed to fetch')) {
+                        // Could be CORS (server running) or network error (server down)
+                        // Try image fallback
+                        tryImageFallback(resolve);
+                    } else {
+                        resolve(false);
+                    }
+                }
+            });
         });
+    }
+
+    // Fallback method using image loading
+    function tryImageFallback(resolve) {
+        const img = new Image();
+        const imgTimeout = setTimeout(() => {
+            img.onload = null;
+            img.onerror = null;
+            resolve(false);
+        }, 1000);
+
+        img.onload = () => {
+            clearTimeout(imgTimeout);
+            resolve(true);
+        };
+
+        img.onerror = (e) => {
+            clearTimeout(imgTimeout);
+            // If we get an error event, server responded (even with 404)
+            // This means server is running
+            resolve(true);
+        };
+
+        // Try to load a resource from the server
+        img.src = `http://127.0.0.1:18426/ping?${Date.now()}`;
     }
 
     function showServerNotRunningModal() {
