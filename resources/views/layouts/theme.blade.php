@@ -152,25 +152,33 @@
             e.preventDefault();
             const originalHtml = this.innerHTML;
             
-            // Always try to detect the server first (even on remote servers)
+            // Check if we're on localhost or a remote server
+            const isLocalhost = window.location.hostname === 'localhost' || 
+                              window.location.hostname === '127.0.0.1' ||
+                              window.location.hostname === '::1';
+            
+            if (!isLocalhost) {
+                // Running on remote server (like Linode) - show warning immediately
+                showServerNotRunningModal(async () => {
+                    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
+                    this.style.pointerEvents = 'none';
+                    await openRegistrationPage();
+                    this.innerHTML = originalHtml;
+                    this.style.pointerEvents = 'auto';
+                });
+                return;
+            }
+
+            // On localhost - try to detect the server
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
             this.style.pointerEvents = 'none';
 
             try {
                 const isServerRunning = await checkLocalServerHealth();
 
-                if (isServerRunning) {
-                    // Server detected - open directly
-                    await openRegistrationPage();
+                if (!isServerRunning) {
                     this.innerHTML = originalHtml;
                     this.style.pointerEvents = 'auto';
-                } else {
-                    // Detection failed - but might be due to ad blocker
-                    // Try to open anyway, show modal only if user needs guidance
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
-                    
-                    // Show modal immediately since we couldn't detect the server
                     showServerNotRunningModal(async () => {
                         this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
                         this.style.pointerEvents = 'none';
@@ -178,13 +186,13 @@
                         this.innerHTML = originalHtml;
                         this.style.pointerEvents = 'auto';
                     });
+                    return;
                 }
-<<<<<<< HEAD
-=======
 
                 // Server is running, proceed normally
                 await openRegistrationPage();
->>>>>>> parent of 5b37d34 (testing)
+                this.innerHTML = originalHtml;
+                this.style.pointerEvents = 'auto';
             } catch (error) {
                 console.error('Error:', error);
                 this.innerHTML = originalHtml;
@@ -234,31 +242,101 @@
         });
     }
 
-    // Check if local server is running - use simple image loading method
+    // Check if local server is running - tries multiple methods to bypass ad blockers
     async function checkLocalServerHealth() {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => {
-                resolve(false);
-            }, 3000);
+        // Method 1: Try WebSocket connection (less likely to be blocked)
+        try {
+            const wsResult = await checkWebSocket();
+            if (wsResult) return true;
+        } catch (e) {
+            console.log('WebSocket check failed, trying alternatives...');
+        }
 
-            // Try to load a resource from the server using an img tag
-            // This is less likely to be blocked than fetch/WebSocket
-            const img = new Image();
-            
-            img.onload = () => {
+        // Method 2: Try fetch with no-cors mode
+        try {
+            const fetchResult = await checkFetchNoCors();
+            if (fetchResult) return true;
+        } catch (e) {
+            console.log('Fetch check failed, trying alternatives...');
+        }
+
+        // Method 3: Try iframe approach
+        try {
+            const iframeResult = await checkIframe();
+            if (iframeResult) return true;
+        } catch (e) {
+            console.log('Iframe check failed, trying alternatives...');
+        }
+
+        // If all methods fail, we'll assume it's not running
+        // But we'll still give the user the option to try opening it
+        return false;
+    }
+
+    function checkWebSocket() {
+        return new Promise((resolve) => {
+            const ws = new WebSocket('ws://127.0.0.1:18426');
+            const timeout = setTimeout(() => {
+                ws.close();
+                resolve(false);
+            }, 2000);
+
+            ws.onopen = () => {
                 clearTimeout(timeout);
+                ws.close();
                 resolve(true);
             };
 
-            img.onerror = () => {
+            ws.onerror = () => {
                 clearTimeout(timeout);
-                // Error could mean server not running OR ad blocker
-                // We'll return false but the modal will let user try anyway
+                resolve(false);
+            };
+        });
+    }
+
+    function checkFetchNoCors() {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(false), 2000);
+            
+            fetch('http://127.0.0.1:18426/register.html', { 
+                mode: 'no-cors',
+                cache: 'no-store'
+            })
+            .then(() => {
+                clearTimeout(timeout);
+                resolve(true);
+            })
+            .catch(() => {
+                clearTimeout(timeout);
+                resolve(false);
+            });
+        });
+    }
+
+    function checkIframe() {
+        return new Promise((resolve) => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'http://127.0.0.1:18426/register.html';
+            
+            const timeout = setTimeout(() => {
+                document.body.removeChild(iframe);
+                resolve(false);
+            }, 2000);
+
+            iframe.onload = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(iframe);
+                resolve(true);
+            };
+
+            iframe.onerror = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(iframe);
                 resolve(false);
             };
 
-            // Try to load with a timestamp to bypass cache
-            img.src = `http://127.0.0.1:18426/favicon.ico?t=${Date.now()}`;
+            document.body.appendChild(iframe);
         });
     }
 
@@ -369,5 +447,3 @@
 </script>
 </body>
 </html>
-
-
