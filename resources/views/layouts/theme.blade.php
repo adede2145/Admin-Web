@@ -152,24 +152,7 @@
             e.preventDefault();
             const originalHtml = this.innerHTML;
             
-            // Check if we're on localhost or a remote server
-            const isLocalhost = window.location.hostname === 'localhost' || 
-                              window.location.hostname === '127.0.0.1' ||
-                              window.location.hostname === '::1';
-            
-            if (!isLocalhost) {
-                // Running on remote server (like Linode) - show warning immediately
-                showServerNotRunningModal(async () => {
-                    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Opening...';
-                    this.style.pointerEvents = 'none';
-                    await openRegistrationPage();
-                    this.innerHTML = originalHtml;
-                    this.style.pointerEvents = 'auto';
-                });
-                return;
-            }
-
-            // On localhost - try to detect the server
+            // Always try to detect the server first (even on remote servers)
             this.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
             this.style.pointerEvents = 'none';
 
@@ -177,6 +160,7 @@
                 const isServerRunning = await checkLocalServerHealth();
 
                 if (!isServerRunning) {
+                    // Server not detected - show modal explaining why
                     this.innerHTML = originalHtml;
                     this.style.pointerEvents = 'auto';
                     showServerNotRunningModal(async () => {
@@ -189,7 +173,7 @@
                     return;
                 }
 
-                // Server is running, proceed normally
+                // Server is running, proceed normally without modal
                 await openRegistrationPage();
                 this.innerHTML = originalHtml;
                 this.style.pointerEvents = 'auto';
