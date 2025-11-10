@@ -22,8 +22,12 @@
     <link rel="preload" as="image" href="{{ asset('login-bg.jpg') }}">
     <link rel="preload" as="image" href="{{ asset('login-illustration.png') }}">
     
-    <!-- Critical CSS only -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Preload critical CSS -->
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    
+    <!-- Critical CSS only - LOCAL FILES -->
+    <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
     <style>
         body { 
@@ -126,7 +130,7 @@
         </div>
     </div>
 </div>
-<!-- Defer Bootstrap JS - not needed for initial render -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+<!-- Defer Bootstrap JS - LOCAL FILE -->
+<script src="{{ asset('js/bootstrap.bundle.min.js') }}" defer></script>
 </body>
 </html>
