@@ -630,9 +630,17 @@ class EmployeeController extends Controller
         if (!auth()->check()) {
             // Return placeholder for unauthenticated requests
             $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAqMBi0zJw+oAAAAASUVORK5CYII=');
+            $etag = md5($png);
+            
+            $requestEtag = request()->header('If-None-Match');
+            if ($requestEtag && $requestEtag === $etag) {
+                return response('', 304);
+            }
+            
             return response($png, 200, [
                 'Content-Type' => 'image/png',
-                'Cache-Control' => 'no-cache',
+                'Cache-Control' => 'public, max-age=2592000, immutable',
+                'ETag' => $etag,
             ]);
         }
         
@@ -649,26 +657,56 @@ class EmployeeController extends Controller
             $photoPath = storage_path('app/private/employees/photos/' . $employee->photo_path);
             
             if (file_exists($photoPath)) {
+                $fileTime = filemtime($photoPath);
+                $etag = md5($employee->photo_path . $fileTime);
+                
+                // Check if browser has cached version
+                $requestEtag = request()->header('If-None-Match');
+                if ($requestEtag && $requestEtag === $etag) {
+                    return response('', 304); // Not Modified - use cached version
+                }
+                
                 return response()->file($photoPath, [
                     'Content-Type' => 'image/jpeg',
-                    'Cache-Control' => 'public, max-age=604800',
+                    'Cache-Control' => 'public, max-age=2592000, immutable', // 30 days, immutable
+                    'ETag' => $etag,
+                    'Last-Modified' => gmdate('D, d M Y H:i:s', $fileTime) . ' GMT',
+                    'Expires' => gmdate('D, d M Y H:i:s', time() + 2592000) . ' GMT',
                 ]);
             }
         }
         
         // FALLBACK TO BLOB (old way - for backward compatibility during migration)
         if ($employee->photo_data && $employee->photo_content_type) {
+            // Generate ETag from photo data
+            $etag = md5($employee->photo_data);
+            $requestEtag = request()->header('If-None-Match');
+            
+            if ($requestEtag && $requestEtag === $etag) {
+                return response('', 304); // Not Modified
+            }
+            
             return response($employee->photo_data, 200, [
                 'Content-Type' => $employee->photo_content_type,
-                'Cache-Control' => 'public, max-age=604800',
+                'Cache-Control' => 'public, max-age=2592000, immutable',
+                'ETag' => $etag,
             ]);
         }
         
         // FINAL FALLBACK: transparent 1x1 PNG placeholder
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAqMBi0zJw+oAAAAASUVORK5CYII=');
+        $etag = md5($png);
+        
+        // Check if browser has cached placeholder
+        $requestEtag = request()->header('If-None-Match');
+        if ($requestEtag && $requestEtag === $etag) {
+            return response('', 304); // Not Modified - use cached placeholder
+        }
+        
         return response($png, 200, [
             'Content-Type' => 'image/png',
-            'Cache-Control' => 'no-cache',
+            'Cache-Control' => 'public, max-age=2592000, immutable', // Cache placeholder too
+            'ETag' => $etag,
         ]);
     }
 }

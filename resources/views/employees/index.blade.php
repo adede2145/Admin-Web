@@ -66,7 +66,12 @@
                                                 <span class="text-muted">{{ $employee->employee_id }}</span>
                                             </td>
                                             <td>
-                                                <img src="{{ route('employees.photo', $employee->employee_id) }}?v={{ $employee->updated_at ? $employee->updated_at->timestamp : time() }}" alt="{{ $employee->full_name }}" class="rounded-circle" style="width:40px;height:40px;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/40x40?text=%20';">
+                                                <img src="{{ route('employees.photo', $employee->employee_id) }}" 
+                                                     alt="{{ $employee->full_name }}" 
+                                                     class="rounded-circle" 
+                                                     style="width:40px;height:40px;object-fit:cover;" 
+                                                     loading="lazy"
+                                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/40x40?text=%20';">
                                             </td>
                                     <td>
                                         <code class="text-primary">{{ $employee->employee_code ?? 'N/A' }}</code>
@@ -129,7 +134,11 @@
                     <div class="card-body text-center p-4">
                         <div class="mx-auto rounded-circle mb-3" style="width:140px;height:140px;background:#eee;overflow:hidden;display:flex;align-items:center;justify-content:center;">
                             @if($selectedEmployee)
-                                <img src="{{ route('employees.photo', $selectedEmployee->employee_id) }}?v={{ $selectedEmployee->updated_at ? $selectedEmployee->updated_at->timestamp : time() }}" alt="{{ $selectedEmployee->full_name }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/140x140?text=%20';">
+                                <img src="{{ route('employees.photo', $selectedEmployee->employee_id) }}" 
+                                     alt="{{ $selectedEmployee->full_name }}" 
+                                     style="width:100%;height:100%;object-fit:cover;" 
+                                     loading="eager"
+                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/140x140?text=%20';">
                             @else
                                 <i class="bi bi-person" style="font-size:64px;color:#aaa"></i>
                             @endif
@@ -256,7 +265,7 @@
                                 <div class="d-flex align-items-center gap-4 p-3" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; border-style: dashed;">
                                     <div class="position-relative">
                                         <img id="preview_{{ $employee->employee_id }}" 
-                                             src="{{ route('employees.photo', $employee->employee_id) }}?v={{ $employee->updated_at ? $employee->updated_at->timestamp : time() }}" 
+                                             src="{{ route('employees.photo', $employee->employee_id) }}" 
                                              alt="Preview" 
                                              class="rounded-circle border-3 border-white shadow-sm" 
                                              style="width: 100px; height: 100px; object-fit: cover;" 
@@ -550,6 +559,77 @@
     @endforeach
 
     <script>
+        // Cool notification function - Define first so it's available everywhere
+        function showNotification(type, message) {
+            const toastEl = document.getElementById(type + 'Toast');
+            const messageEl = document.getElementById(type + 'Message');
+            
+            if (!toastEl || !messageEl) {
+                console.error('Toast elements not found:', type + 'Toast', type + 'Message');
+                return;
+            }
+            
+            messageEl.textContent = message;
+            
+            const toast = new bootstrap.Toast(toastEl, {
+                autohide: true,
+                delay: 6000 // Show for 6 seconds
+            });
+            
+            toast.show();
+            
+            // Add smooth slide-in animation
+            toastEl.style.transform = 'translateX(100%)';
+            toastEl.style.opacity = '0';
+            setTimeout(() => {
+                toastEl.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                toastEl.style.transform = 'translateX(0)';
+                toastEl.style.opacity = '1';
+            }, 10);
+        }
+
+        // Listen for messages from the registration window
+        window.addEventListener('message', function(event) {
+            // For security, you might want to check event.origin
+            // if (event.origin !== 'http://127.0.0.1:18426') return;
+            
+            if (event.data && (event.data.type === 'EMPLOYEE_REGISTERED' || event.data.type === 'EMPLOYEE_UPDATED')) {
+                console.log('Received message from registration window:', event.data);
+                
+                // Store the notification message in sessionStorage before reloading
+                const message = event.data.message || 'Employee data updated successfully!';
+                sessionStorage.setItem('pendingNotification', JSON.stringify({
+                    type: 'success',
+                    message: message
+                }));
+                
+                // Reload the page immediately to show the new employee
+                window.location.reload();
+            }
+        });
+
+        // Check for pending notification on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const pendingNotification = sessionStorage.getItem('pendingNotification');
+            if (pendingNotification) {
+                try {
+                    const notification = JSON.parse(pendingNotification);
+                    // Clear it immediately to prevent showing it again
+                    sessionStorage.removeItem('pendingNotification');
+                    
+                    console.log('Showing pending notification:', notification);
+                    
+                    // Show the notification after a brief delay to ensure page is fully loaded
+                    setTimeout(() => {
+                        showNotification(notification.type, notification.message);
+                    }, 300);
+                } catch (e) {
+                    console.error('Error parsing pending notification:', e);
+                    sessionStorage.removeItem('pendingNotification');
+                }
+            }
+        });
+
         document.querySelectorAll('.emp-row').forEach(function(r){
             r.addEventListener('click', function(e){
                 if (e.target.closest('button')) return;
@@ -771,30 +851,6 @@
             });
         }
 
-        // Cool notification functions
-        function showNotification(type, message) {
-            const toastEl = document.getElementById(type + 'Toast');
-            const messageEl = document.getElementById(type + 'Message');
-            
-            if (!toastEl || !messageEl) return;
-            
-            messageEl.textContent = message;
-            
-            const toast = new bootstrap.Toast(toastEl, {
-                autohide: true,
-                delay: 5000
-            });
-            
-            toast.show();
-            
-            // Add animation effect
-            toastEl.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                toastEl.style.transition = 'transform 0.3s ease-in-out';
-                toastEl.style.transform = 'translateX(0)';
-            }, 100);
-        }
-
         // Show notifications based on session messages
         @if(session('success'))
             document.addEventListener('DOMContentLoaded', function() {
@@ -870,12 +926,11 @@
                                 showNotification('success', result.data.message || 'Employee updated successfully!');
                                 if (modal) modal.hide();
                                 
-                                // Update all images for this employee with cache-busting timestamp
-                                const timestamp = new Date().getTime();
+                                // Update all images for this employee (ETag handles caching)
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Construct the proper photo URL
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + timestamp;
+                                // Construct the proper photo URL (no cache-busting needed)
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo';
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
@@ -981,12 +1036,11 @@
                                 // Close modal
                                 if (modal) modal.hide();
                                 
-                                // Update all images for this employee with cache-busting timestamp
-                                const timestamp = new Date().getTime();
+                                // Update all images for this employee (ETag handles caching)
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Construct the proper photo URL
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + timestamp;
+                                // Construct the proper photo URL (no cache-busting needed)
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo';
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
@@ -1080,12 +1134,11 @@
                                 showNotification('success', 'Employee updated successfully!');
                                 if (modal) modal.hide();
                                 
-                                // Update all images for this employee with cache-busting timestamp
-                                const timestamp = new Date().getTime();
+                                // Update all images for this employee (ETag handles caching)
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Construct the proper photo URL
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + timestamp;
+                                // Construct the proper photo URL (no cache-busting needed)
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo';
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
@@ -1370,31 +1423,31 @@
 
     <!-- Cool Toast Notifications -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" style="min-width: 350px;">
             <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    <span id="successMessage"></span>
+                <div class="toast-body py-3 px-4">
+                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                    <strong id="successMessage" style="font-size: 1rem;"></strong>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
         
-        <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert">
+        <div id="errorToast" class="toast align-items-center text-white bg-danger border-0 shadow-lg" role="alert" style="min-width: 350px;">
             <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <span id="errorMessage"></span>
+                <div class="toast-body py-3 px-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <strong id="errorMessage" style="font-size: 1rem;"></strong>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
         
-        <div id="infoToast" class="toast align-items-center text-white bg-info border-0" role="alert">
+        <div id="infoToast" class="toast align-items-center text-white bg-info border-0 shadow-lg" role="alert" style="min-width: 350px;">
             <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <span id="infoMessage"></span>
+                <div class="toast-body py-3 px-4">
+                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                    <strong id="infoMessage" style="font-size: 1rem;"></strong>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>

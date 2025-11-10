@@ -157,6 +157,8 @@
     // Handle Local Registration Station button
     const localRegistrationBtn = document.getElementById('openLocalRegistrationBtn');
     if (localRegistrationBtn) {
+        let registrationWindow = null; // Track the registration window
+        
         localRegistrationBtn.addEventListener('click', async function(e) {
             e.preventDefault();
             
@@ -184,10 +186,10 @@
                     if (data.success && data.token) {
                         const backendUrl = window.location.origin;
                         const registrationUrl = `http://127.0.0.1:18426/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
-                        const popup = window.open(registrationUrl, '_blank');
+                        registrationWindow = window.open(registrationUrl, '_blank');
                         
                         // If popup was blocked or failed to open, show a message
-                        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                        if (!registrationWindow || registrationWindow.closed || typeof registrationWindow.closed === 'undefined') {
                             alert('Registration window was blocked. Please ensure:\n\n1. The Device Bridge is running on your local computer\n2. Pop-up blocker is disabled for this site\n3. You allow the registration window to open');
                         }
                     } else {

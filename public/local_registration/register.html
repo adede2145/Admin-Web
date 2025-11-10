@@ -273,58 +273,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // ============================================
-        // PING ENDPOINT HANDLER (for health check)
-        // ============================================
-        // This allows the hosted Laravel app to check if this local page is accessible
-        // by making a request to: http://127.0.0.1:18426/register.html?ping=true
-        (function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('ping') === 'true') {
-                // Check if this is an image request (for ad-blocker bypass)
-                const isImageCheck = urlParams.has('t'); // timestamp parameter indicates image check
-                
-                if (isImageCheck) {
-                    // Return a 1x1 transparent PNG for image-based detection
-                    // This bypasses ad blockers that might block fetch requests
-                    document.body.innerHTML = '';
-                    document.head.innerHTML = `
-                        <meta charset="UTF-8">
-                        <title>PING_OK</title>
-                        <style>body{margin:0;padding:0;background:#22c55e;}</style>
-                    `;
-                    // Stop further execution
-                    throw new Error('PING_OK');
-                }
-                
-                // Regular ping response with visual feedback
-                document.title = 'PING_OK';
-                
-                // Add a meta tag for verification
-                const meta = document.createElement('meta');
-                meta.name = 'local-registration-status';
-                meta.content = 'active';
-                document.head.appendChild(meta);
-                
-                // Display a simple message
-                document.body.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: Arial, sans-serif; background: #d1d5db;">
-                        <div style="background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center;">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" style="margin-bottom: 1rem;">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
-                            </svg>
-                            <h2 style="color: #22c55e; margin: 0 0 0.5rem 0;">Registration Server Active</h2>
-                            <p style="color: #6b7280; margin: 0;">Local fingerprint registration is ready.</p>
-                        </div>
-                    </div>
-                `;
-                
-                // Stop further script execution
-                throw new Error('PING_OK');
-            }
-        })();
-
+       
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode'); // 'edit' or null (for new registration)
@@ -1066,7 +1015,11 @@
             const progressBarElement = isPrimary ? primaryProgressBar : backupProgressBar;
             const instructionElement = isPrimary ? primaryInstruction : backupInstruction;
             const templateElement = isPrimary ? primaryTemplate : backupTemplate;
-            const fingerType = isPrimary ? 'index finger' : 'thumb';
+            
+            // Determine labels based on mode
+            const editMode = isEditMode();
+            const fingerprintLabel = isPrimary ? 'primary fingerprint' : 'backup fingerprint';
+            const fingerType = editMode ? fingerprintLabel : (isPrimary ? 'index finger' : 'thumb');
 
             enrollmentInProgress = true;
             if (isPrimary) {
@@ -1251,9 +1204,16 @@
                 });
 
                 if (enrollmentSuccessful) {
+                    // Show context-aware notification based on mode
+                    const editMode = isEditMode();
+                    const notificationTitle = editMode ? 'Fingerprint Updated' : 'Fingerprint Captured';
+                    const notificationMessage = isPrimary 
+                        ? (editMode ? 'Primary fingerprint captured successfully!' : 'Index finger enrolled successfully!')
+                        : (editMode ? 'Backup fingerprint captured successfully!' : 'Thumb enrolled successfully!');
+                    
                     showNotification(
-                        'Fingerprint Captured',
-                        `${fingerType.charAt(0).toUpperCase() + fingerType.slice(1)} enrolled successfully!`,
+                        notificationTitle,
+                        notificationMessage,
                         'success'
                     );
                 }
@@ -1262,8 +1222,18 @@
                 progressBarElement.style.width = '0%';
                 statusElement.textContent = `Failed: ${error.message}`;
                 statusElement.className = 'text-danger';
-                instructionElement.textContent = `Failed to enroll ${fingerType}. Please try again.`;
-                showNotification('Fingerprint Enrollment Failed', `Could not capture ${fingerType}: ${error.message}`, 'error');
+                
+                // Show context-aware error message
+                const editMode = isEditMode();
+                const fingerprintLabel = isPrimary ? 'Primary fingerprint' : 'Backup fingerprint';
+                const fingerTypeLabel = editMode ? fingerprintLabel.toLowerCase() : fingerType;
+                
+                instructionElement.textContent = `Failed to capture ${fingerprintLabel.toLowerCase()}. Please try again.`;
+                showNotification(
+                    'Fingerprint Capture Failed', 
+                    `Could not capture ${fingerprintLabel.toLowerCase()}: ${error.message}`, 
+                    'error'
+                );
             } finally {
                 if (pollTimer) {
                     clearInterval(pollTimer);
@@ -1510,41 +1480,43 @@
                     const result = await response.json();
                     
                     if (response.ok && result.success) {
-                        showNotification(
-                            'Update Successful',
-                            `Fingerprints updated successfully for ${result.employee?.name || 'employee'}!`,
-                            'success'
-                        );
+                        // Determine what was updated for the notification message
+                        let updateMessage = '';
+                        const employeeName = result.employee?.name || result.employee?.full_name || 'Employee';
                         
-                        // Show success message with option to close tab
+                        if (replacePrimaryChecked && replaceBackupChecked) {
+                            updateMessage = `Both fingerprints updated successfully for ${employeeName}!`;
+                        } else if (replacePrimaryChecked) {
+                            updateMessage = `Primary fingerprint updated successfully for ${employeeName}!`;
+                        } else if (replaceBackupChecked) {
+                            updateMessage = `Backup fingerprint updated successfully for ${employeeName}!`;
+                        } else {
+                            updateMessage = `Fingerprints updated successfully for ${employeeName}!`;
+                        }
+                        
+                        // Notify parent window of successful update
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'EMPLOYEE_UPDATED',
+                                employee: result.employee,
+                                employeeName: employeeName,
+                                message: updateMessage
+                            }, '*');
+                        }
+                        
+                        // Close the window immediately (no notification needed here)
                         setTimeout(() => {
-                            if (confirm('Fingerprints updated successfully! Click OK to close this tab and return to the employee list.')) {
-                                // Try to close the tab (works if opened via window.open or target="_blank")
-                                window.close();
-                                
-                                // If window.close() doesn't work (some browsers block it), redirect back
-                                setTimeout(() => {
-                                    window.location.href = `${backendUrl}/employees`;
-                                }, 100);
-                            } else {
-                                // User chose not to close, just show a button to go back
+                            window.close();
+                            
+                            // If window.close() doesn't work (some browsers block it), show a message
+                            setTimeout(() => {
+                                // If we're still here, window.close() didn't work
                                 showNotification(
                                     'Update Complete',
-                                    'You can now close this tab manually or click the button below to return.',
+                                    'You can now close this window manually. The employee list has been updated.',
                                     'info'
                                 );
-                                
-                                // Add a "Return to Employees" button
-                                const returnBtn = document.createElement('button');
-                                returnBtn.className = 'btn btn-primary btn-lg mt-3';
-                                returnBtn.innerHTML = '<i class="bi bi-arrow-left me-2"></i>Return to Employee List';
-                                returnBtn.onclick = () => {
-                                    window.location.href = `${backendUrl}/employees`;
-                                };
-                                
-                                const formContainer = document.getElementById('registerForm').parentElement;
-                                formContainer.insertBefore(returnBtn, formContainer.firstChild);
-                            }
+                            }, 500);
                         }, 1500);
                     } else {
                         const errorMessage = result.message || 'Update failed. Please try again.';
@@ -1594,32 +1566,50 @@
                     }
 
                     if (response.ok && result.success) {
-                        showNotification(
-                            'Registration Successful',
-                            `Employee ${result.employee?.name || 'registered'} successfully!`,
-                            'success'
-                        );
+                        // Notify parent window of successful registration
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'EMPLOYEE_REGISTERED',
+                                employee: result.employee,
+                                employeeName: result.employee?.name || result.employee?.full_name || 'New employee',
+                                message: `${result.employee?.name || result.employee?.full_name || 'Employee'} has been registered successfully!`
+                            }, '*');
+                        }
 
+                        // Close the window immediately (no notification needed here)
                         setTimeout(() => {
-                            document.getElementById('registerForm').reset();
-                            primaryTemplate.value = '';
-                            backupTemplate.value = '';
-                            document.getElementById('profilePreview').classList.add('d-none');
-                            document.getElementById('profilePreview').src = '';
-                            rfidStatus.textContent = '';
-                            primaryStatus.textContent = 'Ready to scan';
-                            backupStatus.textContent = 'Complete primary fingerprint first';
-                            backupSection.style.opacity = '0.5';
+                            window.close();
                             
-                            // Reset office dropdown to "Select office"
-                            const officeSelect = document.getElementById('departmentId');
-                            if (officeSelect && officeSelect.options.length > 0) {
-                                officeSelect.selectedIndex = 0;
-                            }
-                            
-                            updateRegisterEnabled();
-                            updateUIBasedOnDeviceStatus();
-                            rfidInput.focus();
+                            // If window.close() doesn't work (some browsers block it), show a message
+                            setTimeout(() => {
+                                // If we're still here, window.close() didn't work
+                                showNotification(
+                                    'Registration Complete',
+                                    'You can now close this window manually. The employee list has been updated.',
+                                    'info'
+                                );
+                                
+                                // Optionally reset the form for another registration
+                                document.getElementById('registerForm').reset();
+                                primaryTemplate.value = '';
+                                backupTemplate.value = '';
+                                document.getElementById('profilePreview').classList.add('d-none');
+                                document.getElementById('profilePreview').src = '';
+                                rfidStatus.textContent = '';
+                                primaryStatus.textContent = 'Ready to scan';
+                                backupStatus.textContent = 'Complete primary fingerprint first';
+                                backupSection.style.opacity = '0.5';
+                                
+                                // Reset office dropdown to "Select office"
+                                const officeSelect = document.getElementById('departmentId');
+                                if (officeSelect && officeSelect.options.length > 0) {
+                                    officeSelect.selectedIndex = 0;
+                                }
+                                
+                                updateRegisterEnabled();
+                                updateUIBasedOnDeviceStatus();
+                                rfidInput.focus();
+                            }, 500);
                         }, 1500);
 
                     } else {
