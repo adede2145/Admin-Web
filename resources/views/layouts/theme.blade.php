@@ -8,13 +8,13 @@
     
     <!-- Preload critical CSS -->
     <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
-    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-full.css') }}">
     
     <!-- Bootstrap CSS - LOCAL -->
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     
-    <!-- Bootstrap Icons - LOCAL -->
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <!-- Bootstrap Icons - LOCAL (COMPLETE) -->
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
     <style>
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
         body { background:#d1d5db; }

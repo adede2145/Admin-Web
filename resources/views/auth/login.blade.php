@@ -24,11 +24,11 @@
     
     <!-- Preload critical CSS -->
     <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
-    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-full.css') }}">
     
     <!-- Critical CSS only - LOCAL FILES -->
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
     <style>
         body { 
             background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('{{ asset("login-bg.jpg") }}');

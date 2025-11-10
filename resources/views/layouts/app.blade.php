@@ -10,13 +10,13 @@
 
     <!-- Preload critical CSS -->
     <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
-    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-full.css') }}">
 
     <!-- Bootstrap CSS - LOCAL -->
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
 
-    <!-- Bootstrap Icons - LOCAL -->
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <!-- Bootstrap Icons - LOCAL (COMPLETE) -->
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

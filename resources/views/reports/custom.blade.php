@@ -7,13 +7,13 @@
     
     <!-- Preload critical CSS -->
     <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
-    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-full.css') }}">
     
     <!-- Bootstrap CSS - LOCAL -->
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     
-    <!-- Bootstrap Icons - LOCAL -->
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    <!-- Bootstrap Icons - LOCAL (COMPLETE) -->
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
     
     <!-- Chart.js - Keep CDN for now (specialized library) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
