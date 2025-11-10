@@ -26,7 +26,11 @@
             min-height: 100vh;
         }
         .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-card { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25), 0 1.5rem 3rem rgba(0,0,0,0.12); border-radius: 1.5rem; overflow: visible; max-width: 1100px; width: 100%; background: none; min-height: 600px; }
+        .login-card { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25), 0 1.5rem 3rem rgba(0,0,0,0.12); border-radius: 1.5rem; overflow: visible; max-width: 1100px; width: 100%; background: none; min-height: 600px; animation: fadeInUp 0.8s ease-out; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         .login-right { background: #fff; display: flex; align-items: center; justify-content: center; padding: 3.5rem 2.5rem; border-radius: 0 1.5rem 1.5rem 0; }
         .login-left {
             background: linear-gradient(0deg,#560000 0%,#ff2d2d 100%);
