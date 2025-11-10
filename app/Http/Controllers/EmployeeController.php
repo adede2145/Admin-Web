@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeController extends Controller
 {
@@ -19,7 +22,7 @@ class EmployeeController extends Controller
         try {
             $query = Employee::with(['department', 'attendanceLogs']);
 
-            // Department restriction for non-super admins
+            //w Department restriction for non-super admins
             if (auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id) {
                 $query->where('department_id', auth()->user()->department_id);
             }
@@ -222,15 +225,57 @@ class EmployeeController extends Controller
                 'department_id' => $request->department_id,
             ];
 
-            // Handle profile image
+            // Create employee record FIRST (we need the ID for filename)
+            $employee = Employee::create($employeeData);
+
+            // Handle profile image with compression
             if ($request->hasFile('profile_image')) {
                 $file = $request->file('profile_image');
-                $employeeData['photo_data'] = file_get_contents($file->getRealPath());
-                $employeeData['photo_content_type'] = $file->getMimeType();
+                
+                try {
+                    // Create ImageManager instance with GD driver
+                    $manager = new ImageManager(new Driver());
+                    
+                    // Process and compress image
+                    $image = $manager->read($file->getRealPath());
+                    
+                    // Resize if too large (max 800x800, maintains aspect ratio)
+                    if ($image->width() > 800 || $image->height() > 800) {
+                        $image->scale(width: 800, height: 800);
+                    }
+                    
+                    // Save full-size image to PRIVATE storage with compression
+                    $filename = 'employee_' . $employee->employee_id . '.jpg';
+                    $fullPath = storage_path('app/private/employees/photos/' . $filename);
+                    $image->toJpeg(quality: 75)->save($fullPath);
+                    
+                    // Create thumbnail (40x40 for list view)
+                    $thumbnail = $manager->read($file->getRealPath());
+                    $thumbnail->cover(40, 40);
+                    $thumbPath = storage_path('app/private/employees/photos/thumbs/' . $filename);
+                    $thumbnail->toJpeg(quality: 70)->save($thumbPath);
+                    
+                    // Update employee record with photo path
+                    $employee->update([
+                        'photo_path' => $filename,
+                        'photo_content_type' => 'image/jpeg',
+                        'photo_data' => null  // Clear any BLOB data
+                    ]);
+                    
+                    Log::info("Photo compressed and saved for employee: {$employee->employee_id}", [
+                        'filename' => $filename,
+                        'original_size' => $file->getSize(),
+                        'compressed_size' => filesize($fullPath)
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    Log::error('Error processing employee photo during registration', [
+                        'employee_id' => $employee->employee_id,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue without photo - don't fail registration
+                }
             }
-
-            // Create employee record
-            $employee = Employee::create($employeeData);
 
             // Store primary fingerprint template
             EmployeeFingerprintTemplate::create([
@@ -322,7 +367,7 @@ class EmployeeController extends Controller
                 'department_id' => $request->department_id,
             ];
 
-            // Handle optional photo upload
+            // Handle optional photo upload with compression
             if ($request->hasFile('photo')) {
                 try {
                     $file = $request->file('photo');
@@ -343,14 +388,51 @@ class EmployeeController extends Controller
                         throw new \Exception('File must be an image (JPEG, PNG, JPG, or GIF)');
                     }
                     
-                    $updateData['photo_data'] = file_get_contents($file->getRealPath());
-                    $updateData['photo_content_type'] = $file->getMimeType();
-                    $updateData['photo_path'] = null;
+                    // Delete old photo files if they exist
+                    if ($employee->photo_path) {
+                        $oldPath = storage_path('app/private/employees/photos/' . $employee->photo_path);
+                        $oldThumbPath = storage_path('app/private/employees/photos/thumbs/' . $employee->photo_path);
+                        if (file_exists($oldPath)) {
+                            unlink($oldPath);
+                        }
+                        if (file_exists($oldThumbPath)) {
+                            unlink($oldThumbPath);
+                        }
+                    }
                     
-                    Log::info("Photo uploaded successfully for employee ID: {$id}", [
-                        'size' => $file->getSize(),
-                        'mime' => $file->getMimeType()
+                    // Create ImageManager instance with GD driver
+                    $manager = new ImageManager(new Driver());
+                    
+                    // Process and compress image
+                    $image = $manager->read($file->getRealPath());
+                    
+                    // Resize if too large (max 800x800, maintains aspect ratio)
+                    if ($image->width() > 800 || $image->height() > 800) {
+                        $image->scale(width: 800, height: 800);
+                    }
+                    
+                    // Save full-size image to PRIVATE storage with compression
+                    $filename = 'employee_' . $employee->employee_id . '.jpg';
+                    $fullPath = storage_path('app/private/employees/photos/' . $filename);
+                    $image->toJpeg(quality: 75)->save($fullPath);
+                    
+                    // Create thumbnail (40x40 for list view)
+                    $thumbnail = $manager->read($file->getRealPath());
+                    $thumbnail->cover(40, 40);
+                    $thumbPath = storage_path('app/private/employees/photos/thumbs/' . $filename);
+                    $thumbnail->toJpeg(quality: 70)->save($thumbPath);
+                    
+                    // Update database with file path
+                    $updateData['photo_path'] = $filename;
+                    $updateData['photo_content_type'] = 'image/jpeg';
+                    $updateData['photo_data'] = null;  // Clear BLOB data
+                    
+                    Log::info("Photo compressed and saved for employee ID: {$id}", [
+                        'filename' => $filename,
+                        'original_size' => $file->getSize(),
+                        'compressed_size' => filesize($fullPath)
                     ]);
+                    
                 } catch (\Exception $e) {
                     Log::error('Error uploading employee photo', [
                         'employee_id' => $id,
@@ -541,17 +623,48 @@ class EmployeeController extends Controller
         }
     }
 
-    // Serve employee photo from stored path (supports absolute kiosk paths)
+    // Serve employee photo from PRIVATE storage (with authentication & authorization)
     public function photo($id)
     {
+        // AUTHENTICATION CHECK - Must be logged in
+        if (!auth()->check()) {
+            // Return placeholder for unauthenticated requests
+            $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAqMBi0zJw+oAAAAASUVORK5CYII=');
+            return response($png, 200, [
+                'Content-Type' => 'image/png',
+                'Cache-Control' => 'no-cache',
+            ]);
+        }
+        
         $employee = Employee::findOrFail($id);
+        
+        // AUTHORIZATION CHECK - Department restriction (except super admin)
+        if (auth()->user()->role->role_name !== 'super_admin' && 
+            auth()->user()->department_id !== $employee->department_id) {
+            abort(403, 'Access denied');
+        }
+        
+        // TRY FILE SYSTEM FIRST (from PRIVATE storage)
+        if ($employee->photo_path) {
+            $photoPath = storage_path('app/private/employees/photos/' . $employee->photo_path);
+            
+            if (file_exists($photoPath)) {
+                return response()->file($photoPath, [
+                    'Content-Type' => 'image/jpeg',
+                    'Cache-Control' => 'public, max-age=604800',
+                ]);
+            }
+        }
+        
+        // FALLBACK TO BLOB (old way - for backward compatibility during migration)
         if ($employee->photo_data && $employee->photo_content_type) {
             return response($employee->photo_data, 200, [
                 'Content-Type' => $employee->photo_content_type,
                 'Cache-Control' => 'public, max-age=604800',
             ]);
         }
-        // Fallback: transparent 1x1 PNG
+        
+        // FINAL FALLBACK: transparent 1x1 PNG placeholder
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAqMBi0zJw+oAAAAASUVORK5CYII=');
         return response($png, 200, [
             'Content-Type' => 'image/png',

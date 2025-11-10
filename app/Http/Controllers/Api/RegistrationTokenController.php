@@ -208,15 +208,57 @@ class RegistrationTokenController extends Controller
                 'department_id' => $request->department_id,
             ];
 
-            // Handle profile image as BLOB (exactly like EmployeeController)
+            // Create employee record FIRST (we need the ID for filename)
+            $employee = \App\Models\Employee::create($employeeData);
+
+            // Handle profile image with compression
             if ($request->hasFile('profile_image')) {
                 $file = $request->file('profile_image');
-                $employeeData['photo_data'] = file_get_contents($file->getRealPath());
-                $employeeData['photo_content_type'] = $file->getMimeType();
+                
+                try {
+                    // Create ImageManager instance with GD driver
+                    $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                    
+                    // Process and compress image
+                    $image = $manager->read($file->getRealPath());
+                    
+                    // Resize if too large (max 800x800, maintains aspect ratio)
+                    if ($image->width() > 800 || $image->height() > 800) {
+                        $image->scale(width: 800, height: 800);
+                    }
+                    
+                    // Save full-size image to PRIVATE storage with compression
+                    $filename = 'employee_' . $employee->employee_id . '.jpg';
+                    $fullPath = storage_path('app/private/employees/photos/' . $filename);
+                    $image->toJpeg(quality: 75)->save($fullPath);
+                    
+                    // Create thumbnail (40x40 for list view)
+                    $thumbnail = $manager->read($file->getRealPath());
+                    $thumbnail->cover(40, 40);
+                    $thumbPath = storage_path('app/private/employees/photos/thumbs/' . $filename);
+                    $thumbnail->toJpeg(quality: 70)->save($thumbPath);
+                    
+                    // Update employee record with photo path
+                    $employee->update([
+                        'photo_path' => $filename,
+                        'photo_content_type' => 'image/jpeg',
+                        'photo_data' => null  // Clear any BLOB data
+                    ]);
+                    
+                    \Illuminate\Support\Facades\Log::info("Photo compressed and saved for employee (API): {$employee->employee_id}", [
+                        'filename' => $filename,
+                        'original_size' => $file->getSize(),
+                        'compressed_size' => filesize($fullPath)
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Error processing employee photo during API registration', [
+                        'employee_id' => $employee->employee_id,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue without photo - don't fail registration
+                }
             }
-
-            // Create employee record
-            $employee = \App\Models\Employee::create($employeeData);
 
             // Store primary fingerprint template (exactly like EmployeeController)
             \App\Models\EmployeeFingerprintTemplate::create([
