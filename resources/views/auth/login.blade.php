@@ -18,12 +18,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         body { 
+            background-color: #1a1a1a;
+            min-height: 100vh;
+            transition: background-image 0.3s ease-in;
+        }
+        body.bg-loaded {
             background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('{{ asset("login-bg.jpg") }}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            min-height: 100vh;
         }
         .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
         .login-card { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25), 0 1.5rem 3rem rgba(0,0,0,0.12); border-radius: 1.5rem; overflow: visible; max-width: 1100px; width: 100%; background: none; min-height: 600px; animation: fadeInUp 0.8s ease-out; }
@@ -119,5 +123,15 @@
 </div>
 <!-- Defer Bootstrap JS - not needed for initial render -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+<script>
+// Smooth background loading - prevents flicker
+(function() {
+    const img = new Image();
+    img.onload = function() {
+        document.body.classList.add('bg-loaded');
+    };
+    img.src = '{{ asset("login-bg.jpg") }}';
+})();
+</script>
 </body>
 </html>
