@@ -8,11 +8,15 @@
 
     <title>@yield('title', 'Dashboard') - {{ config('app.name', 'Admin Panel') }}</title>
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Preload critical CSS -->
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Bootstrap CSS - LOCAL -->
+    <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
+
+    <!-- Bootstrap Icons - LOCAL -->
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -80,8 +84,8 @@
         </main>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS Bundle - LOCAL -->
+    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" defer></script>
 </body>
 
 </html>

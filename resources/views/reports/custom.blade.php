@@ -5,11 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $reportData['title'] }} - {{ config('app.name', 'AUTO AUDIT') }}</title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Chart.js -->
+    <!-- Preload critical CSS -->
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    
+    <!-- Bootstrap CSS - LOCAL -->
+    <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
+    
+    <!-- Bootstrap Icons - LOCAL -->
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    
+    <!-- Chart.js - Keep CDN for now (specialized library) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
@@ -620,7 +626,7 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS - LOCAL -->
+    <script src="{{ asset('js/bootstrap.bundle.min.js') }}" defer></script>
 </body>
 </html>

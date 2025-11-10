@@ -5,8 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') - {{ config('app.name', 'AUTO AUDIT') }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Preload critical CSS -->
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="preload" as="style" href="{{ asset('css/bootstrap-icons-local.css') }}">
+    
+    <!-- Bootstrap CSS - LOCAL -->
+    <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
+    
+    <!-- Bootstrap Icons - LOCAL -->
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-local.css') }}">
     <style>
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
         body { background:#d1d5db; }
@@ -112,7 +120,8 @@
     </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap JS Bundle - LOCAL -->
+<script src="{{ asset('js/bootstrap.bundle.min.js') }}" defer></script>
 <script>
     // Handle Recent Audits notification behavior
     document.addEventListener('DOMContentLoaded', function() {
