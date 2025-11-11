@@ -41,6 +41,33 @@ photo: (image file)
 
 ---
 
+## 📝 Registration & Employee Management
+
+**All employee creation/update methods now use blob storage:**
+
+### 1. Registration API (`/api/register-employee`)
+- Accepts `profile_image` file
+- Automatically compresses to blob
+- Stores in `photo_data` column
+- Sets `photo_path` to `NULL`
+
+### 2. Admin Employee Creation (`EmployeeController@store`)
+- Accepts `profile_image` file
+- Automatically compresses to blob
+- Stores in `photo_data` column
+- Sets `photo_path` to `NULL`
+
+### 3. Admin Employee Update (`EmployeeController@update`)
+- Accepts new `profile_image` file
+- Automatically compresses to blob
+- Updates `photo_data` column
+- Sets `photo_path` to `NULL`
+- Cleans up old files if they exist
+
+**All new employees will automatically have compressed blob photos!** ✅
+
+---
+
 ## 💾 Database Schema
 
 ```sql

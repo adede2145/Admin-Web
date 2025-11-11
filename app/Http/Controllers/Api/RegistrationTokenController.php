@@ -211,7 +211,7 @@ class RegistrationTokenController extends Controller
             // Create employee record FIRST (we need the ID for filename)
             $employee = \App\Models\Employee::create($employeeData);
 
-            // Handle profile image with compression
+            // Handle profile image with compression (blob storage)
             if ($request->hasFile('profile_image')) {
                 $file = $request->file('profile_image');
                 
@@ -219,36 +219,27 @@ class RegistrationTokenController extends Controller
                     // Create ImageManager instance with GD driver
                     $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
                     
-                    // Process and compress image
+                    // Process and compress image for blob storage
                     $image = $manager->read($file->getRealPath());
                     
-                    // Resize if too large (max 800x800, maintains aspect ratio)
-                    if ($image->width() > 800 || $image->height() > 800) {
-                        $image->scale(width: 800, height: 800);
+                    // Resize if too large (max 800px width for blob)
+                    if ($image->width() > 800) {
+                        $image->scale(width: 800);
                     }
                     
-                    // Save full-size image to PRIVATE storage with compression
-                    $filename = 'employee_' . $employee->employee_id . '.jpg';
-                    $fullPath = storage_path('app/private/employees/photos/' . $filename);
-                    $image->toJpeg(quality: 75)->save($fullPath);
+                    // Create compressed blob (70% quality JPEG)
+                    $compressedBlob = $image->toJpeg(quality: 70)->toString();
                     
-                    // Create thumbnail (40x40 for list view)
-                    $thumbnail = $manager->read($file->getRealPath());
-                    $thumbnail->cover(40, 40);
-                    $thumbPath = storage_path('app/private/employees/photos/thumbs/' . $filename);
-                    $thumbnail->toJpeg(quality: 70)->save($thumbPath);
-                    
-                    // Update employee record with photo path
+                    // Update employee record with compressed blob only (no file storage)
                     $employee->update([
-                        'photo_path' => $filename,
-                        'photo_content_type' => 'image/jpeg',
-                        'photo_data' => null  // Clear any BLOB data
+                        'photo_path' => null, // No file storage
+                        'photo_data' => $compressedBlob, // Compressed blob
+                        'photo_content_type' => 'image/jpeg'
                     ]);
                     
-                    \Illuminate\Support\Facades\Log::info("Photo compressed and saved for employee (API): {$employee->employee_id}", [
-                        'filename' => $filename,
-                        'original_size' => $file->getSize(),
-                        'compressed_size' => filesize($fullPath)
+                    \Illuminate\Support\Facades\Log::info("Photo compressed and saved as blob for employee (API): {$employee->employee_id}", [
+                        'blob_size' => strlen($compressedBlob),
+                        'original_size' => $file->getSize()
                     ]);
                     
                 } catch (\Exception $e) {

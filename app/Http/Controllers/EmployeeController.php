@@ -228,7 +228,7 @@ class EmployeeController extends Controller
             // Create employee record FIRST (we need the ID for filename)
             $employee = Employee::create($employeeData);
 
-            // Handle profile image with compression
+            // Handle profile image with compression (blob storage)
             if ($request->hasFile('profile_image')) {
                 $file = $request->file('profile_image');
                 
@@ -236,36 +236,27 @@ class EmployeeController extends Controller
                     // Create ImageManager instance with GD driver
                     $manager = new ImageManager(new Driver());
                     
-                    // Process and compress image
+                    // Process and compress image for blob storage
                     $image = $manager->read($file->getRealPath());
                     
-                    // Resize if too large (max 800x800, maintains aspect ratio)
-                    if ($image->width() > 800 || $image->height() > 800) {
-                        $image->scale(width: 800, height: 800);
+                    // Resize if too large (max 800px width for blob)
+                    if ($image->width() > 800) {
+                        $image->scale(width: 800);
                     }
                     
-                    // Save full-size image to PRIVATE storage with compression
-                    $filename = 'employee_' . $employee->employee_id . '.jpg';
-                    $fullPath = storage_path('app/private/employees/photos/' . $filename);
-                    $image->toJpeg(quality: 75)->save($fullPath);
+                    // Create compressed blob (70% quality JPEG)
+                    $compressedBlob = $image->toJpeg(quality: 70)->toString();
                     
-                    // Create thumbnail (40x40 for list view)
-                    $thumbnail = $manager->read($file->getRealPath());
-                    $thumbnail->cover(40, 40);
-                    $thumbPath = storage_path('app/private/employees/photos/thumbs/' . $filename);
-                    $thumbnail->toJpeg(quality: 70)->save($thumbPath);
-                    
-                    // Update employee record with photo path
+                    // Update employee record with compressed blob only (no file storage)
                     $employee->update([
-                        'photo_path' => $filename,
-                        'photo_content_type' => 'image/jpeg',
-                        'photo_data' => null  // Clear any BLOB data
+                        'photo_path' => null, // No file storage
+                        'photo_data' => $compressedBlob, // Compressed blob
+                        'photo_content_type' => 'image/jpeg'
                     ]);
                     
-                    Log::info("Photo compressed and saved for employee: {$employee->employee_id}", [
-                        'filename' => $filename,
-                        'original_size' => $file->getSize(),
-                        'compressed_size' => filesize($fullPath)
+                    Log::info("Photo compressed and saved as blob for employee: {$employee->employee_id}", [
+                        'blob_size' => strlen($compressedBlob),
+                        'original_size' => $file->getSize()
                     ]);
                     
                 } catch (\Exception $e) {
@@ -388,7 +379,7 @@ class EmployeeController extends Controller
                         throw new \Exception('File must be an image (JPEG, PNG, JPG, or GIF)');
                     }
                     
-                    // Delete old photo files if they exist
+                    // Delete old photo files if they exist (cleanup from old system)
                     if ($employee->photo_path) {
                         $oldPath = storage_path('app/private/employees/photos/' . $employee->photo_path);
                         $oldThumbPath = storage_path('app/private/employees/photos/thumbs/' . $employee->photo_path);
@@ -403,34 +394,25 @@ class EmployeeController extends Controller
                     // Create ImageManager instance with GD driver
                     $manager = new ImageManager(new Driver());
                     
-                    // Process and compress image
+                    // Process and compress image for blob storage
                     $image = $manager->read($file->getRealPath());
                     
-                    // Resize if too large (max 800x800, maintains aspect ratio)
-                    if ($image->width() > 800 || $image->height() > 800) {
-                        $image->scale(width: 800, height: 800);
+                    // Resize if too large (max 800px width for blob)
+                    if ($image->width() > 800) {
+                        $image->scale(width: 800);
                     }
                     
-                    // Save full-size image to PRIVATE storage with compression
-                    $filename = 'employee_' . $employee->employee_id . '.jpg';
-                    $fullPath = storage_path('app/private/employees/photos/' . $filename);
-                    $image->toJpeg(quality: 75)->save($fullPath);
+                    // Create compressed blob (70% quality JPEG)
+                    $compressedBlob = $image->toJpeg(quality: 70)->toString();
                     
-                    // Create thumbnail (40x40 for list view)
-                    $thumbnail = $manager->read($file->getRealPath());
-                    $thumbnail->cover(40, 40);
-                    $thumbPath = storage_path('app/private/employees/photos/thumbs/' . $filename);
-                    $thumbnail->toJpeg(quality: 70)->save($thumbPath);
-                    
-                    // Update database with file path
-                    $updateData['photo_path'] = $filename;
+                    // Update database with blob only (no file storage)
+                    $updateData['photo_path'] = null; // No file storage
+                    $updateData['photo_data'] = $compressedBlob; // Compressed blob
                     $updateData['photo_content_type'] = 'image/jpeg';
-                    $updateData['photo_data'] = null;  // Clear BLOB data
                     
-                    Log::info("Photo compressed and saved for employee ID: {$id}", [
-                        'filename' => $filename,
-                        'original_size' => $file->getSize(),
-                        'compressed_size' => filesize($fullPath)
+                    Log::info("Photo compressed and saved as blob for employee ID: {$id}", [
+                        'blob_size' => strlen($compressedBlob),
+                        'original_size' => $file->getSize()
                     ]);
                     
                 } catch (\Exception $e) {
