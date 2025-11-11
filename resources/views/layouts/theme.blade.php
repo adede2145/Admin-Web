@@ -25,7 +25,7 @@
         .aa-topbar .logo { font-weight:700; letter-spacing:.5px; font-size:1.35rem; color:#fff; }
         .aa-topbar .logo i { font-size:1.5rem; }
         /* Sidebar nav: icon beside text (row), uniform padding and spacing */
-        .aa-nav .nav-link { color:#ffdfe0; padding:.75rem 1.5rem !important; width:100%; display:flex; align-items:center; justify-content:flex-start; flex-direction:row; text-align:left; gap:.75rem; font-weight:400; line-height:1.2; margin:0 !important; }
+        .aa-nav .nav-link { color:#ffdfe0; padding:.75rem 1.5rem !important; width:100%; display:flex; align-items:center; justify-content:flex-start; flex-direction:row; text-align:left; gap:1rem; font-weight:400; line-height:1.2; margin:0 !important; }
         .aa-nav .nav-link i { color: var(--aa-yellow); font-size:1.25rem; margin:0 !important; flex-shrink:0; width:1.25rem; }
         .aa-nav .nav-link.active, .aa-nav .nav-link:hover { background:#cc0000; color:#fff; }
         .aa-content { flex:1; display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; }
