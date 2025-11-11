@@ -25,46 +25,38 @@
         .aa-topbar .logo { font-weight:700; letter-spacing:.5px; font-size:1.35rem; color:#fff; }
         .aa-topbar .logo i { font-size:1.5rem; }
         
-        /* NUCLEAR OPTION: Maximum specificity for sidebar nav + RESET ALL CHILD SPACING */
-        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav { 
-            --bs-nav-link-padding-x: 0 !important; 
-            --bs-nav-link-padding-y: 0 !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
+        /* Custom sidebar navigation - NO Bootstrap conflicts */
+        .aa-nav-custom {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            margin: 0;
+            list-style: none;
         }
-        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link { 
-            color: #ffdfe0 !important; 
-            padding: .75rem 1.5rem !important; 
-            margin: 0 !important; 
-            width: 100% !important; 
-            display: flex !important; 
-            align-items: center !important; 
-            justify-content: flex-start !important; 
-            flex-direction: row !important; 
-            text-align: left !important; 
-            gap: 1rem !important; 
-            font-weight: 400 !important; 
-            line-height: 1.2 !important; 
-            box-sizing: border-box !important; 
-            min-height: auto !important;
-            max-height: none !important;
+        .aa-nav-link {
+            color: #ffdfe0;
+            padding: .75rem 1.5rem;
+            margin: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: left;
+            gap: 1rem;
+            font-weight: 400;
+            line-height: 1.2;
+            text-decoration: none;
+            transition: background 0.2s ease;
         }
-        /* FORCE: Remove ALL padding/margin from text content inside nav links */
-        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link * {
-            padding: 0 !important;
-            margin: 0 !important;
+        .aa-nav-link i {
+            color: var(--aa-yellow);
+            font-size: 1.25rem;
+            flex-shrink: 0;
         }
-        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link i { 
-            color: var(--aa-yellow) !important; 
-            font-size: 1.25rem !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            flex-shrink: 0 !important; 
-        }
-        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link.active,
-        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link:hover { 
-            background: #cc0000 !important; 
-            color: #fff !important; 
+        .aa-nav-link.active,
+        .aa-nav-link:hover {
+            background: #cc0000;
+            color: #fff;
         }
         .aa-content { flex:1; display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; }
         .aa-topbar { height:56px; background:var(--aa-maroon); color:#fff; border-bottom:1px solid #3d0a0a; display:flex; align-items:center; padding:0 1rem; gap:1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
@@ -118,15 +110,15 @@
     </header>
     <div class="aa-main-content">
         <aside id="aaSidebar" class="aa-sidebar">
-            <nav class="aa-nav nav flex-column py-2">
-                <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                <a class="nav-link {{ request()->is('attendance') ? 'active' : '' }}" href="{{ route('attendance.index') }}"><i class="bi bi-clock-history"></i> Attendance Log</a>
-                <a class="nav-link {{ request()->is('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}"><i class="bi bi-graph-up"></i> Generate Reports</a>
-                <a class="nav-link {{ request()->is('employees') ? 'active' : '' }}" href="{{ route('employees.index') }}"><i class="bi bi-people"></i> Manage Employees</a>
+            <nav class="aa-nav-custom py-2">
+                <a class="aa-nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a class="aa-nav-link {{ request()->is('attendance') ? 'active' : '' }}" href="{{ route('attendance.index') }}"><i class="bi bi-clock-history"></i> Attendance Log</a>
+                <a class="aa-nav-link {{ request()->is('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}"><i class="bi bi-graph-up"></i> Generate Reports</a>
+                <a class="aa-nav-link {{ request()->is('employees') ? 'active' : '' }}" href="{{ route('employees.index') }}"><i class="bi bi-people"></i> Manage Employees</a>
                 @if(auth()->check() && auth()->user()->role && in_array(auth()->user()->role->role_name, ['admin','super_admin']))
-                    <a class="nav-link" href="#" id="openLocalRegistrationBtn"><i class="bi bi-fingerprint"></i> Register Employee <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.75rem;"></i></a>
+                    <a class="aa-nav-link" href="#" id="openLocalRegistrationBtn"><i class="bi bi-fingerprint"></i> Register Employee <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.75rem;"></i></a>
                 @endif
-                <a class="nav-link {{ request()->is('audit-logs*') ? 'active' : '' }}" href="{{ route('audit.index') }}" id="recentAuditsLink">
+                <a class="aa-nav-link {{ request()->is('audit-logs*') ? 'active' : '' }}" href="{{ route('audit.index') }}" id="recentAuditsLink">
                     <i class="bi bi-clock-history"></i> Recent Audits
                     @php
                         $admin = auth()->user();
