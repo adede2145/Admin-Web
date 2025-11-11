@@ -24,10 +24,12 @@
         .aa-sidebar { width:300px; background:var(--aa-sidebar); color:#fff; position:sticky; top:0; height:calc(100vh - 56px); box-shadow: 2px 0 8px rgba(0,0,0,0.15); }
         .aa-topbar .logo { font-weight:700; letter-spacing:.5px; font-size:1.35rem; color:#fff; }
         .aa-topbar .logo i { font-size:1.5rem; }
+        /* Sidebar: reset Bootstrap nav defaults */
+        .aa-nav { --bs-nav-link-padding-x: 1.5rem; --bs-nav-link-padding-y: .75rem; }
         /* Sidebar nav: icon beside text (row), uniform padding and spacing */
-        .aa-nav .nav-link { color:#ffdfe0; padding:.75rem 1.5rem !important; width:100%; display:flex; align-items:center; justify-content:flex-start; flex-direction:row; text-align:left; gap:1.25rem; font-weight:400; line-height:1.2; margin:0 !important; }
+        .aa-nav .nav-link { color:#ffdfe0 !important; padding:.75rem 1.5rem !important; width:100%; display:flex; align-items:center; justify-content:flex-start; flex-direction:row; text-align:left; gap:1.25rem; font-weight:400; line-height:1.2; margin:0 !important; }
         .aa-nav .nav-link i { color: var(--aa-yellow); font-size:1.25rem; margin:0 !important; flex-shrink:0; width:1.25rem; }
-        .aa-nav .nav-link.active, .aa-nav .nav-link:hover { background:#cc0000; color:#fff; }
+        .aa-nav .nav-link.active, .aa-nav .nav-link:hover { background:#cc0000; color:#fff !important; }
         .aa-content { flex:1; display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; }
         .aa-topbar { height:56px; background:var(--aa-maroon); color:#fff; border-bottom:1px solid #3d0a0a; display:flex; align-items:center; padding:0 1rem; gap:1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         /* Search bar: slightly longer and modern (less rounded) */
