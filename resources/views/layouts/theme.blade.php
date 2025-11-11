@@ -17,7 +17,6 @@
     <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
     <style data-version="v2.2">
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
-        html { overflow-y: scroll; }
         body { background:#d1d5db; overflow-x: hidden; margin: 0; padding: 0; }
         .aa-app { min-height:100vh; display:flex; flex-direction:column; width: 100%; }
         .aa-main-content { display:flex; flex:1; overflow: hidden; }
