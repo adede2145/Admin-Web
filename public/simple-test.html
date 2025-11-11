@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Photo Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+        }
+        .photo {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        img {
+            max-width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Employee Photo API Test</h1>
+    <p>Testing: <code>GET /api/employee-photos/{id}</code></p>
+
+    <div class="photo">
+        <h3>Employee ID: 1</h3>
+        <img id="photo1" src="http://127.0.0.1:8000/api/employee-photos/1" alt="Employee 1">
+        <div id="status1" class="status"></div>
+    </div>
+
+    <div class="photo">
+        <h3>Employee ID: 28</h3>
+        <img id="photo28" src="http://127.0.0.1:8000/api/employee-photos/28" alt="Employee 28">
+        <div id="status28" class="status"></div>
+    </div>
+
+    <script>
+        // Test photo 1
+        document.getElementById('photo1').onload = function() {
+            document.getElementById('status1').innerHTML = '✓ Photo loaded successfully';
+            document.getElementById('status1').className = 'status success';
+        };
+        document.getElementById('photo1').onerror = function() {
+            document.getElementById('status1').innerHTML = '✗ Failed to load photo';
+            document.getElementById('status1').className = 'status error';
+        };
+
+        // Test photo 28
+        document.getElementById('photo28').onload = function() {
+            document.getElementById('status28').innerHTML = '✓ Photo loaded successfully';
+            document.getElementById('status28').className = 'status success';
+        };
+        document.getElementById('photo28').onerror = function() {
+            document.getElementById('status28').innerHTML = '✗ Failed to load photo';
+            document.getElementById('status28').className = 'status error';
+        };
+
+        // Check API response in console
+        fetch('http://127.0.0.1:8000/api/employee-photos/1')
+            .then(response => {
+                console.log('API Response Status:', response.status);
+                console.log('Content-Type:', response.headers.get('Content-Type'));
+                console.log('Cache-Control:', response.headers.get('Cache-Control'));
+            })
+            .catch(error => console.error('API Error:', error));
+    </script>
+</body>
+</html>

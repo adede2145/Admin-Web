@@ -38,3 +38,10 @@ Route::post('/register-employee', [\App\Http\Controllers\Api\RegistrationTokenCo
 // Employee fingerprint editing with token authentication (for local registration page)
 Route::post('/get-employee', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'getEmployee']);
 Route::post('/update-fingerprints', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'updateFingerprints']);
+
+// Public endpoint to serve employee photos (compressed blob from database)
+// Using custom rate limiter with higher limit (300/min) for kiosk performance
+Route::middleware('throttle:employee-photos')->get('/employee-photos/{employeeId}', [\App\Http\Controllers\Api\EmployeePhotoController::class, 'show']);
+
+// Photo upload endpoint (requires authentication)
+Route::middleware('auth:sanctum')->post('/employee-photos/{employeeId}/upload', [\App\Http\Controllers\Api\EmployeePhotoController::class, 'upload']);

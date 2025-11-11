@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Photo Test</title>
+</head>
+<body>
+    <h1>Employee Photo Direct Test</h1>
+    
+    <h2>Employee 1:</h2>
+    <img src="http://127.0.0.1:8000/api/employee-photos/1" alt="Employee 1" style="max-width: 300px;" 
+         onload="this.nextElementSibling.textContent='✓ Loaded!'" 
+         onerror="this.nextElementSibling.textContent='✗ Error: ' + this.src">
+    <div style="color: green; font-weight: bold;"></div>
+
+    <h2>Employee 2:</h2>
+    <img src="http://127.0.0.1:8000/api/employee-photos/2" alt="Employee 2" style="max-width: 300px;"
+         onload="this.nextElementSibling.textContent='✓ Loaded!'" 
+         onerror="this.nextElementSibling.textContent='✗ Error'">
+    <div style="color: green; font-weight: bold;"></div>
+
+    <h2>Invalid ID (should fail):</h2>
+    <img src="http://127.0.0.1:8000/api/employee-photos/99999" alt="Employee 99999" style="max-width: 300px;"
+         onload="this.nextElementSibling.textContent='✓ Loaded (unexpected)'" 
+         onerror="this.nextElementSibling.textContent='✓ Correctly returned 404'">
+    <div style="color: green; font-weight: bold;"></div>
+
+    <script>
+        // Log fetch details
+        fetch('http://127.0.0.1:8000/api/employee-photos/1')
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Content-Type:', response.headers.get('Content-Type'));
+                console.log('Cache-Control:', response.headers.get('Cache-Control'));
+                console.log('Expires:', response.headers.get('Expires'));
+            })
+            .catch(error => console.error('Fetch error:', error));
+    </script>
+</body>
+</html>
