@@ -15,10 +15,11 @@
     
     <!-- Bootstrap Icons - LOCAL (COMPLETE) -->
     <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
-    <style data-version="v2.1">
+    <style data-version="v2.2">
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
-        body { background:#d1d5db; overflow-x: hidden; }
-        .aa-app { min-height:100vh; display:flex; flex-direction:column; }
+        html { overflow-y: scroll; }
+        body { background:#d1d5db; overflow-x: hidden; margin: 0; padding: 0; }
+        .aa-app { min-height:100vh; display:flex; flex-direction:column; width: 100%; }
         .aa-main-content { display:flex; flex:1; overflow: hidden; }
         /* Sidebar: widened and fixed width */
         .aa-sidebar { 
@@ -81,7 +82,38 @@
             color: #fff !important;
         }
         .aa-content { flex:1; display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; }
-        .aa-topbar { height:56px; background:var(--aa-maroon); color:#fff; border-bottom:1px solid #3d0a0a; display:flex; align-items:center; padding:0 1rem; gap:1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .aa-topbar { 
+            height:56px !important; 
+            min-height:56px !important; 
+            max-height:56px !important; 
+            background:var(--aa-maroon); 
+            color:#fff; 
+            border-bottom:1px solid #3d0a0a; 
+            display:flex !important; 
+            align-items:center !important; 
+            padding:0 1rem !important; 
+            gap:1rem; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            position: relative;
+            flex-shrink: 0 !important;
+            width: 100%;
+        }
+        .aa-topbar .logo { 
+            font-weight:700; 
+            letter-spacing:.5px; 
+            font-size:1.35rem !important; 
+            color:#fff; 
+            display: flex !important;
+            align-items: center !important;
+            white-space: nowrap;
+            line-height: 1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .aa-topbar .logo i { 
+            font-size:1.5rem !important; 
+            line-height: 1 !important;
+        }
         /* Search bar: slightly longer and modern (less rounded) */
         .aa-search { flex:1; max-width:560px; }
         .aa-search .input-group { border-radius:8px; overflow:hidden; background:#ffffff; border:1px solid rgba(255,255,255,.25); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,.04); }
