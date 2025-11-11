@@ -932,11 +932,12 @@
                                 showNotification('success', result.data.message || 'Employee updated successfully!');
                                 if (modal) modal.hide();
                                 
-                                // Update all images for this employee (ETag handles caching)
+                                // Update all images for this employee with cache-busting
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Construct the proper photo URL (no cache-busting needed)
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo';
+                                // Add timestamp to force browser to reload the image
+                                const timestamp = new Date().getTime();
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?t=' + timestamp;
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
@@ -1042,11 +1043,12 @@
                                 // Close modal
                                 if (modal) modal.hide();
                                 
-                                // Update all images for this employee (ETag handles caching)
+                                // Update all images for this employee with cache-busting
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Construct the proper photo URL (no cache-busting needed)
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo';
+                                // Add timestamp to force browser to reload the image
+                                const timestamp = new Date().getTime();
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?t=' + timestamp;
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
