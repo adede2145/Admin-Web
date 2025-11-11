@@ -878,6 +878,12 @@
                     e.preventDefault();
                     
                     const formData = new FormData(form);
+                    
+                    // Ensure _method field is included for Laravel PUT routing
+                    if (!formData.has('_method')) {
+                        formData.append('_method', 'PUT');
+                    }
+                    
                     const submitBtn = form.querySelector('button[type="submit"]');
                     const originalText = submitBtn.innerHTML;
                     const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
