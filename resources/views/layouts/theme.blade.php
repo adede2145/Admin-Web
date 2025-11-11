@@ -15,7 +15,7 @@
     
     <!-- Bootstrap Icons - LOCAL (COMPLETE) -->
     <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
-    <style data-version="v2.0">
+    <style data-version="v2.1">
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
         body { background:#d1d5db; }
         .aa-app { min-height:100vh; display:flex; flex-direction:column; }
@@ -25,7 +25,7 @@
         .aa-topbar .logo { font-weight:700; letter-spacing:.5px; font-size:1.35rem; color:#fff; }
         .aa-topbar .logo i { font-size:1.5rem; }
         
-        /* NUCLEAR OPTION: Maximum specificity for sidebar nav */
+        /* NUCLEAR OPTION: Maximum specificity for sidebar nav + RESET ALL CHILD SPACING */
         body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav { 
             --bs-nav-link-padding-x: 0 !important; 
             --bs-nav-link-padding-y: 0 !important; 
@@ -48,6 +48,11 @@
             box-sizing: border-box !important; 
             min-height: auto !important;
             max-height: none !important;
+        }
+        /* FORCE: Remove ALL padding/margin from text content inside nav links */
+        body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link * {
+            padding: 0 !important;
+            margin: 0 !important;
         }
         body .aa-app .aa-main-content aside.aa-sidebar nav.aa-nav a.nav-link i { 
             color: var(--aa-yellow) !important; 
