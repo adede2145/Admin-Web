@@ -17,46 +17,68 @@
     <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
     <style data-version="v2.1">
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
-        body { background:#d1d5db; }
+        body { background:#d1d5db; overflow-x: hidden; }
         .aa-app { min-height:100vh; display:flex; flex-direction:column; }
-        .aa-main-content { display:flex; flex:1; }
-        /* Sidebar: widened */
-        .aa-sidebar { width:300px; background:var(--aa-sidebar); color:#fff; position:sticky; top:0; height:calc(100vh - 56px); box-shadow: 2px 0 8px rgba(0,0,0,0.15); }
+        .aa-main-content { display:flex; flex:1; overflow: hidden; }
+        /* Sidebar: widened and fixed width */
+        .aa-sidebar { 
+            width:300px !important; 
+            min-width:300px !important; 
+            max-width:300px !important; 
+            flex-shrink: 0 !important; 
+            flex-grow: 0 !important;
+            flex-basis: 300px !important;
+            background:var(--aa-sidebar); 
+            color:#fff; 
+            position:sticky; 
+            top:0; 
+            height:calc(100vh - 56px); 
+            box-shadow: 2px 0 8px rgba(0,0,0,0.15); 
+            overflow-y: auto; 
+            overflow-x: hidden; 
+        }
         .aa-topbar .logo { font-weight:700; letter-spacing:.5px; font-size:1.35rem; color:#fff; }
         .aa-topbar .logo i { font-size:1.5rem; }
         
-        /* Custom sidebar navigation - NO Bootstrap conflicts */
+        /* Custom sidebar navigation - with proper spacing and font size */
         .aa-nav-custom {
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-            margin: 0;
-            list-style: none;
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 0.5rem 0 !important;
+            margin: 0 !important;
+            list-style: none !important;
+            gap: 0 !important;
         }
         .aa-nav-link {
-            color: #ffdfe0;
-            padding: .75rem 1.5rem;
-            margin: 0;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            text-align: left;
-            gap: 1rem;
-            font-weight: 400;
-            line-height: 1.2;
-            text-decoration: none;
-            transition: background 0.2s ease;
+            color: #ffdfe0 !important;
+            padding: .75rem 1.5rem !important;
+            margin: 0 !important;
+            text-decoration: none !important;
+            font-size:  1.25rem !important;
+            line-height: 1.4 !important;
+            display: block !important;
+            transition: background 0.2s ease !important;
+            box-sizing: border-box !important;
+            height: auto !important;
+            min-height: auto !important;
+            border: none !important;
+            border-radius: 0 !important;
+            white-space: nowrap !important;
         }
         .aa-nav-link i {
-            color: var(--aa-yellow);
-            font-size: 1.25rem;
-            flex-shrink: 0;
+            color: var(--aa-yellow) !important;
+            margin-right: 0.75rem !important;
+            font-size: 1.25rem !important;
+            width: 1.5rem !important;
+            display: inline-block !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            line-height: 1 !important;
         }
         .aa-nav-link.active,
         .aa-nav-link:hover {
-            background: #cc0000;
-            color: #fff;
+            background: #cc0000 !important;
+            color: #fff !important;
         }
         .aa-content { flex:1; display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; }
         .aa-topbar { height:56px; background:var(--aa-maroon); color:#fff; border-bottom:1px solid #3d0a0a; display:flex; align-items:center; padding:0 1rem; gap:1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
@@ -110,7 +132,7 @@
     </header>
     <div class="aa-main-content">
         <aside id="aaSidebar" class="aa-sidebar">
-            <nav class="aa-nav-custom py-2">
+            <nav class="aa-nav-custom">
                 <a class="aa-nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
                 <a class="aa-nav-link {{ request()->is('attendance') ? 'active' : '' }}" href="{{ route('attendance.index') }}"><i class="bi bi-clock-history"></i> Attendance Log</a>
                 <a class="aa-nav-link {{ request()->is('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}"><i class="bi bi-graph-up"></i> Generate Reports</a>
@@ -135,9 +157,9 @@
                     @endif
                 </a>
                 @if(auth()->check() && auth()->user()->role && auth()->user()->role->role_name === 'super_admin')
-                    <a class="nav-link {{ request()->is('admin-panel') ? 'active' : '' }}" href="{{ route('admin.panel') }}"><i class="bi bi-shield-lock"></i> Manage Admins</a>
-                    <a class="nav-link {{ request()->is('departments*') ? 'active' : '' }}" href="{{ route('departments.index') }}"><i class="bi bi-building"></i> Manage Offices</a>
-                    <a class="nav-link {{ request()->is('kiosks*') ? 'active' : '' }}" href="{{ route('kiosks.index') }}"><i class="bi bi-display"></i> Manage Kiosks</a>
+                    <a class="aa-nav-link {{ request()->is('admin-panel') ? 'active' : '' }}" href="{{ route('admin.panel') }}"><i class="bi bi-shield-lock"></i> Manage Admins</a>
+                    <a class="aa-nav-link {{ request()->is('departments*') ? 'active' : '' }}" href="{{ route('departments.index') }}"><i class="bi bi-building"></i> Manage Offices</a>
+                    <a class="aa-nav-link {{ request()->is('kiosks*') ? 'active' : '' }}" href="{{ route('kiosks.index') }}"><i class="bi bi-display"></i> Manage Kiosks</a>
                 @endif
             </nav>
         </aside>
