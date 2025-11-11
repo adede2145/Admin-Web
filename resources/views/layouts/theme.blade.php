@@ -15,7 +15,7 @@
     
     <!-- Bootstrap Icons - LOCAL (COMPLETE) -->
     <link rel="stylesheet" href="{{ asset('css/bootstrap-icons-full.css') }}">
-    <style data-version="v1.1">
+    <style data-version="v1.2">
         :root { --aa-maroon:#560000; --aa-maroon-dark:#3a0000; --aa-yellow:#ffc107; --aa-sidebar:#450000; }
         body { background:#d1d5db; }
         .aa-app { min-height:100vh; display:flex; flex-direction:column; }
@@ -25,9 +25,9 @@
         .aa-topbar .logo { font-weight:700; letter-spacing:.5px; font-size:1.35rem; color:#fff; }
         .aa-topbar .logo i { font-size:1.5rem; }
         /* Sidebar: reset Bootstrap nav defaults - FORCE OVERRIDE */
-        .aa-nav { --bs-nav-link-padding-x: 1.5rem !important; --bs-nav-link-padding-y: .75rem !important; }
-        /* Sidebar nav: icon beside text (row), uniform padding and spacing - STRONGEST SPECIFICITY */
-        .aa-sidebar .aa-nav .nav-link { color:#ffdfe0 !important; padding:.75rem 1.5rem !important; width:100%; display:flex !important; align-items:center; justify-content:flex-start; flex-direction:row; text-align:left; gap:1.25rem !important; font-weight:400; line-height:1.2; margin:0 !important; }
+        .aa-nav { --bs-nav-link-padding-x: 0 !important; --bs-nav-link-padding-y: 0 !important; }
+        /* Sidebar nav: NO SPACING TEST */
+        .aa-sidebar .aa-nav .nav-link { color:#ffdfe0 !important; padding:0 !important; margin:0 !important; width:100%; display:flex !important; align-items:center; justify-content:flex-start; flex-direction:row; text-align:left; gap:0 !important; font-weight:400; line-height:1.2; }
         .aa-sidebar .aa-nav .nav-link i { color: var(--aa-yellow) !important; font-size:1.25rem; margin:0 !important; flex-shrink:0; width:1.25rem; }
         .aa-sidebar .aa-nav .nav-link.active, .aa-sidebar .aa-nav .nav-link:hover { background:#cc0000 !important; color:#fff !important; }
         .aa-content { flex:1; display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; }
