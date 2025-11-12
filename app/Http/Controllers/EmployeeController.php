@@ -612,17 +612,10 @@ class EmployeeController extends Controller
         if (!auth()->check()) {
             // Return placeholder for unauthenticated requests
             $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAqMBi0zJw+oAAAAASUVORK5CYII=');
-            $etag = md5($png);
-            
-            $requestEtag = request()->header('If-None-Match');
-            if ($requestEtag && $requestEtag === $etag) {
-                return response('', 304);
-            }
             
             return response($png, 200, [
                 'Content-Type' => 'image/png',
-                'Cache-Control' => 'public, max-age=2592000, immutable',
-                'ETag' => $etag,
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
             ]);
         }
         
@@ -640,7 +633,8 @@ class EmployeeController extends Controller
             
             if (file_exists($photoPath)) {
                 $fileTime = filemtime($photoPath);
-                $etag = md5($employee->photo_path . $fileTime);
+                // Include employee_id and file modification time in ETag for uniqueness
+                $etag = '"' . md5($id . '-' . $employee->photo_path . '-' . $fileTime) . '"';
                 
                 // Check if browser has cached version
                 $requestEtag = request()->header('If-None-Match');
@@ -650,18 +644,19 @@ class EmployeeController extends Controller
                 
                 return response()->file($photoPath, [
                     'Content-Type' => 'image/jpeg',
-                    'Cache-Control' => 'public, max-age=2592000, immutable', // 30 days, immutable
+                    'Cache-Control' => 'private, max-age=3600, must-revalidate',
                     'ETag' => $etag,
                     'Last-Modified' => gmdate('D, d M Y H:i:s', $fileTime) . ' GMT',
-                    'Expires' => gmdate('D, d M Y H:i:s', time() + 2592000) . ' GMT',
                 ]);
             }
         }
         
-        // FALLBACK TO BLOB (old way - for backward compatibility during migration)
+        // FALLBACK TO BLOB (current system - storing photos as compressed blobs)
         if ($employee->photo_data && $employee->photo_content_type) {
-            // Generate ETag from photo data
-            $etag = md5($employee->photo_data);
+            // Generate ETag from employee ID and hash of photo data for uniqueness
+            // This ensures that each employee has a unique ETag and it changes when photo changes
+            $photoHash = md5($employee->photo_data);
+            $etag = '"' . md5($id . '-' . $photoHash) . '"';
             $requestEtag = request()->header('If-None-Match');
             
             if ($requestEtag && $requestEtag === $etag) {
@@ -670,25 +665,17 @@ class EmployeeController extends Controller
             
             return response($employee->photo_data, 200, [
                 'Content-Type' => $employee->photo_content_type,
-                'Cache-Control' => 'public, max-age=2592000, immutable',
+                'Cache-Control' => 'private, max-age=3600, must-revalidate',
                 'ETag' => $etag,
             ]);
         }
         
         // FINAL FALLBACK: transparent 1x1 PNG placeholder
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAqMBi0zJw+oAAAAASUVORK5CYII=');
-        $etag = md5($png);
-        
-        // Check if browser has cached placeholder
-        $requestEtag = request()->header('If-None-Match');
-        if ($requestEtag && $requestEtag === $etag) {
-            return response('', 304); // Not Modified - use cached placeholder
-        }
         
         return response($png, 200, [
             'Content-Type' => 'image/png',
-            'Cache-Control' => 'public, max-age=2592000, immutable', // Cache placeholder too
-            'ETag' => $etag,
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
         ]);
     }
 }

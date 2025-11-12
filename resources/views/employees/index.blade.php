@@ -66,7 +66,7 @@
                                                 <span class="text-muted">{{ $employee->employee_id }}</span>
                                             </td>
                                             <td>
-                                                <img src="{{ route('employees.photo', $employee->employee_id) }}" 
+                                                <img src="{{ route('employees.photo', $employee->employee_id) }}?v={{ $employee->employee_id }}_{{ md5($employee->photo_data ?? uniqid()) }}" 
                                                      alt="{{ $employee->full_name }}" 
                                                      class="rounded-circle" 
                                                      style="width:40px;height:40px;object-fit:cover;" 
@@ -134,7 +134,7 @@
                     <div class="card-body text-center p-4">
                         <div class="mx-auto rounded-circle mb-3" style="width:140px;height:140px;background:#eee;overflow:hidden;display:flex;align-items:center;justify-content:center;">
                             @if($selectedEmployee)
-                                <img src="{{ route('employees.photo', $selectedEmployee->employee_id) }}" 
+                                <img src="{{ route('employees.photo', $selectedEmployee->employee_id) }}?v={{ $selectedEmployee->employee_id }}_{{ md5($selectedEmployee->photo_data ?? uniqid()) }}" 
                                      alt="{{ $selectedEmployee->full_name }}" 
                                      style="width:100%;height:100%;object-fit:cover;" 
                                      loading="eager"
@@ -265,7 +265,7 @@
                                 <div class="d-flex align-items-center gap-4 p-3" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; border-style: dashed;">
                                     <div class="position-relative">
                                         <img id="preview_{{ $employee->employee_id }}" 
-                                             src="{{ route('employees.photo', $employee->employee_id) }}" 
+                                             src="{{ route('employees.photo', $employee->employee_id) }}?v={{ $employee->employee_id }}_{{ md5($employee->photo_data ?? uniqid()) }}" 
                                              alt="Preview" 
                                              class="rounded-circle border-3 border-white shadow-sm" 
                                              style="width: 100px; height: 100px; object-fit: cover;" 
@@ -935,9 +935,9 @@
                                 // Update all images for this employee with cache-busting
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Add timestamp to force browser to reload the image
-                                const timestamp = new Date().getTime();
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?t=' + timestamp;
+                                // Generate a unique cache-busting parameter based on current timestamp
+                                const cacheBuster = employeeId + '_' + new Date().getTime();
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + cacheBuster;
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
@@ -1046,9 +1046,9 @@
                                 // Update all images for this employee with cache-busting
                                 const employeeId = form.closest('.modal').id.replace('editEmployee', '');
                                 
-                                // Add timestamp to force browser to reload the image
-                                const timestamp = new Date().getTime();
-                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?t=' + timestamp;
+                                // Generate a unique cache-busting parameter based on current timestamp
+                                const cacheBuster = employeeId + '_' + new Date().getTime();
+                                const photoUrl = '{{ url("/employees") }}/' + employeeId + '/photo?v=' + cacheBuster;
                                 
                                 // Update modal preview image
                                 const previewImg = document.getElementById('preview_' + employeeId);
