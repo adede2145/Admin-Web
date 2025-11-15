@@ -28,7 +28,8 @@ class Employee extends Model
     ];
 
     protected $hidden = [
-        'fingerprint_hash'
+        'fingerprint_hash',
+        'photo_data'  // Exclude binary photo data from JSON serialization
     ];
 
     public function department()

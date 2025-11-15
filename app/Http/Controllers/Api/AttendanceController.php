@@ -60,7 +60,7 @@ class AttendanceController extends Controller
                 'total' => $logs->total(),
                 'current_page' => $logs->currentPage(),
                 'last_page' => $logs->lastPage()
-            ]);
+            ], 200, ['Content-Type' => 'application/json; charset=UTF-8'], JSON_UNESCAPED_UNICODE);
         }
 
         return $logs;
