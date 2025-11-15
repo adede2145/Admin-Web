@@ -34,6 +34,11 @@ class AttendanceLog extends Model
         'verification_notes'
     ];
 
+    // Hide binary data from JSON serialization to prevent encoding errors
+    protected $hidden = [
+        'photo_data',
+    ];
+
     protected $casts = [
         'time_in' => 'datetime',
         'time_out' => 'datetime',
