@@ -927,6 +927,9 @@
                     // Update pagination
                     document.getElementById('paginationContainer').innerHTML = data.pagination;
 
+                    // Re-attach pagination click handlers
+                    attachPaginationHandlers();
+
                     // Update last updated time
                     lastUpdatedSpan.textContent = new Date().toLocaleTimeString();
 
@@ -956,6 +959,64 @@
                     }, 3000);
                 });
         }
+
+        // Function to handle pagination clicks
+        function attachPaginationHandlers() {
+            const paginationContainer = document.getElementById('paginationContainer');
+            if (!paginationContainer) return;
+
+            const paginationLinks = paginationContainer.querySelectorAll('.pagination a');
+            
+            paginationLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const url = new URL(this.href);
+                    const page = url.searchParams.get('page');
+                    
+                    if (page) {
+                        // Update browser URL without reloading
+                        const currentUrl = new URL(window.location);
+                        currentUrl.searchParams.set('page', page);
+                        window.history.pushState({}, '', currentUrl);
+                        
+                        // Fetch new page data
+                        const params = new URLSearchParams(currentUrl.search);
+                        
+                        fetch('{{ route("api.attendance.logs") }}?' + params.toString(), {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Update table body
+                            document.getElementById('attendanceTableBody').innerHTML = data.html;
+                            
+                            // Update pagination
+                            document.getElementById('paginationContainer').innerHTML = data.pagination;
+                            
+                            // Re-attach handlers for new pagination
+                            attachPaginationHandlers();
+                            
+                            // Update last updated time
+                            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+                            
+                            // Scroll to top of table
+                            document.getElementById('attendance-logs-table').scrollTop = 0;
+                        })
+                        .catch(error => {
+                            console.error('Error loading page:', error);
+                            alert('Error loading page. Please try again.');
+                        });
+                    }
+                });
+            });
+        }
+
+        // Attach initial pagination handlers
+        attachPaginationHandlers();
     });
 
     // Enhanced Filter Functions
