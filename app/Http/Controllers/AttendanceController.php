@@ -537,7 +537,7 @@ class AttendanceController extends Controller
         // Use Dompdf to convert HTML to PDF
         $dompdf = new \Dompdf\Dompdf();
         $dompdf->loadHtml($htmlContent);
-        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->setPaper('Letter', 'portrait');
         $dompdf->render();
 
         return response($dompdf->output())
@@ -551,38 +551,34 @@ class AttendanceController extends Controller
         
         $startDate = \Carbon\Carbon::parse($report->start_date);
         $endDate = \Carbon\Carbon::parse($report->end_date);
-        
-        // Format period based on report type
-        $periodLabel = '';
-        if ($report->report_type === 'monthly') {
-            $periodLabel = 'For the month of: ' . $startDate->format('F Y');
-        } elseif ($report->report_type === 'weekly') {
-            $periodLabel = 'For the week of: ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
-        } else {
-            $periodLabel = 'For the period: ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
-        }
-
-        // Add headers
-        $csvData[] = ['Civil Service Form No. 48'];
-        $csvData[] = ['DAILY TIME RECORD'];
-        $csvData[] = [];
-        $csvData[] = ['Department: ' . $report->department_name];
-        $csvData[] = ['Period: ' . $report->formatted_period];
-        $csvData[] = ['Generated on: ' . $report->formatted_generated_on];
-        $csvData[] = [];
 
         // Generate CSV for each employee
         foreach ($report->summaries as $summary) {
             $employee = $summary->employee;
             
+            // Format period based on report type
+            $periodLabel = '';
+            if ($report->report_type === 'monthly') {
+                $periodLabel = 'For the month of ' . $startDate->format('F Y');
+            } elseif ($report->report_type === 'weekly') {
+                $periodLabel = 'For the week of ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+            } else {
+                $periodLabel = 'For the period ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+            }
+            
+            // Add headers for each employee
+            $csvData[] = ['Civil Service Form No. 48'];
+            $csvData[] = ['DAILY TIME RECORD'];
             $csvData[] = [];
-            $csvData[] = ['Employee Name:', $employee->full_name];
+            $csvData[] = [$employee->full_name];
+            $csvData[] = ['(Name)'];
+            $csvData[] = [];
             $csvData[] = [$periodLabel];
-            $csvData[] = ['Official hours:', 'Regular days: 8:00 AM - 5:00 PM', 'Saturdays: N/A'];
+            $csvData[] = ['Official hours for arrival and departure: Regular days 8:00 AM - 5:00 PM', 'Saturdays: N/A'];
             $csvData[] = [];
             
             // Table header
-            $csvData[] = ['Day', 'AM Arrival', 'AM Departure', 'PM Arrival', 'PM Departure', 'Undertime Hours', 'Undertime Minutes'];
+            $csvData[] = ['Day', 'A.M. Arrival', 'A.M. Departure', 'P.M. Arrival', 'P.M. Departure', 'Undertime Hours', 'Undertime Min.'];
             
             // Get attendance details for this employee
             $employeeDetails = $report->details->where('employee_id', $employee->employee_id);
@@ -626,13 +622,20 @@ class AttendanceController extends Controller
             $csvData[] = [];
             $csvData[] = ['I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.'];
             $csvData[] = [];
+            $csvData[] = ['VERIFIED as to the prescribed office hours'];
+            $csvData[] = [];
+            $csvData[] = ['________________________________________'];
+            $csvData[] = ['In Charge'];
+            $csvData[] = [];
+            $csvData[] = [];
             $csvData[] = ['----------------------------------------'];
+            $csvData[] = [];
         }
 
         $csvContent = '';
         foreach ($csvData as $row) {
             $csvContent .= implode(',', array_map(function ($field) {
-                return '"' . str_replace('"', '""', $field) . '"';
+                return '"' . str_replace('"', '""', $field ?? '') . '"';
             }, $row)) . "\n";
         }
 
@@ -739,104 +742,115 @@ class AttendanceController extends Controller
             <title>DTR Report - ' . $report->report_title . '</title>
             <style>
                 @page {
-                    size: A4 portrait;
-                    margin: 0.5cm;
+                    size: Letter portrait;
+                    margin: 1.5cm 2cm;
                 }
                 body { 
                     font-family: Arial, sans-serif; 
                     margin: 0;
-                    padding: 10px;
-                    font-size: 9pt;
+                    padding: 0;
+                    font-size: 10pt;
                 }
                 .form-number {
-                    font-size: 7pt;
+                    font-size: 8pt;
                     font-style: italic;
                     text-align: right;
-                    margin-bottom: 2px;
+                    margin-bottom: 5px;
                 }
                 .header { 
                     text-align: center; 
-                    margin-bottom: 8px;
+                    margin-bottom: 15px;
                 }
                 .header h1 {
-                    margin: 2px 0;
-                    font-size: 13pt;
+                    margin: 5px 0;
+                    font-size: 14pt;
                     font-weight: bold;
+                    letter-spacing: 1px;
                 }
                 .header .decorative {
                     text-align: center;
-                    margin: 2px 0;
-                    font-size: 8pt;
+                    margin: 5px 0;
+                    font-size: 9pt;
                 }
                 .employee-info {
-                    margin: 5px 0;
+                    margin: 10px auto;
+                    max-width: 650px;
                 }
                 .employee-info table {
                     width: 100%;
-                    margin-bottom: 3px;
+                    margin-bottom: 5px;
                 }
                 .employee-info td {
-                    padding: 1px 0;
-                    font-size: 9pt;
+                    padding: 2px 0;
+                    font-size: 10pt;
                 }
                 .employee-info .label {
-                    width: 120px;
+                    width: 140px;
                     font-style: italic;
                 }
                 .employee-info .underline {
                     border-bottom: 1px solid #000;
                     display: inline-block;
-                    min-width: 200px;
-                    padding: 0 5px;
+                    min-width: 250px;
+                    padding: 0 8px;
                 }
                 .work-schedule {
-                    margin: 3px 0;
-                    font-size: 7pt;
+                    margin: 8px 0;
+                    font-size: 8pt;
                     font-style: italic;
-                    line-height: 1.2;
+                    line-height: 1.4;
+                }
+                .table-container {
+                    margin: 10px auto;
+                    max-width: 650px;
                 }
                 .dtr-table { 
                     width: 100%; 
                     border-collapse: collapse;
-                    margin: 5px 0;
-                    font-size: 7pt;
+                    margin: 10px 0;
+                    font-size: 8pt;
                 }
                 .dtr-table th, .dtr-table td { 
                     border: 1px solid #000; 
-                    padding: 2px 1px;
+                    padding: 4px 2px;
                     text-align: center;
                 }
                 .dtr-table th { 
                     background-color: #f5f5f5;
                     font-weight: bold;
-                    font-size: 7pt;
+                    font-size: 8pt;
                 }
-                .dtr-table .day-col { width: 25px; }
-                .dtr-table .time-col { width: 60px; font-size: 6pt; }
-                .dtr-table .undertime-col { width: 35px; }
-                .dtr-table .am-pm-header { font-weight: bold; font-size: 7pt; }
+                .dtr-table .day-col { width: 30px; }
+                .dtr-table .time-col { width: 70px; font-size: 7pt; }
+                .dtr-table .undertime-col { width: 40px; }
+                .dtr-table .am-pm-header { font-weight: bold; font-size: 8pt; }
                 .certification {
-                    margin-top: 8px;
-                    font-size: 6pt;
+                    margin-top: 15px;
+                    font-size: 7pt;
                     font-style: italic;
-                    line-height: 1.1;
+                    line-height: 1.3;
+                    max-width: 650px;
+                    margin-left: auto;
+                    margin-right: auto;
                 }
                 .signature-line {
-                    margin-top: 15px;
+                    margin-top: 20px;
                     text-align: center;
-                    font-size: 7pt;
+                    font-size: 8pt;
+                    max-width: 650px;
+                    margin-left: auto;
+                    margin-right: auto;
                 }
                 .signature-line .line {
                     border-top: 1px solid #000;
-                    width: 200px;
-                    margin: 0 auto 2px;
+                    width: 250px;
+                    margin: 0 auto 3px;
                 }
                 .page-break { 
                     page-break-after: always;
                 }
                 .employee-page {
                     page-break-inside: avoid;
-                    height: 100%;
                 }
             </style>
         </head>
@@ -901,6 +915,7 @@ class AttendanceController extends Controller
                 
                 // DTR Table
                 $html .= '
+                <div class="table-container">
                 <table class="dtr-table">
                     <thead>
                         <tr>
@@ -966,7 +981,8 @@ class AttendanceController extends Controller
                             <td style="font-weight: bold;">' . $totalUndertime['minutes'] . '</td>
                         </tr>
                     </tbody>
-                </table>';
+                </table>
+                </div>';
                 
                 // Certification
                 $html .= '
