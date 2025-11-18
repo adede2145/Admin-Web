@@ -548,55 +548,85 @@ class AttendanceController extends Controller
     private function downloadAsCSV($report, $overrides, $filename)
     {
         $csvData = [];
-
-        // Add headers
-        $csvData[] = ['DTR Report: ' . $report->report_title];
-        $csvData[] = ['Generated on: ' . $report->formatted_generated_on];
-        $csvData[] = ['Department: ' . $report->department_name];
-        $csvData[] = ['Period: ' . $report->formatted_period];
-        $csvData[] = [];
-
-        // Employee Summary
-        $csvData[] = ['Employee Summary'];
-        $csvData[] = ['Employee ID', 'Name', 'Department', 'Present Days', 'Absent Days', 'Total Hours', 'Overtime Hours', 'Attendance Rate'];
-
-        foreach ($report->summaries as $summary) {
-            $csvData[] = [
-                $summary->employee_id,
-                $summary->employee->full_name,
-                $summary->employee->department->department_name,
-                $summary->present_days,
-                $summary->absent_days,
-                number_format($summary->total_hours, 2),
-                number_format($summary->overtime_hours, 2),
-                number_format($summary->attendance_rate, 1) . '%'
-            ];
+        
+        $startDate = \Carbon\Carbon::parse($report->start_date);
+        $endDate = \Carbon\Carbon::parse($report->end_date);
+        
+        // Format period based on report type
+        $periodLabel = '';
+        if ($report->report_type === 'monthly') {
+            $periodLabel = 'For the month of: ' . $startDate->format('F Y');
+        } elseif ($report->report_type === 'weekly') {
+            $periodLabel = 'For the week of: ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+        } else {
+            $periodLabel = 'For the period: ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
         }
 
+        // Add headers
+        $csvData[] = ['Civil Service Form No. 48'];
+        $csvData[] = ['DAILY TIME RECORD'];
         $csvData[] = [];
-        $csvData[] = ['Detailed Attendance Records'];
-        $csvData[] = ['Employee ID', 'Employee Name', 'Date', 'Time In', 'Time Out', 'Total Hours', 'Overtime', 'Status', 'Remarks'];
+        $csvData[] = ['Department: ' . $report->department_name];
+        $csvData[] = ['Period: ' . $report->formatted_period];
+        $csvData[] = ['Generated on: ' . $report->formatted_generated_on];
+        $csvData[] = [];
 
-        foreach ($report->details as $detail) {
-            // Check for override
-            $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
-            $ovKey = $detail->employee_id . '|' . $dateKey;
-            $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
-
-            $status = $ov ? 'Leave' : ucfirst($detail->status);
-            $remarks = $ov ? ('Leave' . ($ov->remarks ? ': ' . $ov->remarks : '')) : ($detail->remarks ?? '');
-
-            $csvData[] = [
-                $detail->employee_id,
-                $detail->employee->full_name,
-                $detail->formatted_date,
-                $detail->formatted_time_in,
-                $detail->formatted_time_out,
-                number_format($detail->total_hours, 2),
-                number_format($detail->overtime_hours, 2),
-                $status,
-                $remarks
-            ];
+        // Generate CSV for each employee
+        foreach ($report->summaries as $summary) {
+            $employee = $summary->employee;
+            
+            $csvData[] = [];
+            $csvData[] = ['Employee Name:', $employee->full_name];
+            $csvData[] = [$periodLabel];
+            $csvData[] = ['Official hours:', 'Regular days: 8:00 AM - 5:00 PM', 'Saturdays: N/A'];
+            $csvData[] = [];
+            
+            // Table header
+            $csvData[] = ['Day', 'AM Arrival', 'AM Departure', 'PM Arrival', 'PM Departure', 'Undertime Hours', 'Undertime Minutes'];
+            
+            // Get attendance details for this employee
+            $employeeDetails = $report->details->where('employee_id', $employee->employee_id);
+            $detailsByDate = [];
+            foreach ($employeeDetails as $detail) {
+                $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+                $detailsByDate[$dateKey] = $detail;
+            }
+            
+            // Loop through the actual date range of the report
+            $currentDate = $startDate->copy();
+            
+            while ($currentDate->lte($endDate)) {
+                $dateKey = $currentDate->toDateString();
+                $detail = $detailsByDate[$dateKey] ?? null;
+                
+                // Check for override
+                $ovKey = $employee->employee_id . '|' . $dateKey;
+                $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+                
+                // Calculate AM/PM times and undertime
+                $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+                
+                $csvData[] = [
+                    $currentDate->format('j'),
+                    $amData['am_arrival'],
+                    $amData['am_departure'],
+                    $amData['pm_arrival'],
+                    $amData['pm_departure'],
+                    $amData['undertime_hours'],
+                    $amData['undertime_minutes']
+                ];
+                
+                $currentDate->addDay();
+            }
+            
+            // Total row
+            $totalUndertime = $this->calculateTotalUndertime($employeeDetails, $overrides, $employee->employee_id, $startDate, $endDate);
+            $csvData[] = ['Total', '', '', '', '', $totalUndertime['hours'], $totalUndertime['minutes']];
+            
+            $csvData[] = [];
+            $csvData[] = ['I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.'];
+            $csvData[] = [];
+            $csvData[] = ['----------------------------------------'];
         }
 
         $csvContent = '';
@@ -708,140 +738,253 @@ class AttendanceController extends Controller
             <meta charset="UTF-8">
             <title>DTR Report - ' . $report->report_title . '</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-                .report-info { margin-bottom: 30px; }
-                .report-info table { width: 100%; border-collapse: collapse; }
-                .report-info td { padding: 8px; border: 1px solid #ddd; }
-                .report-info th { background-color: #f5f5f5; padding: 8px; border: 1px solid #ddd; }
-                .summary { margin-bottom: 30px; }
-                .summary table { width: 100%; border-collapse: collapse; }
-                .summary th, .summary td { padding: 8px; border: 1px solid #ddd; text-align: center; }
-                .summary th { background-color: #f5f5f5; }
-                .details { margin-bottom: 30px; }
-                .details table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                .details th, .details td { padding: 6px; border: 1px solid #ddd; text-align: center; }
-                .details th { background-color: #f5f5f5; }
-                .page-break { page-break-before: always; }
-                .employee-section { margin-bottom: 40px; }
-                .employee-header { background-color: #f0f0f0; padding: 10px; margin-bottom: 10px; }
+                @page {
+                    size: A4 portrait;
+                    margin: 0.5cm;
+                }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 0;
+                    padding: 10px;
+                    font-size: 9pt;
+                }
+                .form-number {
+                    font-size: 7pt;
+                    font-style: italic;
+                    text-align: right;
+                    margin-bottom: 2px;
+                }
+                .header { 
+                    text-align: center; 
+                    margin-bottom: 8px;
+                }
+                .header h1 {
+                    margin: 2px 0;
+                    font-size: 13pt;
+                    font-weight: bold;
+                }
+                .header .decorative {
+                    text-align: center;
+                    margin: 2px 0;
+                    font-size: 8pt;
+                }
+                .employee-info {
+                    margin: 5px 0;
+                }
+                .employee-info table {
+                    width: 100%;
+                    margin-bottom: 3px;
+                }
+                .employee-info td {
+                    padding: 1px 0;
+                    font-size: 9pt;
+                }
+                .employee-info .label {
+                    width: 120px;
+                    font-style: italic;
+                }
+                .employee-info .underline {
+                    border-bottom: 1px solid #000;
+                    display: inline-block;
+                    min-width: 200px;
+                    padding: 0 5px;
+                }
+                .work-schedule {
+                    margin: 3px 0;
+                    font-size: 7pt;
+                    font-style: italic;
+                    line-height: 1.2;
+                }
+                .dtr-table { 
+                    width: 100%; 
+                    border-collapse: collapse;
+                    margin: 5px 0;
+                    font-size: 7pt;
+                }
+                .dtr-table th, .dtr-table td { 
+                    border: 1px solid #000; 
+                    padding: 2px 1px;
+                    text-align: center;
+                }
+                .dtr-table th { 
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                    font-size: 7pt;
+                }
+                .dtr-table .day-col { width: 25px; }
+                .dtr-table .time-col { width: 60px; font-size: 6pt; }
+                .dtr-table .undertime-col { width: 35px; }
+                .dtr-table .am-pm-header { font-weight: bold; font-size: 7pt; }
+                .certification {
+                    margin-top: 8px;
+                    font-size: 6pt;
+                    font-style: italic;
+                    line-height: 1.1;
+                }
+                .signature-line {
+                    margin-top: 15px;
+                    text-align: center;
+                    font-size: 7pt;
+                }
+                .signature-line .line {
+                    border-top: 1px solid #000;
+                    width: 200px;
+                    margin: 0 auto 2px;
+                }
+                .page-break { 
+                    page-break-after: always;
+                }
+                .employee-page {
+                    page-break-inside: avoid;
+                    height: 100%;
+                }
             </style>
         </head>
-        <body>
-            <div class="header">
-                <h1>Daily Time Record (DTR) Report</h1>
-                <h2>' . $report->report_title . '</h2>
-                <p>Generated on: ' . $report->formatted_generated_on . '</p>
-            </div>
+        <body>';
 
-            <div class="report-info">
-                <h3>Report Information</h3>
-                <table>
-                    <tr><th>Report ID</th><td>#' . $report->report_id . '</td><th>Department</th><td>' . $report->department_name . '</td></tr>
-                    <tr><th>Report Type</th><td>' . ucfirst($report->report_type) . '</td><th>Period</th><td>' . $report->formatted_period . '</td></tr>
-                    <tr><th>Total Employees</th><td>' . $report->total_employees . '</td><th>Total Days</th><td>' . $report->total_days . '</td></tr>
-                    <tr><th>Total Hours</th><td>' . number_format($report->total_hours, 2) . ' hours</td><th>Status</th><td>' . ucfirst($report->status) . '</td></tr>
-                </table>
-            </div>';
-
-        // Add employee summaries
+        // Generate DTR for each employee in CSC Form 48 format
         if ($report->summaries && count($report->summaries) > 0) {
-            $html .= '
-            <div class="summary">
-                <h3>Employee Summary</h3>
-                <table>
+            $employeeCount = 0;
+            
+            foreach ($report->summaries as $summary) {
+                $employeeCount++;
+                $employee = $summary->employee;
+                
+                // Add page break after first employee
+                if ($employeeCount > 1) {
+                    $html .= '<div class="page-break"></div>';
+                }
+                
+                $html .= '<div class="employee-page">';
+                
+                // Form number
+                $html .= '<div class="form-number">Civil Service Form No. 48</div>';
+                
+                // Header
+                $html .= '
+                <div class="header">
+                    <h1>DAILY TIME RECORD</h1>
+                    <div class="decorative">————◇◇◇————</div>
+                </div>';
+                
+                // Employee info
+                $startDate = \Carbon\Carbon::parse($report->start_date);
+                $endDate = \Carbon\Carbon::parse($report->end_date);
+                
+                // Format period based on report type
+                $periodLabel = '';
+                if ($report->report_type === 'monthly') {
+                    $periodLabel = 'For the month of <span class="underline">' . $startDate->format('F Y') . '</span>';
+                } elseif ($report->report_type === 'weekly') {
+                    $periodLabel = 'For the week of <span class="underline">' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y') . '</span>';
+                } else {
+                    $periodLabel = 'For the period <span class="underline">' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y') . '</span>';
+                }
+                
+                $html .= '
+                <div class="employee-info">
+                    <table>
+                        <tr>
+                            <td colspan="2">
+                                <span class="underline">' . htmlspecialchars($employee->full_name) . '</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: center; font-size: 7pt;">(Name)</td>
+                        </tr>
+                    </table>
+                    <div class="work-schedule">
+                        ' . $periodLabel . '<br/>
+                        Official hours for arrival and departure: Regular days <span class="underline">8:00 AM - 5:00 PM</span> Saturdays: <span class="underline">N/A</span>
+                    </div>
+                </div>';
+                
+                // DTR Table
+                $html .= '
+                <table class="dtr-table">
                     <thead>
                         <tr>
-                            <th>Employee ID</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                            <th>Present Days</th>
-                            <th>Absent Days</th>
-                            <th>Total Hours</th>
-                            <th>Overtime Hours</th>
-                            <th>Attendance Rate</th>
+                            <th rowspan="2" class="day-col">Day</th>
+                            <th colspan="2" class="am-pm-header">A.M.</th>
+                            <th colspan="2" class="am-pm-header">P.M.</th>
+                            <th colspan="2" class="am-pm-header">Undertime</th>
+                        </tr>
+                        <tr>
+                            <th class="time-col">Arrival</th>
+                            <th class="time-col">Departure</th>
+                            <th class="time-col">Arrival</th>
+                            <th class="time-col">Departure</th>
+                            <th class="undertime-col">Hours</th>
+                            <th class="undertime-col">Min.</th>
                         </tr>
                     </thead>
                     <tbody>';
-
-            foreach ($report->summaries as $summary) {
-                $html .= '
-                         <tr>
-                             <td>#' . $summary->employee_id . '</td>
-                             <td>' . $summary->employee->full_name . '</td>
-                             <td>' . $summary->employee->department->department_name . '</td>
-                             <td>' . $summary->present_days . '</td>
-                             <td>' . $summary->absent_days . '</td>
-                             <td>' . number_format($summary->total_hours, 2) . '</td>
-                             <td>' . number_format($summary->overtime_hours, 2) . '</td>
-                             <td>' . number_format($summary->attendance_rate, 1) . '%</td>
-                         </tr>';
-            }
-
-            $html .= '
-                    </tbody>
-                </table>
-            </div>';
-        }
-
-        // Add detailed attendance records
-        if ($report->details && count($report->details) > 0) {
-            $html .= '
-            <div class="details">
-                <h3>Detailed Attendance Records</h3>';
-
-            $currentEmployee = null;
-            foreach ($report->details as $detail) {
-                if ($currentEmployee !== $detail->employee_id) {
-                    if ($currentEmployee !== null) {
-                        $html .= '</table></div>';
-                    }
-                    $currentEmployee = $detail->employee_id;
-                    $html .= '
-                     <div class="employee-section">
-                         <div class="employee-header">
-                             <strong>Employee: ' . $detail->employee->full_name . ' (#' . $detail->employee_id . ')</strong>
-                         </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Time In</th>
-                                    <th>Time Out</th>
-                                    <th>Total Hours</th>
-                                    <th>Overtime</th>
-                                    <th>Status</th>
-                                    <th>Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody>';
+                
+                // Get attendance details for this employee
+                $employeeDetails = $report->details->where('employee_id', $employee->employee_id);
+                $detailsByDate = [];
+                foreach ($employeeDetails as $detail) {
+                    $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+                    $detailsByDate[$dateKey] = $detail;
                 }
-
-                // Check for override
-                $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
-                $ovKey = $detail->employee_id . '|' . $dateKey;
-                $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
-
-                $status = $ov ? 'Leave' : ucfirst($detail->status);
-                $remarks = $ov ? ('Leave' . ($ov->remarks ? ': ' . $ov->remarks : '')) : ($detail->remarks ?? '');
-
+                
+                // Loop through the actual date range of the report
+                $currentDate = $startDate->copy();
+                $dayCounter = 1;
+                
+                while ($currentDate->lte($endDate)) {
+                    $dateKey = $currentDate->toDateString();
+                    $detail = $detailsByDate[$dateKey] ?? null;
+                    
+                    // Check for override
+                    $ovKey = $employee->employee_id . '|' . $dateKey;
+                    $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+                    
+                    // Calculate AM/PM times and undertime
+                    $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+                    
+                    $html .= '<tr>';
+                    $html .= '<td>' . $currentDate->format('j') . '</td>';
+                    $html .= '<td>' . $amData['am_arrival'] . '</td>';
+                    $html .= '<td>' . $amData['am_departure'] . '</td>';
+                    $html .= '<td>' . $amData['pm_arrival'] . '</td>';
+                    $html .= '<td>' . $amData['pm_departure'] . '</td>';
+                    $html .= '<td>' . $amData['undertime_hours'] . '</td>';
+                    $html .= '<td>' . $amData['undertime_minutes'] . '</td>';
+                    $html .= '</tr>';
+                    
+                    $currentDate->addDay();
+                    $dayCounter++;
+                }
+                
+                // Total row
+                $totalUndertime = $this->calculateTotalUndertime($employeeDetails, $overrides, $employee->employee_id, $startDate, $endDate);
                 $html .= '
-                             <tr>
-                                 <td>' . $detail->formatted_date . '</td>
-                                 <td>' . $detail->formatted_time_in . '</td>
-                                 <td>' . $detail->formatted_time_out . '</td>
-                                 <td>' . number_format($detail->total_hours, 2) . '</td>
-                                 <td>' . number_format($detail->overtime_hours, 2) . '</td>
-                                 <td>' . $status . '</td>
-                                 <td>' . $remarks . '</td>
-                             </tr>';
+                        <tr>
+                            <td colspan="5" style="text-align: right; font-weight: bold;">Total</td>
+                            <td style="font-weight: bold;">' . $totalUndertime['hours'] . '</td>
+                            <td style="font-weight: bold;">' . $totalUndertime['minutes'] . '</td>
+                        </tr>
+                    </tbody>
+                </table>';
+                
+                // Certification
+                $html .= '
+                <div class="certification">
+                    <p>I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.</p>
+                </div>
+                
+                <div class="signature-line">
+                    <div class="line"></div>
+                    <div>VERIFIED as to the prescribed office hours</div>
+                    <div style="margin-top: 40px;">
+                        <div class="line"></div>
+                        <div>In Charge</div>
+                    </div>
+                </div>';
+                
+                $html .= '</div>'; // End employee-page
             }
-
-            if ($currentEmployee !== null) {
-                $html .= '</tbody></table></div>';
-            }
-
-            $html .= '</div>';
         }
 
         $html .= '
@@ -849,6 +992,164 @@ class AttendanceController extends Controller
         </html>';
 
         return $html;
+    }
+    
+    /**
+     * Extract AM and PM times from attendance detail
+     */
+    private function extractAMPMTimes($detail, $override, $currentDate)
+    {
+        // Default empty values
+        $result = [
+            'am_arrival' => '',
+            'am_departure' => '',
+            'pm_arrival' => '',
+            'pm_departure' => '',
+            'undertime_hours' => '',
+            'undertime_minutes' => ''
+        ];
+        
+        // Check if on leave
+        if ($override) {
+            return $result; // Leave days show blank
+        }
+        
+        // Check if weekend
+        if ($currentDate->isWeekend()) {
+            return $result; // Weekends show blank
+        }
+        
+        // If no detail or absent - don't calculate undertime, just leave blank
+        if (!$detail || $detail->status === 'absent') {
+            return $result; // No attendance = blank, not 8 hours undertime
+        }
+        
+        // Get all attendance logs for this day to split AM/PM
+        $logs = \App\Models\AttendanceLog::where('employee_id', $detail->employee_id)
+            ->whereDate('time_in', $detail->date)
+            ->where('time_in', '>=', '1900-01-01 00:00:00')
+            ->orderBy('time_in')
+            ->get();
+        
+        // If no logs exist, leave blank (no time in/out recorded)
+        if ($logs->isEmpty()) {
+            return $result;
+        }
+        
+        // Separate AM and PM logs
+        $amLogs = [];
+        $pmLogs = [];
+        
+        foreach ($logs as $log) {
+            if ($log->time_in) {
+                $hour = (int) $log->time_in->format('H');
+                if ($hour < 12) {
+                    $amLogs[] = $log;
+                } else {
+                    $pmLogs[] = $log;
+                }
+            }
+        }
+        
+        // Extract AM times
+        if (!empty($amLogs)) {
+            $firstAM = $amLogs[0];
+            $result['am_arrival'] = $firstAM->time_in ? $firstAM->time_in->format('h:i A') : '';
+            
+            // AM departure could be from the same log or the last AM log
+            $lastAM = end($amLogs);
+            $result['am_departure'] = $lastAM->time_out ? $lastAM->time_out->format('h:i A') : '';
+        }
+        
+        // Extract PM times
+        if (!empty($pmLogs)) {
+            $firstPM = $pmLogs[0];
+            $result['pm_arrival'] = $firstPM->time_in ? $firstPM->time_in->format('h:i A') : '';
+            
+            $lastPM = end($pmLogs);
+            $result['pm_departure'] = $lastPM->time_out ? $lastPM->time_out->format('h:i A') : '';
+        }
+        
+        // Calculate undertime
+        // Standard work day: 8:00 AM - 12:00 PM (4 hrs) and 1:00 PM - 5:00 PM (4 hrs) = 8 hours total
+        $totalWorkedMinutes = 0;
+        $hasTimeIn = false;
+        
+        // Calculate AM work time
+        if (!empty($amLogs)) {
+            $firstAM = $amLogs[0];
+            $lastAM = end($amLogs);
+            if ($firstAM->time_in) {
+                $hasTimeIn = true;
+                if ($lastAM->time_out) {
+                    $totalWorkedMinutes += $firstAM->time_in->diffInMinutes($lastAM->time_out);
+                }
+            }
+        }
+        
+        // Calculate PM work time  
+        if (!empty($pmLogs)) {
+            $firstPM = $pmLogs[0];
+            $lastPM = end($pmLogs);
+            if ($firstPM->time_in) {
+                $hasTimeIn = true;
+                if ($lastPM->time_out) {
+                    $totalWorkedMinutes += $firstPM->time_in->diffInMinutes($lastPM->time_out);
+                }
+            }
+        }
+        
+        // Only calculate undertime if there's at least one time-in recorded
+        // If no time-in exists at all, leave undertime blank
+        if ($hasTimeIn) {
+            // Expected work time: 8 hours = 480 minutes
+            $expectedMinutes = 480;
+            $undertimeMinutes = max(0, $expectedMinutes - $totalWorkedMinutes);
+            
+            if ($undertimeMinutes > 0) {
+                $result['undertime_hours'] = floor($undertimeMinutes / 60);
+                $result['undertime_minutes'] = str_pad($undertimeMinutes % 60, 2, '0', STR_PAD_LEFT);
+            }
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Calculate total undertime for the period
+     */
+    private function calculateTotalUndertime($details, $overrides, $employeeId, $startDate, $endDate)
+    {
+        $totalUndertimeMinutes = 0;
+        
+        $detailsByDate = [];
+        foreach ($details as $detail) {
+            $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+            $detailsByDate[$dateKey] = $detail;
+        }
+        
+        $currentDate = $startDate->copy();
+        
+        while ($currentDate->lte($endDate)) {
+            $dateKey = $currentDate->toDateString();
+            $detail = $detailsByDate[$dateKey] ?? null;
+            
+            $ovKey = $employeeId . '|' . $dateKey;
+            $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+            
+            $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+            
+            if ($amData['undertime_hours'] !== '' && $amData['undertime_minutes'] !== '') {
+                $totalUndertimeMinutes += ($amData['undertime_hours'] * 60) + (int)$amData['undertime_minutes'];
+            }
+            
+            $currentDate->addDay();
+        }
+        
+        return [
+            'hours' => floor($totalUndertimeMinutes / 60),
+            'minutes' => str_pad($totalUndertimeMinutes % 60, 2, '0', STR_PAD_LEFT)
+        ];
     }
 
     /**
