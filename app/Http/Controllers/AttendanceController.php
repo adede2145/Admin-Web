@@ -742,115 +742,151 @@ class AttendanceController extends Controller
             <title>DTR Report - ' . $report->report_title . '</title>
             <style>
                 @page {
-                    size: Letter portrait;
-                    margin: 1.5cm 2cm;
+                    size: A4 portrait;
+                    margin: 0.4cm 0.5cm;
                 }
                 body { 
                     font-family: Arial, sans-serif; 
                     margin: 0;
                     padding: 0;
-                    font-size: 10pt;
+                    font-size: 8pt;
+                }
+                .page-container {
+                    display: table;
+                    width: 100%;
+                    height: 100%;
+                }
+                .two-column {
+                    display: table-row;
+                }
+                .left-column, .right-column {
+                    display: table-cell;
+                    width: 50%;
+                    vertical-align: top;
+                    padding: 2px;
+                }
+                .left-column {
+                    border-right: 1px solid #ccc;
+                    padding-right: 3px;
+                }
+                .right-column {
+                    padding-left: 3px;
                 }
                 .form-number {
                     font-size: 8pt;
                     font-style: italic;
-                    text-align: right;
-                    margin-bottom: 5px;
+                    text-align: left;
+                    margin-bottom: 8px;
                 }
                 .header { 
                     text-align: center; 
-                    margin-bottom: 15px;
+                    margin-bottom: 10px;
                 }
                 .header h1 {
                     margin: 5px 0;
-                    font-size: 14pt;
+                    font-size: 12pt;
                     font-weight: bold;
-                    letter-spacing: 1px;
+                    letter-spacing: 0.5px;
                 }
                 .header .decorative {
                     text-align: center;
                     margin: 5px 0;
-                    font-size: 9pt;
+                    font-size: 8pt;
                 }
                 .employee-info {
-                    margin: 10px auto;
-                    max-width: 650px;
+                    margin: 8px 0;
                 }
                 .employee-info table {
                     width: 100%;
                     margin-bottom: 5px;
                 }
                 .employee-info td {
-                    padding: 2px 0;
-                    font-size: 10pt;
-                }
-                .employee-info .label {
-                    width: 140px;
-                    font-style: italic;
+                    padding: 3px 0;
+                    font-size: 8pt;
                 }
                 .employee-info .underline {
                     border-bottom: 1px solid #000;
                     display: inline-block;
-                    min-width: 250px;
-                    padding: 0 8px;
+                    min-width: 100px;
+                    padding: 0 3px;
                 }
                 .work-schedule {
-                    margin: 8px 0;
+                    margin: 5px 0;
                     font-size: 8pt;
                     font-style: italic;
-                    line-height: 1.4;
-                }
-                .table-container {
-                    margin: 10px auto;
-                    max-width: 650px;
+                    line-height: 1.6;
                 }
                 .dtr-table { 
                     width: 100%; 
                     border-collapse: collapse;
-                    margin: 10px 0;
-                    font-size: 8pt;
+                    margin: 3px 0;
+                    font-size: 9pt;
                 }
                 .dtr-table th, .dtr-table td { 
                     border: 1px solid #000; 
-                    padding: 4px 2px;
+                    padding: 1px;
                     text-align: center;
+                    line-height: 1;
                 }
                 .dtr-table th { 
                     background-color: #f5f5f5;
                     font-weight: bold;
-                    font-size: 8pt;
+                    font-size: 7pt;
+                    padding: 2px 1px;
                 }
-                .dtr-table .day-col { width: 30px; }
-                .dtr-table .time-col { width: 70px; font-size: 7pt; }
-                .dtr-table .undertime-col { width: 40px; }
-                .dtr-table .am-pm-header { font-weight: bold; font-size: 8pt; }
+                .dtr-table .day-col { width: 18px; font-size: 7pt; }
+                .dtr-table .time-col { width: 45px; font-size: 7pt; }
+                .dtr-table .undertime-col { width: 26px; font-size: 7pt; }
+                .dtr-table .am-pm-header { font-weight: bold; font-size: 9pt; }
+                .dtr-table .undertime-header { font-weight: bold; font-size: 8pt; }
+                .dtr-table .total-row { font-size: 9pt; font-weight: bold; }
                 .certification {
-                    margin-top: 15px;
+                    margin-top: 10px;
                     font-size: 7pt;
                     font-style: italic;
-                    line-height: 1.3;
-                    max-width: 650px;
-                    margin-left: auto;
-                    margin-right: auto;
+                    line-height: 1.6;
+                }
+                .certification p {
+                    margin: 5px 0;
                 }
                 .signature-line {
-                    margin-top: 20px;
+                    margin-top: 15px;
                     text-align: center;
-                    font-size: 8pt;
-                    max-width: 650px;
-                    margin-left: auto;
-                    margin-right: auto;
+                    font-size: 7pt;
                 }
                 .signature-line .line {
                     border-top: 1px solid #000;
-                    width: 250px;
-                    margin: 0 auto 3px;
+                    width: 120px;
+                    margin: 0 auto 5px;
+                }
+                .right-column img {
+                    width: 100%;
+                    height: auto;
+                    max-height: 100%;
+                    object-fit: contain;
+                    display: block;
+                }
+                .instructions {
+                    font-size: 6pt;
+                    line-height: 1.3;
+                    text-align: justify;
+                }
+                .instructions h2 {
+                    font-size: 8pt;
+                    text-align: center;
+                    margin: 5px 0;
+                    font-weight: bold;
+                }
+                .instructions .diamond {
+                    text-align: center;
+                    margin: 3px 0;
+                    font-size: 7pt;
+                }
+                .instructions p {
+                    margin: 4px 0;
                 }
                 .page-break { 
                     page-break-after: always;
-                }
-                .employee-page {
-                    page-break-inside: avoid;
                 }
             </style>
         </head>
@@ -869,7 +905,11 @@ class AttendanceController extends Controller
                     $html .= '<div class="page-break"></div>';
                 }
                 
-                $html .= '<div class="employee-page">';
+                $html .= '<div class="page-container">';
+                $html .= '<div class="two-column">';
+                
+                // LEFT COLUMN - DTR FORM
+                $html .= '<div class="left-column">';
                 
                 // Form number
                 $html .= '<div class="form-number">Civil Service Form No. 48</div>';
@@ -888,7 +928,7 @@ class AttendanceController extends Controller
                 // Format period based on report type
                 $periodLabel = '';
                 if ($report->report_type === 'monthly') {
-                    $periodLabel = 'For the month of <span class="underline">' . $startDate->format('F Y') . '</span>';
+                    $periodLabel = 'For the month of <span class="underline">' . $startDate->format('F j') . '-' . $endDate->format('j, Y') . '</span>';
                 } elseif ($report->report_type === 'weekly') {
                     $periodLabel = 'For the week of <span class="underline">' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y') . '</span>';
                 } else {
@@ -899,30 +939,29 @@ class AttendanceController extends Controller
                 <div class="employee-info">
                     <table>
                         <tr>
-                            <td colspan="2">
-                                <span class="underline">' . htmlspecialchars($employee->full_name) . '</span>
+                            <td colspan="2" style="text-align: center;">
+                                <span class="underline" style="font-size: 10pt;">' . htmlspecialchars($employee->full_name) . '</span>
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align: center; font-size: 7pt;">(Name)</td>
+                            <td colspan="2" style="text-align: center; font-size: 8pt;">(Name)</td>
                         </tr>
                     </table>
                     <div class="work-schedule">
                         ' . $periodLabel . '<br/>
-                        Official hours for arrival and departure: Regular days <span class="underline">8:00 AM - 5:00 PM</span> Saturdays: <span class="underline">N/A</span>
+                        <span class="underline">8:00AM-12:00NN / 1:00PM-5:00PM</span>
                     </div>
                 </div>';
                 
                 // DTR Table
                 $html .= '
-                <div class="table-container">
                 <table class="dtr-table">
                     <thead>
                         <tr>
                             <th rowspan="2" class="day-col">Day</th>
                             <th colspan="2" class="am-pm-header">A.M.</th>
                             <th colspan="2" class="am-pm-header">P.M.</th>
-                            <th colspan="2" class="am-pm-header">Undertime</th>
+                            <th colspan="2" class="undertime-header">Undertime</th>
                         </tr>
                         <tr>
                             <th class="time-col">Arrival</th>
@@ -955,17 +994,38 @@ class AttendanceController extends Controller
                     $ovKey = $employee->employee_id . '|' . $dateKey;
                     $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
                     
+                    // Check if weekend
+                    $isWeekend = $currentDate->isWeekend();
+                    $dayName = '';
+                    if ($isWeekend) {
+                        $dayName = strtoupper($currentDate->format('l')); // SATURDAY or SUNDAY
+                    }
+                    
                     // Calculate AM/PM times and undertime
                     $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
                     
                     $html .= '<tr>';
+                    
+                    // Always show the day number first
                     $html .= '<td>' . $currentDate->format('j') . '</td>';
-                    $html .= '<td>' . $amData['am_arrival'] . '</td>';
-                    $html .= '<td>' . $amData['am_departure'] . '</td>';
-                    $html .= '<td>' . $amData['pm_arrival'] . '</td>';
-                    $html .= '<td>' . $amData['pm_departure'] . '</td>';
-                    $html .= '<td>' . $amData['undertime_hours'] . '</td>';
-                    $html .= '<td>' . $amData['undertime_minutes'] . '</td>';
+                    
+                    // If leave/override, display leave reason spanning remaining columns
+                    if ($ov) {
+                        $leaveText = strtoupper($ov->remarks ?: 'LEAVE');
+                        $html .= '<td colspan="6" style="font-weight: bold; padding: 6px 1px;">' . htmlspecialchars($leaveText) . '</td>';
+                    }
+                    // If weekend, display day name spanning remaining columns
+                    elseif ($isWeekend) {
+                        $html .= '<td colspan="6" style="font-weight: bold; padding: 6px 1px;">' . $dayName . '</td>';
+                    } else {
+                        $html .= '<td>' . $amData['am_arrival'] . '</td>';
+                        $html .= '<td>' . $amData['am_departure'] . '</td>';
+                        $html .= '<td>' . $amData['pm_arrival'] . '</td>';
+                        $html .= '<td>' . $amData['pm_departure'] . '</td>';
+                        $html .= '<td>' . $amData['undertime_hours'] . '</td>';
+                        $html .= '<td>' . $amData['undertime_minutes'] . '</td>';
+                    }
+                    
                     $html .= '</tr>';
                     
                     $currentDate->addDay();
@@ -974,15 +1034,37 @@ class AttendanceController extends Controller
                 
                 // Total row
                 $totalUndertime = $this->calculateTotalUndertime($employeeDetails, $overrides, $employee->employee_id, $startDate, $endDate);
+                
+                // Build total summary text
+                $summaryParts = [];
+                
+                if ($totalUndertime['leave_days'] > 0) {
+                    $summaryParts[] = $totalUndertime['leave_days'] . ' day' . ($totalUndertime['leave_days'] > 1 ? 's' : '') . ' leave w/ pay';
+                }
+                
+                if ($totalUndertime['tardy_days'] > 0) {
+                    $summaryParts[] = $totalUndertime['tardy_days'] . ' day' . ($totalUndertime['tardy_days'] > 1 ? 's' : '') . ' tardy';
+                } else {
+                    $summaryParts[] = 'no tardy';
+                }
+                
+                if ($totalUndertime['has_undertime']) {
+                    $summaryParts[] = $totalUndertime['hours'] . 'h ' . $totalUndertime['minutes'] . 'm undertime';
+                } else {
+                    $summaryParts[] = 'no undertime';
+                }
+                
+                $summaryText = implode('; ', $summaryParts);
+                
                 $html .= '
-                        <tr>
-                            <td colspan="5" style="text-align: right; font-weight: bold;">Total</td>
-                            <td style="font-weight: bold;">' . $totalUndertime['hours'] . '</td>
-                            <td style="font-weight: bold;">' . $totalUndertime['minutes'] . '</td>
+                        <tr class="total-row">
+                            <td colspan="7" style="text-align: left; padding: 4px 8px; font-size: 8pt;">
+                                <strong>TOTAL</strong><br/>
+                                ' . htmlspecialchars($summaryText) . '
+                            </td>
                         </tr>
                     </tbody>
-                </table>
-                </div>';
+                </table>';
                 
                 // Certification
                 $html .= '
@@ -992,14 +1074,41 @@ class AttendanceController extends Controller
                 
                 <div class="signature-line">
                     <div class="line"></div>
-                    <div>VERIFIED as to the prescribed office hours</div>
-                    <div style="margin-top: 40px;">
+                    <div style="margin-top: 5px;">VERIFIED as to the prescribed office hours</div>
+                    <div style="margin-top: 15px;">
                         <div class="line"></div>
-                        <div>In Charge</div>
+                        <div style="margin-top: 5px;">In Charge</div>
                     </div>
                 </div>';
                 
-                $html .= '</div>'; // End employee-page
+                $html .= '</div>'; // End left-column
+                
+                // RIGHT COLUMN - INSTRUCTIONS IMAGE
+                $html .= '<div class="right-column">';
+                
+                // Get the image path and embed as base64 for PDF
+                $imagePath = public_path('dtr-instructions.png');
+                
+                if (file_exists($imagePath)) {
+                    // Convert image to base64 for PDF embedding
+                    $imageData = base64_encode(file_get_contents($imagePath));
+                    $imageSrc = 'data:image/png;base64,' . $imageData;
+                    
+                    $html .= '<img src="' . $imageSrc . '" style="width: 100%; height: auto; display: block; object-fit: contain;" alt="DTR Instructions">';
+                } else {
+                    // Fallback if image not found
+                    $html .= '<div class="instructions">';
+                    $html .= '<h2>INSTRUCTIONS</h2>';
+                    $html .= '<div class="diamond">◇◇◇</div>';
+                    $html .= '<p style="color: red; font-weight: bold;">Instructions image not found at: public/dtr-instructions.png</p>';
+                    $html .= '<p>Please ensure the image file is placed in the public folder.</p>';
+                    $html .= '</div>';
+                }
+                
+                $html .= '</div>'; // End right-column
+                
+                $html .= '</div>'; // End two-column
+                $html .= '</div>'; // End page-container
             }
         }
 
@@ -1195,6 +1304,8 @@ class AttendanceController extends Controller
     private function calculateTotalUndertime($details, $overrides, $employeeId, $startDate, $endDate)
     {
         $totalUndertimeMinutes = 0;
+        $leaveDays = 0;
+        $tardyDays = 0;
         
         $detailsByDate = [];
         foreach ($details as $detail) {
@@ -1211,6 +1322,29 @@ class AttendanceController extends Controller
             $ovKey = $employeeId . '|' . $dateKey;
             $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
             
+            // Count leave days
+            if ($ov) {
+                $leaveDays++;
+            }
+            
+            // Check for tardy (late arrival)
+            if (!$ov && !$currentDate->isWeekend() && $detail) {
+                $logs = \App\Models\AttendanceLog::where('employee_id', $employeeId)
+                    ->whereDate('time_in', $dateKey)
+                    ->where('time_in', '>=', '1900-01-01 00:00:00')
+                    ->orderBy('time_in')
+                    ->first();
+                
+                if ($logs && $logs->time_in) {
+                    $timeInHour = (int) $logs->time_in->format('H');
+                    $timeInMinute = (int) $logs->time_in->format('i');
+                    // Consider tardy if arrived after 8:00 AM
+                    if ($timeInHour > 8 || ($timeInHour == 8 && $timeInMinute > 0)) {
+                        $tardyDays++;
+                    }
+                }
+            }
+            
             $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
             
             if ($amData['undertime_hours'] !== '' && $amData['undertime_minutes'] !== '') {
@@ -1222,7 +1356,10 @@ class AttendanceController extends Controller
         
         return [
             'hours' => floor($totalUndertimeMinutes / 60),
-            'minutes' => str_pad($totalUndertimeMinutes % 60, 2, '0', STR_PAD_LEFT)
+            'minutes' => str_pad($totalUndertimeMinutes % 60, 2, '0', STR_PAD_LEFT),
+            'leave_days' => $leaveDays,
+            'tardy_days' => $tardyDays,
+            'has_undertime' => $totalUndertimeMinutes > 0
         ];
     }
 

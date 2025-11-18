@@ -296,7 +296,7 @@
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-gear me-2 fs-6"></i>Report Type
                                     </label>
-                                    <select name="report_type" class="form-select form-select-lg border-2" required
+                                    <select name="report_type" id="dtrReportType" class="form-select form-select-lg border-2" required
                                             style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
                                             onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
                                             onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
@@ -367,21 +367,21 @@
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-calendar-date me-2 fs-6"></i>Start Date
                                     </label>
-                                    <input type="date" name="start_date" class="form-control form-control-lg border-2" value="{{ now()->startOfMonth()->toDateString() }}" required
+                                    <input type="date" name="start_date" id="dtrStartDate" class="form-control form-control-lg border-2" value="{{ now()->startOfMonth()->toDateString() }}" required
                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                    <div class="form-text">Defaults to the first day of this month</div>
+                                    <div class="form-text" id="dtrStartDateHelp">Defaults to the first day of this month</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-calendar-check me-2 fs-6"></i>End Date
                                     </label>
-                                    <input type="date" name="end_date" class="form-control form-control-lg border-2" value="{{ now()->toDateString() }}" required
+                                    <input type="date" name="end_date" id="dtrEndDate" class="form-control form-control-lg border-2" value="{{ now()->toDateString() }}" required
                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                    <div class="form-text">Defaults to today</div>
+                                    <div class="form-text" id="dtrEndDateHelp">Defaults to today</div>
                                 </div>
                             </div>
                         </div>
@@ -525,6 +525,82 @@
             const params = new URLSearchParams(window.location.search);
             params.set('period', this.value);
             window.location.search = params.toString();
+        });
+
+        // DTR Report Type Date Adjustment Script (same as attendance page)
+        document.addEventListener('DOMContentLoaded', function() {
+            const dtrReportType = document.getElementById('dtrReportType');
+            const dtrStartDate = document.getElementById('dtrStartDate');
+            const dtrEndDate = document.getElementById('dtrEndDate');
+            const dtrStartDateHelp = document.getElementById('dtrStartDateHelp');
+            const dtrEndDateHelp = document.getElementById('dtrEndDateHelp');
+            
+            if (dtrReportType && dtrStartDate && dtrEndDate) {
+                // Function to format date as YYYY-MM-DD
+                function formatDate(date) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+                
+                // Function to get start of week (Monday)
+                function getStartOfWeek(date) {
+                    const d = new Date(date);
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+                    return new Date(d.setDate(diff));
+                }
+                
+                // Function to get end of week (Sunday)
+                function getEndOfWeek(date) {
+                    const d = new Date(date);
+                    const day = d.getDay();
+                    const diff = d.getDate() + (7 - day) % 7;
+                    return new Date(d.setDate(diff));
+                }
+                
+                // Function to update dates based on report type
+                function updateDatesForReportType() {
+                    const reportType = dtrReportType.value;
+                    const today = new Date();
+                    let startDate, endDate, startHelp, endHelp;
+                    
+                    if (reportType === 'weekly') {
+                        // Set to current week (Monday to Sunday)
+                        startDate = getStartOfWeek(today);
+                        endDate = getEndOfWeek(today);
+                        startHelp = 'Start of current week (Monday)';
+                        endHelp = 'End of current week (Sunday)';
+                    } else if (reportType === 'monthly') {
+                        // Set to current month (1st to last day)
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        startHelp = 'First day of current month';
+                        endHelp = 'Last day of current month';
+                    } else {
+                        // Custom - don't auto-adjust
+                        return;
+                    }
+                    
+                    dtrStartDate.value = formatDate(startDate);
+                    dtrEndDate.value = formatDate(endDate);
+                    
+                    if (dtrStartDateHelp) dtrStartDateHelp.textContent = startHelp;
+                    if (dtrEndDateHelp) dtrEndDateHelp.textContent = endHelp;
+                }
+                
+                // Listen for report type changes
+                dtrReportType.addEventListener('change', updateDatesForReportType);
+                
+                // Initialize dates when modal opens
+                const generateDTRModal = document.getElementById('generateDTRModal');
+                if (generateDTRModal) {
+                    generateDTRModal.addEventListener('shown.bs.modal', function() {
+                        updateDatesForReportType();
+                    });
+                }
+            }
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
