@@ -1052,38 +1052,75 @@ class AttendanceController extends Controller
             return $result;
         }
         
-        // Separate AM and PM logs
+        // Initialize AM/PM log arrays
         $amLogs = [];
         $pmLogs = [];
+        $isSingleSpanningLog = false;
         
-        foreach ($logs as $log) {
-            if ($log->time_in) {
-                $hour = (int) $log->time_in->format('H');
-                if ($hour < 12) {
-                    $amLogs[] = $log;
+        // Check if there's a single log that spans both AM and PM
+        if ($logs->count() == 1) {
+            $log = $logs->first();
+            if ($log->time_in && $log->time_out) {
+                $timeInHour = (int) $log->time_in->format('H');
+                $timeOutHour = (int) $log->time_out->format('H');
+                
+                // If time_in is AM (before 12) and time_out is PM (12 or after)
+                if ($timeInHour < 12 && $timeOutHour >= 12) {
+                    // This is a single log spanning both AM and PM
+                    $isSingleSpanningLog = true;
+                    $result['am_arrival'] = $log->time_in->format('h:i A');
+                    $result['am_departure'] = '12:00 PM'; // Assume lunch break starts at 12
+                    $result['pm_arrival'] = '01:00 PM'; // Assume lunch break ends at 1 PM
+                    $result['pm_departure'] = $log->time_out->format('h:i A');
+                } elseif ($timeInHour < 12) {
+                    // AM only
+                    $result['am_arrival'] = $log->time_in->format('h:i A');
+                    $result['am_departure'] = $log->time_out->format('h:i A');
                 } else {
-                    $pmLogs[] = $log;
+                    // PM only
+                    $result['pm_arrival'] = $log->time_in->format('h:i A');
+                    $result['pm_departure'] = $log->time_out->format('h:i A');
+                }
+            } elseif ($log->time_in) {
+                // Only time in, no time out
+                $timeInHour = (int) $log->time_in->format('H');
+                if ($timeInHour < 12) {
+                    $result['am_arrival'] = $log->time_in->format('h:i A');
+                } else {
+                    $result['pm_arrival'] = $log->time_in->format('h:i A');
                 }
             }
-        }
-        
-        // Extract AM times
-        if (!empty($amLogs)) {
-            $firstAM = $amLogs[0];
-            $result['am_arrival'] = $firstAM->time_in ? $firstAM->time_in->format('h:i A') : '';
+        } else {
+            // Multiple logs - separate them into AM and PM
+            foreach ($logs as $log) {
+                if ($log->time_in) {
+                    $hour = (int) $log->time_in->format('H');
+                    if ($hour < 12) {
+                        $amLogs[] = $log;
+                    } else {
+                        $pmLogs[] = $log;
+                    }
+                }
+            }
             
-            // AM departure could be from the same log or the last AM log
-            $lastAM = end($amLogs);
-            $result['am_departure'] = $lastAM->time_out ? $lastAM->time_out->format('h:i A') : '';
-        }
-        
-        // Extract PM times
-        if (!empty($pmLogs)) {
-            $firstPM = $pmLogs[0];
-            $result['pm_arrival'] = $firstPM->time_in ? $firstPM->time_in->format('h:i A') : '';
+            // Extract AM times
+            if (!empty($amLogs)) {
+                $firstAM = $amLogs[0];
+                $result['am_arrival'] = $firstAM->time_in ? $firstAM->time_in->format('h:i A') : '';
+                
+                // AM departure could be from the same log or the last AM log
+                $lastAM = end($amLogs);
+                $result['am_departure'] = $lastAM->time_out ? $lastAM->time_out->format('h:i A') : '';
+            }
             
-            $lastPM = end($pmLogs);
-            $result['pm_departure'] = $lastPM->time_out ? $lastPM->time_out->format('h:i A') : '';
+            // Extract PM times
+            if (!empty($pmLogs)) {
+                $firstPM = $pmLogs[0];
+                $result['pm_arrival'] = $firstPM->time_in ? $firstPM->time_in->format('h:i A') : '';
+                
+                $lastPM = end($pmLogs);
+                $result['pm_departure'] = $lastPM->time_out ? $lastPM->time_out->format('h:i A') : '';
+            }
         }
         
         // Calculate undertime
@@ -1091,26 +1128,47 @@ class AttendanceController extends Controller
         $totalWorkedMinutes = 0;
         $hasTimeIn = false;
         
-        // Calculate AM work time
-        if (!empty($amLogs)) {
-            $firstAM = $amLogs[0];
-            $lastAM = end($amLogs);
-            if ($firstAM->time_in) {
+        // Handle single log case
+        if ($logs->count() == 1) {
+            $log = $logs->first();
+            if ($log->time_in && $log->time_out) {
                 $hasTimeIn = true;
-                if ($lastAM->time_out) {
-                    $totalWorkedMinutes += $firstAM->time_in->diffInMinutes($lastAM->time_out);
+                
+                // If it spans AM to PM (already detected), deduct 1 hour lunch break
+                if ($isSingleSpanningLog) {
+                    $totalMinutes = $log->time_in->diffInMinutes($log->time_out);
+                    $totalWorkedMinutes = $totalMinutes - 60; // Deduct 1 hour lunch
+                } else {
+                    // Single session (either AM only or PM only)
+                    $totalWorkedMinutes = $log->time_in->diffInMinutes($log->time_out);
+                }
+            } elseif ($log->time_in) {
+                $hasTimeIn = true;
+                // Only time in, no time out - no worked minutes
+            }
+        } else {
+            // Multiple logs - calculate separately
+            // Calculate AM work time
+            if (!empty($amLogs)) {
+                $firstAM = $amLogs[0];
+                $lastAM = end($amLogs);
+                if ($firstAM->time_in) {
+                    $hasTimeIn = true;
+                    if ($lastAM->time_out) {
+                        $totalWorkedMinutes += $firstAM->time_in->diffInMinutes($lastAM->time_out);
+                    }
                 }
             }
-        }
-        
-        // Calculate PM work time  
-        if (!empty($pmLogs)) {
-            $firstPM = $pmLogs[0];
-            $lastPM = end($pmLogs);
-            if ($firstPM->time_in) {
-                $hasTimeIn = true;
-                if ($lastPM->time_out) {
-                    $totalWorkedMinutes += $firstPM->time_in->diffInMinutes($lastPM->time_out);
+            
+            // Calculate PM work time  
+            if (!empty($pmLogs)) {
+                $firstPM = $pmLogs[0];
+                $lastPM = end($pmLogs);
+                if ($firstPM->time_in) {
+                    $hasTimeIn = true;
+                    if ($lastPM->time_out) {
+                        $totalWorkedMinutes += $firstPM->time_in->diffInMinutes($lastPM->time_out);
+                    }
                 }
             }
         }
