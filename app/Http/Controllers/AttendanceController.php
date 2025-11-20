@@ -358,6 +358,17 @@ class AttendanceController extends Controller
             ]);
         }
 
+        // Persist heartbeat to history table for analytics graph
+        try {
+            \App\Models\KioskHeartbeat::create([
+                'kiosk_id' => $kiosk->kiosk_id,
+                'last_seen' => now('Asia/Manila')->toDateTimeString(),
+                'location' => $kiosk->location
+            ]);
+        } catch (\Exception $e) {
+            logger()->warning('Failed to persist kiosk heartbeat: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Heartbeat updated successfully',

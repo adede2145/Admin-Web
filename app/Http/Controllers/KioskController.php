@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Kiosk;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class KioskController extends Controller
 {
@@ -120,15 +121,24 @@ class KioskController extends Controller
         // Offline kiosks (active but not seen recently)
         $offlineKiosks = Kiosk::offline()->count();
         
-        // Kiosk activity over last 30 days - fix timezone handling
+        // Kiosk activity over last 30 days - aggregate from heartbeat history
         $activityData = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $date = Carbon::now('Asia/Manila')->subDays($i);
-            
-            // Count kiosks that were active on this day (had heartbeat)
-            $activeCount = Kiosk::where('is_active', true)
-                ->whereDate('last_seen', $date->format('Y-m-d'))
-                ->count();
+        $start = Carbon::today('Asia/Manila')->subDays(29);
+        
+        // Query heartbeat history grouped by date (Manila timezone)
+        $heartbeatCounts = DB::table('kiosk_heartbeats')
+            ->select(DB::raw("DATE(CONVERT_TZ(created_at, '+00:00', '+08:00')) as date"), DB::raw("COUNT(DISTINCT kiosk_id) as active"))
+            ->where('created_at', '>=', $start->copy()->setTimezone('UTC')->toDateTimeString())
+            ->groupBy(DB::raw("DATE(CONVERT_TZ(created_at, '+00:00', '+08:00'))"))
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+        
+        // Build 30-day array, filling missing dates with zero
+        for ($i = 0; $i < 30; $i++) {
+            $date = $start->copy()->addDays($i);
+            $key = $date->toDateString();
+            $activeCount = isset($heartbeatCounts[$key]) ? (int)$heartbeatCounts[$key]->active : 0;
             
             $activityData[] = [
                 'date' => $date->format('M d'),
