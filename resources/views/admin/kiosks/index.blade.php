@@ -47,6 +47,36 @@
                 </div>
             </div>
 
+                            <!-- View Uptime Modal -->
+                            <div class="modal fade" id="viewUptimeModal" tabindex="-1" aria-labelledby="viewUptimeModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-md modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header header-maroon">
+                                            <h5 class="modal-title text-white" id="viewUptimeModalLabel"><i class="bi bi-eye me-2"></i>Kiosk Uptime Details</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <strong>Location:</strong>
+                                                <div class="modal-kiosk-location text-muted"></div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <strong>Last Seen:</strong>
+                                                <div class="modal-kiosk-lastseen text-muted"></div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <strong>Uptime:</strong>
+                                                <div class="modal-kiosk-uptime text-muted"></div>
+                                            </div>
+                                            <div class="alert alert-info small">If uptime is not available, ensure the kiosk reports its uptime or the server provides an uptime field.</div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card border-start border-success border-4 shadow h-100">
                     <div class="card-body">
@@ -202,7 +232,13 @@
                             </thead>
                             <tbody>
                                 @foreach($kiosks as $kiosk)
-                                    <tr data-kiosk-id="{{ $kiosk->kiosk_id }}">
+                                    <tr 
+                                        data-kiosk-id="{{ $kiosk->kiosk_id }}"
+                                        data-location="{{ e($kiosk->location) }}"
+                                        data-last-seen="{{ $kiosk->last_seen ? $kiosk->last_seen->format('Y-m-d H:i:s') : '' }}"
+                                        data-uptime-days="{{ $kiosk->uptime_days ?? '' }}"
+                                        data-uptime="{{ $kiosk->uptime_formatted ?? '' }}"
+                                    >
                                         <td class="fw-bold">#{{ $kiosk->kiosk_id }}</td>
                                         <td>{{ $kiosk->location }}</td>
                                         <td>
@@ -233,9 +269,23 @@
                                                 <a href="{{ route('kiosks.edit', $kiosk) }}" class="btn btn-outline-primary btn-sm" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
+                                                <button type="button" class="btn btn-outline-info btn-sm view-uptime-btn" data-kiosk-id="{{ $kiosk->kiosk_id }}" title="View Uptime">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
                                                 <button type="button" class="btn btn-outline-danger btn-sm delete-kiosk-btn" data-kiosk-id="{{ $kiosk->kiosk_id }}" data-kiosk-location="{{ $kiosk->location }}" title="Delete">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
+                                            </div>
+                                            <div class="ms-2 d-flex align-items-center">
+                                                <small class="text-muted kiosk-uptime">
+                                                    @if(isset($kiosk->uptime_formatted) && $kiosk->uptime_formatted !== 'Unknown')
+                                                        Running: {{ $kiosk->uptime_formatted }}
+                                                    @elseif(isset($kiosk->uptime_days))
+                                                        Running: {{ $kiosk->uptime_days }} day{{ $kiosk->uptime_days > 1 ? 's' : '' }}
+                                                    @else
+                                                        &nbsp;
+                                                    @endif
+                                                </small>
                                             </div>
                                         </td>
                                     </tr>
@@ -342,6 +392,7 @@
             initializeChart();
             startRealTimeUpdates();
             initializeDeleteKioskModal();
+            initializeViewUptimeModal();
         });
 
         // Initialize Activity Chart
@@ -516,6 +567,55 @@
             });
         }
 
+        // Initialize view uptime button handler
+        function initializeViewUptimeModal() {
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.view-uptime-btn')) {
+                    e.preventDefault();
+                    const kioskId = e.target.closest('.view-uptime-btn').dataset.kioskId;
+                    viewUptime(kioskId);
+                }
+            });
+        }
+
+        function viewUptime(kioskId) {
+            const row = document.querySelector(`tr[data-kiosk-id="${kioskId}"]`);
+            const modalEl = document.getElementById('viewUptimeModal');
+            if (!modalEl) return;
+
+            const locationEl = modalEl.querySelector('.modal-kiosk-location');
+            const lastSeenEl = modalEl.querySelector('.modal-kiosk-lastseen');
+            const uptimeEl = modalEl.querySelector('.modal-kiosk-uptime');
+
+            // Clear previous
+            locationEl.textContent = '';
+            lastSeenEl.textContent = '';
+            uptimeEl.textContent = '';
+
+            if (row) {
+                const location = row.dataset.location || '';
+                const lastSeenRaw = row.dataset.lastSeen || '';
+                const uptimeDays = row.dataset.uptimeDays;
+                const uptime = row.dataset.uptime;
+
+                locationEl.textContent = location;
+                lastSeenEl.textContent = lastSeenRaw ? new Date(lastSeenRaw).toLocaleString() : 'N/A';
+
+                if (uptimeDays) {
+                    uptimeEl.textContent = `Running: ${uptimeDays} day${uptimeDays > 1 ? 's' : ''}`;
+                } else if (uptime) {
+                    uptimeEl.textContent = `Running: ${uptime}`;
+                } else {
+                    uptimeEl.textContent = 'Uptime not available';
+                }
+            } else {
+                uptimeEl.textContent = 'Kiosk data not found on page';
+            }
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
         function deleteKiosk(kioskId, kioskLocation) {
             // Store the kioskId for later use
             document.getElementById('confirmDeleteKioskBtn').dataset.kioskId = kioskId;
@@ -644,6 +744,32 @@
                     <div>${kiosk.last_seen_human}</div>
                     ${kiosk.last_seen_formatted ? `<small class="text-muted">${kiosk.last_seen_formatted}</small>` : ''}
                 `;
+            }
+            // Update dataset attributes so the uptime modal can read fresh values
+            try {
+                row.dataset.lastSeen = kiosk.last_seen_formatted || kiosk.last_seen || '';
+                row.dataset.uptimeDays = (kiosk.uptime_days !== undefined && kiosk.uptime_days !== null) ? kiosk.uptime_days : '';
+                row.dataset.uptime = kiosk.uptime || '';
+                if (kiosk.location) {
+                    row.dataset.location = kiosk.location;
+                    // update location cell text if changed
+                    const locationCell = row.children[1];
+                    if (locationCell) locationCell.textContent = kiosk.location;
+                }
+            } catch (err) {
+                console.warn('Could not update row dataset:', err);
+            }
+
+            // Update uptime element (if present)
+            const uptimeEl = row.querySelector('.kiosk-uptime');
+            if (uptimeEl) {
+                if (kiosk.uptime_days !== undefined && kiosk.uptime_days !== null && kiosk.uptime_days !== '') {
+                    uptimeEl.textContent = `Running: ${kiosk.uptime_days} day${kiosk.uptime_days > 1 ? 's' : ''}`;
+                } else if (kiosk.uptime) {
+                    uptimeEl.textContent = `Running: ${kiosk.uptime}`;
+                } else {
+                    uptimeEl.textContent = '';
+                }
             }
         }
 

@@ -13,12 +13,14 @@ class Kiosk extends Model
     protected $fillable = [
         'location',
         'is_active',
-        'last_seen'
+        'last_seen',
+        'last_reboot_at'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'last_seen' => 'datetime:Y-m-d H:i:s'
+        'last_seen' => 'datetime:Y-m-d H:i:s',
+        'last_reboot_at' => 'datetime:Y-m-d H:i:s'
     ];
 
     // Override the last_seen accessor to handle UTC to Manila conversion
@@ -120,5 +122,55 @@ class Kiosk extends Model
         
         // Replace "before" with "ago" if it exists
         return str_replace('before', 'ago', $diff);
+    }
+
+    // Get uptime days
+    public function getUptimeDaysAttribute()
+    {
+        if (!$this->last_reboot_at) {
+            return null;
+        }
+
+        $now = now('Asia/Manila');
+        $rebootTime = $this->last_reboot_at;
+
+        // Ensure reboot time is in the past
+        if ($rebootTime > $now) {
+            return null;
+        }
+
+        return $rebootTime->diffInDays($now);
+    }
+
+    // Get uptime in human readable format (e.g., "5 days 3 hours")
+    public function getUptimeFormattedAttribute()
+    {
+        if (!$this->last_reboot_at) {
+            return 'Unknown';
+        }
+
+        $now = now('Asia/Manila');
+        $rebootTime = $this->last_reboot_at;
+
+        if ($rebootTime > $now) {
+            return 'Invalid boot time';
+        }
+
+        $days = $rebootTime->diffInDays($now);
+        $hours = $rebootTime->copy()->addDays($days)->diffInHours($now);
+        $minutes = $rebootTime->copy()->addDays($days)->addHours($hours)->diffInMinutes($now);
+
+        $parts = [];
+        if ($days > 0) {
+            $parts[] = "$days day" . ($days > 1 ? 's' : '');
+        }
+        if ($hours > 0) {
+            $parts[] = "$hours hour" . ($hours > 1 ? 's' : '');
+        }
+        if ($minutes > 0 || count($parts) === 0) {
+            $parts[] = "$minutes minute" . ($minutes > 1 ? 's' : '');
+        }
+
+        return implode(' ', $parts);
     }
 }

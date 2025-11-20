@@ -329,7 +329,9 @@ class AttendanceController extends Controller
     public function heartbeat(Request $request)
     {
         $request->validate([
-            'kiosk_id' => 'required|exists:kiosks,kiosk_id'
+            'kiosk_id' => 'required|exists:kiosks,kiosk_id',
+            'last_reboot_at' => 'nullable|date_format:Y-m-d H:i:s',
+            'uptime_seconds' => 'nullable|integer|min:0'
         ]);
 
         $kiosk = Kiosk::find($request->kiosk_id);
@@ -343,10 +345,25 @@ class AttendanceController extends Controller
         // Update kiosk heartbeat
         $kiosk->updateHeartbeat();
 
+        // If kiosk sends boot time, update last_reboot_at
+        if ($request->filled('last_reboot_at')) {
+            $kiosk->update([
+                'last_reboot_at' => $request->last_reboot_at
+            ]);
+        } elseif ($request->filled('uptime_seconds')) {
+            // If only uptime in seconds is provided, calculate boot time
+            $bootTime = now('Asia/Manila')->subSeconds($request->uptime_seconds);
+            $kiosk->update([
+                'last_reboot_at' => $bootTime
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Heartbeat updated successfully',
-            'timestamp' => $kiosk->last_seen
+            'timestamp' => $kiosk->last_seen,
+            'uptime_days' => $kiosk->uptime_days,
+            'uptime' => $kiosk->uptime_formatted
         ]);
     }
 

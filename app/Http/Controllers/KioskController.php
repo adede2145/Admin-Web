@@ -88,6 +88,8 @@ class KioskController extends Controller
                     'is_online' => $kiosk->isOnline(),
                     'last_seen_human' => $kiosk->last_seen_human,
                     'last_seen_formatted' => $kiosk->last_seen ? $kiosk->last_seen->format('M d, Y h:i A') : null,
+                    'uptime_days' => $kiosk->uptime_days,
+                    'uptime' => $kiosk->uptime_formatted,
                 ];
             });
             
