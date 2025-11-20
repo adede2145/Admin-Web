@@ -278,12 +278,13 @@
                                             </div>
                                             <div class="ms-2 d-flex align-items-center">
                                                 <small class="text-muted kiosk-uptime">
-                                                    @if(isset($kiosk->uptime_formatted) && $kiosk->uptime_formatted !== 'Unknown')
-                                                        Running: {{ $kiosk->uptime_formatted }}
-                                                    @elseif(isset($kiosk->uptime_days))
-                                                        Running: {{ $kiosk->uptime_days }} day{{ $kiosk->uptime_days > 1 ? 's' : '' }}
+                                                    @if($kiosk->isOnline())
+                                                        <span class="badge bg-info">Running: {{ $kiosk->uptime_formatted }}</span>
+                                                    @elseif($kiosk->last_seen)
+                                                        <span class="badge bg-secondary">Last run: {{ $kiosk->uptime_formatted }}</span><br>
+                                                        <small class="d-block mt-1">Ended: {{ $kiosk->last_seen->format('M d, Y h:i A') }}</small>
                                                     @else
-                                                        &nbsp;
+                                                        <span class="text-muted">Never seen</span>
                                                     @endif
                                                 </small>
                                             </div>
@@ -760,15 +761,21 @@
                 console.warn('Could not update row dataset:', err);
             }
 
-            // Update uptime element (if present)
+            // Update uptime element (if present) - show "Running" only when online
             const uptimeEl = row.querySelector('.kiosk-uptime');
             if (uptimeEl) {
-                if (kiosk.uptime_days !== undefined && kiosk.uptime_days !== null && kiosk.uptime_days !== '') {
-                    uptimeEl.textContent = `Running: ${kiosk.uptime_days} day${kiosk.uptime_days > 1 ? 's' : ''}`;
-                } else if (kiosk.uptime) {
-                    uptimeEl.textContent = `Running: ${kiosk.uptime}`;
+                if (kiosk.is_online) {
+                    // Online: show "Running: X"
+                    uptimeEl.innerHTML = `<span class="badge bg-info">Running: ${kiosk.uptime}</span>`;
+                } else if (kiosk.last_seen_formatted) {
+                    // Offline: show "Last run: X (ended at ...)"
+                    uptimeEl.innerHTML = `
+                        <span class="badge bg-secondary">Last run: ${kiosk.uptime}</span><br>
+                        <small class="d-block mt-1">Ended: ${kiosk.last_seen_formatted}</small>
+                    `;
                 } else {
-                    uptimeEl.textContent = '';
+                    // Never seen
+                    uptimeEl.innerHTML = '<span class="text-muted">Never seen</span>';
                 }
             }
         }

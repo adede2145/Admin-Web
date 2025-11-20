@@ -192,22 +192,39 @@ class KioskController extends Controller
             return 0;
         }
         
-        // Calculate uptime based on last_seen activity over last 7 days
+        // Prefer heartbeat data to determine per-day uptime over the last 7 days.
+        // Fall back to attendance logs if no heartbeats are available.
         $sevenDaysAgo = Carbon::now('Asia/Manila')->subDays(7);
+
+        // Count distinct days with heartbeats for this kiosk (convert UTC->Manila)
+        $heartbeatDays = DB::table('kiosk_heartbeats')
+            ->select(DB::raw("DATE(CONVERT_TZ(last_seen, '+00:00', '+08:00')) as date"))
+            ->where('kiosk_id', $kiosk->kiosk_id)
+            ->where('last_seen', '>=', $sevenDaysAgo->copy()->setTimezone('UTC')->toDateTimeString())
+            ->groupBy('date')
+            ->get()
+            ->count();
+
+        $totalDays = 7;
+
+        if ($heartbeatDays > 0) {
+            $activeDays = min($heartbeatDays, $totalDays);
+            return round(($activeDays / $totalDays) * 100);
+        }
+
+        // No heartbeats found; fall back to attendance logs
         $logs = $kiosk->attendanceLogs()
             ->where('time_in', '>=', $sevenDaysAgo)
             ->get();
-        
+
         if ($logs->isEmpty()) {
             return $kiosk->last_seen && $kiosk->last_seen >= $sevenDaysAgo ? 50 : 0;
         }
-        
-        // Simple uptime calculation based on activity
-        $totalDays = 7;
+
         $activeDays = $logs->groupBy(function ($log) {
             return $log->time_in->format('Y-m-d');
         })->count();
-        
+
         return round(($activeDays / $totalDays) * 100);
     }
 }

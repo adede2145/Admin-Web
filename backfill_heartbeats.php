@@ -18,19 +18,33 @@ echo "✓ Cleared existing heartbeat records" . PHP_EOL;
 
 $inserted = 0;
 
-// Nov 13-18: Only kiosk_id 7 (IT Office) active
+// Nov 13-18: Mostly kiosk_id 7 (IT Office) active, except Nov 14 none and Nov 15 kiosk_id 1
 for ($d = Carbon::parse('2025-11-13'); $d->lte(Carbon::parse('2025-11-18')); $d->addDay()) {
+    // According to attendance logs, there were 0 running kiosks on 2025-11-14 — skip that day
+    if ($d->toDateString() === '2025-11-14') {
+        continue;
+    }
+
+    // Nov 15: kiosk_id 1 is active; other days (13,16,17,18) kiosk_id 7 is active
+    if ($d->toDateString() === '2025-11-15') {
+        $kioskId = 1;
+        $location = 'IT Department - Ground Floor';
+    } else {
+        $kioskId = 7;
+        $location = 'IT Office';
+    }
+
     DB::table('kiosk_heartbeats')->insert([
-        'kiosk_id' => 7,
-        'last_seen' => $d->toDateTimeString(),
-        'location' => 'IT Office',
-        'created_at' => $d->startOfDay('Asia/Manila')->toDateTimeString(),
+        'kiosk_id' => $kioskId,
+        'last_seen' => $d->copy()->toDateTimeString(),
+        'location' => $location,
+        'created_at' => $d->copy()->startOfDay('Asia/Manila')->toDateTimeString(),
         'updated_at' => now()->toDateTimeString(),
     ]);
     $inserted++;
 }
 
-echo "✓ Nov 13-18: Inserted 6 rows (1 kiosk active: kiosk_id 7 - IT Office)" . PHP_EOL;
+echo "✓ Nov 13-18: Inserted 5 rows (kiosk_id 7 active except 2025-11-14)" . PHP_EOL;
 
 // Nov 18: Both kiosks active (1 & 7)
 DB::table('kiosk_heartbeats')->insert([
@@ -77,7 +91,9 @@ echo "✓ Nov 20: Both kiosks active (2 kiosks active)" . PHP_EOL;
 
 echo "\n=== SUMMARY ===" . PHP_EOL;
 echo "Total rows inserted: $inserted" . PHP_EOL;
-echo "Nov 13-18: 1 active (kiosk_id 7)" . PHP_EOL;
+echo "Nov 13: 1 active (kiosk_id 7)" . PHP_EOL;
+echo "Nov 14: 0 active" . PHP_EOL;
+echo "Nov 15-17: 1 active each (kiosk_id 7)" . PHP_EOL;
 echo "Nov 18: 2 active (kiosk_id 1 + 7)" . PHP_EOL;
 echo "Nov 19: 1 active (kiosk_id 7)" . PHP_EOL;
 echo "Nov 20: 2 active (kiosk_id 1 + 7)" . PHP_EOL;

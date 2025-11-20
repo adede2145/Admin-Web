@@ -125,40 +125,64 @@ class Kiosk extends Model
     }
 
     // Get uptime days
+    // When offline, compute uptime until last_seen; when online, compute from reboot until now
     public function getUptimeDaysAttribute()
     {
         if (!$this->last_reboot_at) {
             return null;
         }
 
-        $now = now('Asia/Manila');
         $rebootTime = $this->last_reboot_at;
+        $now = now('Asia/Manila');
 
         // Ensure reboot time is in the past
         if ($rebootTime > $now) {
             return null;
         }
 
+        // If offline, compute uptime only until last_seen
+        if (!$this->isOnline() && $this->last_seen) {
+            $endTime = $this->last_seen;
+            // Only count days if end time is after reboot
+            if ($endTime < $rebootTime) {
+                return null;
+            }
+            return $rebootTime->diffInDays($endTime);
+        }
+
+        // If online, compute uptime until now
         return $rebootTime->diffInDays($now);
     }
 
     // Get uptime in human readable format (e.g., "5 days 3 hours")
+    // When offline, compute uptime until last_seen; when online, compute until now
     public function getUptimeFormattedAttribute()
     {
         if (!$this->last_reboot_at) {
             return 'Unknown';
         }
 
-        $now = now('Asia/Manila');
         $rebootTime = $this->last_reboot_at;
+        $now = now('Asia/Manila');
 
         if ($rebootTime > $now) {
             return 'Invalid boot time';
         }
 
-        $days = $rebootTime->diffInDays($now);
-        $hours = $rebootTime->copy()->addDays($days)->diffInHours($now);
-        $minutes = $rebootTime->copy()->addDays($days)->addHours($hours)->diffInMinutes($now);
+        // Determine end time: use last_seen if offline, otherwise use now
+        $endTime = $now;
+        if (!$this->isOnline() && $this->last_seen) {
+            $endTime = $this->last_seen;
+        }
+
+        // If end time is before reboot, uptime is 0
+        if ($endTime < $rebootTime) {
+            return '0 minutes';
+        }
+
+        $days = $rebootTime->diffInDays($endTime);
+        $hours = $rebootTime->copy()->addDays($days)->diffInHours($endTime);
+        $minutes = $rebootTime->copy()->addDays($days)->addHours($hours)->diffInMinutes($endTime);
 
         $parts = [];
         if ($days > 0) {
@@ -172,5 +196,27 @@ class Kiosk extends Model
         }
 
         return implode(' ', $parts);
+    }
+
+    // Get runtime display for blade template
+    // Shows "Running: X" when online, "Last run: X (ended at ...)" when offline
+    public function getRuntimeDisplayAttribute()
+    {
+        if (!$this->last_reboot_at) {
+            return null;
+        }
+
+        if ($this->isOnline()) {
+            // Online: show "Running: X"
+            return 'Running: ' . $this->uptime_formatted;
+        } else {
+            // Offline: show "Last run: X (ended at ...)"
+            if (!$this->last_seen) {
+                return 'Never seen online';
+            }
+            $runtime = $this->uptime_formatted;
+            $endedAt = $this->last_seen->format('M d, Y h:i A');
+            return "Last run: $runtime (ended at $endedAt)";
+        }
     }
 }
