@@ -162,7 +162,12 @@ class KioskController extends Controller
             $date = $start->copy()->addDays($i);
             $key = $date->toDateString();
             $activeCount = isset($heartbeatCounts[$key]) ? (int)$heartbeatCounts[$key] : 0;
-            
+
+            // For today, use current online kiosk count instead of just heartbeat data
+            if ($date->isToday()) {
+                $activeCount = $onlineKiosks;
+            }
+
             $activityData[] = [
                 'date' => $date->format('M d'),
                 'active' => $activeCount
