@@ -192,8 +192,8 @@
                                         <div class="card-body text-center">
                                             <h5 class="card-title">{{ $stat['location'] }}</h5>
                                             <div class="progress mb-2" style="height: 20px;">
-                                                <div class="progress-bar {{ $stat['uptime'] >= 80 ? 'bg-success' : ($stat['uptime'] >= 60 ? 'bg-warning' : 'bg-danger') }}" 
-                                                     role="progressbar" 
+                                                <div class="progress-bar {{ $stat['uptime'] >= 80 ? 'bg-success' : ($stat['uptime'] >= 60 ? 'bg-warning' : 'bg-danger') }}"
+                                                     role="progressbar"
                                                      style="width: {{ $stat['uptime'] }}%">
                                                     {{ $stat['uptime'] }}%
                                                 </div>
@@ -400,7 +400,19 @@
         function initializeChart() {
             const activityData = @json($analytics['activity_data']);
             const ctx = document.getElementById('activityChart').getContext('2d');
-            
+
+            // Create gradient for the line fill
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(25, 135, 84, 0.4)');
+            gradient.addColorStop(0.5, 'rgba(25, 135, 84, 0.2)');
+            gradient.addColorStop(1, 'rgba(25, 135, 84, 0.05)');
+
+            // Create gradient for the line border
+            const lineGradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
+            lineGradient.addColorStop(0, 'rgb(25, 135, 84)');
+            lineGradient.addColorStop(0.5, 'rgb(13, 202, 240)');
+            lineGradient.addColorStop(1, 'rgb(13, 110, 253)');
+
             activityChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -408,26 +420,82 @@
                     datasets: [{
                         label: 'Active Kiosks',
                         data: activityData.map(item => item.active),
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.1,
+                        borderColor: lineGradient,
+                        backgroundColor: gradient,
+                        tension: 0.4,
                         fill: true,
-                        pointBackgroundColor: 'rgb(75, 192, 192)',
+                        pointBackgroundColor: function(context) {
+                            const index = context.dataIndex;
+                            const value = context.dataset.data[index];
+                            // Highlight today's data point
+                            if (index === activityData.length - 1) {
+                                return 'rgb(255, 193, 7)'; // Yellow for today
+                            }
+                            return 'rgb(25, 135, 84)'; // Green for other days
+                        },
                         pointBorderColor: '#fff',
-                        pointHoverRadius: 6
+                        pointBorderWidth: 3,
+                        pointRadius: function(context) {
+                            const index = context.dataIndex;
+                            // Make today's point larger
+                            return index === activityData.length - 1 ? 8 : 6;
+                        },
+                        pointHoverRadius: 10,
+                        pointHoverBackgroundColor: 'rgb(220, 53, 69)',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 3,
+                        borderWidth: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeInOutQuart'
+                    },
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'top'
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    size: 14,
+                                    weight: '600',
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#495057'
+                            }
                         },
                         tooltip: {
                             mode: 'index',
                             intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            callbacks: {
+                                title: function(context) {
+                                    const date = context[0].label;
+                                    const isToday = context[0].dataIndex === activityData.length - 1;
+                                    return isToday ? `${date} (Today)` : date;
+                                },
+                                label: function(context) {
+                                    return `Active Kiosks: ${context.parsed.y}`;
+                                }
+                            },
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
                         }
                     },
                     scales: {
@@ -437,17 +505,49 @@
                                 stepSize: 1,
                                 callback: function(value) {
                                     return Math.floor(value);
-                                }
+                                },
+                                font: {
+                                    size: 12,
+                                    weight: '500'
+                                },
+                                color: '#6c757d'
                             },
                             title: {
                                 display: true,
-                                text: 'Number of Active Kiosks'
+                                text: 'Number of Active Kiosks',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold',
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#495057'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)',
+                                drawBorder: false
                             }
                         },
                         x: {
                             title: {
                                 display: true,
-                                text: 'Date'
+                                text: 'Date',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold',
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#495057'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                color: '#6c757d'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
                             }
                         }
                     },
@@ -455,6 +555,11 @@
                         mode: 'nearest',
                         axis: 'x',
                         intersect: false
+                    },
+                    elements: {
+                        point: {
+                            hoverBorderWidth: 3
+                        }
                     }
                 }
             });
@@ -785,7 +890,7 @@
             if (activityChart && activityData) {
                 activityChart.data.labels = activityData.map(item => item.date);
                 activityChart.data.datasets[0].data = activityData.map(item => item.active);
-                activityChart.update('none'); // Update without animation for performance
+                activityChart.update('active'); // Update with smooth animation
             }
         }
 
