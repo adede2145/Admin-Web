@@ -125,20 +125,36 @@ class KioskController extends Controller
         $activityData = [];
         $start = Carbon::today('Asia/Manila')->subDays(29);
         
-        // Query heartbeat history grouped by date (Manila timezone)
-        $heartbeatCounts = DB::table('kiosk_heartbeats')
-            ->select(DB::raw("DATE(CONVERT_TZ(created_at, '+00:00', '+08:00')) as date"), DB::raw("COUNT(DISTINCT kiosk_id) as active"))
+        // Query heartbeat history (no timezone conversion in DB since CONVERT_TZ may not be available)
+        $heartbeats = DB::table('kiosk_heartbeats')
             ->where('created_at', '>=', $start->copy()->setTimezone('UTC')->toDateTimeString())
-            ->groupBy(DB::raw("DATE(CONVERT_TZ(created_at, '+00:00', '+08:00'))"))
-            ->orderBy('date')
-            ->get()
-            ->keyBy('date');
+            ->orderBy('created_at')
+            ->get(['created_at', 'kiosk_id']);
+        
+        // Group by date in Manila timezone (convert from UTC in PHP)
+        $heartbeatCounts = [];
+        foreach ($heartbeats as $hb) {
+            $manilaDate = Carbon::createFromFormat('Y-m-d H:i:s', $hb->created_at, 'UTC')
+                ->setTimezone('Asia/Manila')
+                ->toDateString();
+            if (!isset($heartbeatCounts[$manilaDate])) {
+                $heartbeatCounts[$manilaDate] = [];
+            }
+            $heartbeatCounts[$manilaDate][] = $hb->kiosk_id;
+        }
+        
+        // Count distinct kiosks per date
+        $heartbeatCountsFormatted = [];
+        foreach ($heartbeatCounts as $date => $kioskIds) {
+            $heartbeatCountsFormatted[$date] = count(array_unique($kioskIds));
+        }
+        $heartbeatCounts = $heartbeatCountsFormatted;
         
         // Build 30-day array, filling missing dates with zero
         for ($i = 0; $i < 30; $i++) {
             $date = $start->copy()->addDays($i);
             $key = $date->toDateString();
-            $activeCount = isset($heartbeatCounts[$key]) ? (int)$heartbeatCounts[$key]->active : 0;
+            $activeCount = isset($heartbeatCounts[$key]) ? (int)$heartbeatCounts[$key] : 0;
             
             $activityData[] = [
                 'date' => $date->format('M d'),
