@@ -125,7 +125,7 @@ class KioskController extends Controller
         $activityData = [];
         $start = Carbon::today('Asia/Manila')->subDays(29);
         
-        // Query heartbeat history (no timezone conversion in DB since CONVERT_TZ may not be available)
+        // Query heartbeat history (created_at is UTC; convert to Manila timezone in PHP)
         $heartbeats = DB::table('kiosk_heartbeats')
             ->where('created_at', '>=', $start->copy()->setTimezone('UTC')->toDateTimeString())
             ->orderBy('created_at')
@@ -134,6 +134,7 @@ class KioskController extends Controller
         // Group by date in Manila timezone (convert from UTC in PHP)
         $heartbeatCounts = [];
         foreach ($heartbeats as $hb) {
+            // created_at is stored in UTC; convert to Manila timezone
             $manilaDate = Carbon::createFromFormat('Y-m-d H:i:s', $hb->created_at, 'UTC')
                 ->setTimezone('Asia/Manila')
                 ->toDateString();
