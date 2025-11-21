@@ -135,7 +135,7 @@
             <div class="col-xl-8 col-lg-7">
                 <div class="card shadow mb-4 h-100">
                     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between header-maroon">
-                        <h6 class="m-0 fw-bold text-white">Kiosk Activity (Last 30 Days)</h6>
+                        <h6 class="m-0 fw-bold text-white">Kiosk Activity (Current Month)</h6>
                     </div>
                     <div class="card-body d-flex flex-column h-100">
                         <div class="chart-area flex-grow-1 d-flex align-items-center justify-content-center" style="height:100%;max-height:400px;">

@@ -121,16 +121,18 @@ class KioskController extends Controller
         // Offline kiosks (active but not seen recently)
         $offlineKiosks = Kiosk::offline()->count();
         
-        // Kiosk activity over last 30 days - aggregate from heartbeat history
+        // Kiosk activity for current month - aggregate from heartbeat history
         $activityData = [];
-        $start = Carbon::today('Asia/Manila')->subDays(29);
-        
+        $start = Carbon::today('Asia/Manila')->startOfMonth(); // First day of current month
+        $end = Carbon::today('Asia/Manila'); // Today
+        $daysInMonth = $start->diffInDays($end) + 1; // Number of days from start to today
+
         // Query heartbeat history (created_at is UTC; convert to Manila timezone in PHP)
         $heartbeats = DB::table('kiosk_heartbeats')
             ->where('created_at', '>=', $start->copy()->setTimezone('UTC')->toDateTimeString())
             ->orderBy('created_at')
             ->get(['created_at', 'kiosk_id']);
-        
+
         // Group by date in Manila timezone (convert from UTC in PHP)
         $heartbeatCounts = [];
         foreach ($heartbeats as $hb) {
@@ -149,16 +151,16 @@ class KioskController extends Controller
             }
             $heartbeatCounts[$manilaDate][] = $hb->kiosk_id;
         }
-        
+
         // Count distinct kiosks per date
         $heartbeatCountsFormatted = [];
         foreach ($heartbeatCounts as $date => $kioskIds) {
             $heartbeatCountsFormatted[$date] = count(array_unique($kioskIds));
         }
         $heartbeatCounts = $heartbeatCountsFormatted;
-        
-        // Build 30-day array, filling missing dates with zero
-        for ($i = 0; $i < 30; $i++) {
+
+        // Build current month array, filling missing dates with zero
+        for ($i = 0; $i < $daysInMonth; $i++) {
             $date = $start->copy()->addDays($i);
             $key = $date->toDateString();
             $activeCount = isset($heartbeatCounts[$key]) ? (int)$heartbeatCounts[$key] : 0;
