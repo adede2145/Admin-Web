@@ -134,10 +134,16 @@ class KioskController extends Controller
         // Group by date in Manila timezone (convert from UTC in PHP)
         $heartbeatCounts = [];
         foreach ($heartbeats as $hb) {
-            // created_at is stored in UTC; convert to Manila timezone
-            $manilaDate = Carbon::createFromFormat('Y-m-d H:i:s', $hb->created_at, 'UTC')
-                ->setTimezone('Asia/Manila')
-                ->toDateString();
+            // created_at may include microseconds or different formats; parse reliably as UTC then convert to Manila
+            try {
+                $manilaDate = Carbon::parse($hb->created_at, 'UTC')
+                    ->setTimezone('Asia/Manila')
+                    ->toDateString();
+            } catch (\Exception $e) {
+                // Fallback: try to cast directly to string date portion
+                $manilaDate = substr((string)$hb->created_at, 0, 10);
+            }
+
             if (!isset($heartbeatCounts[$manilaDate])) {
                 $heartbeatCounts[$manilaDate] = [];
             }
