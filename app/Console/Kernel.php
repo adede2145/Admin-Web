@@ -15,7 +15,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Snapshot active kiosks daily at 11:59 PM Manila time for historical data
+        $schedule->command('kiosk:snapshot-daily')
+                 ->dailyAt('23:59')
+                 ->timezone('Asia/Manila');
     }
 
     /**
