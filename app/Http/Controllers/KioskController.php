@@ -127,23 +127,22 @@ class KioskController extends Controller
         $end = Carbon::today('Asia/Manila'); // Today
         $daysInMonth = $start->diffInDays($end) + 1; // Number of days from start to today
 
-        // Query heartbeat history (created_at is UTC; convert to Manila timezone in PHP)
+        // Query heartbeat history (last_seen is in Manila timezone; filter by last_seen)
         $heartbeats = DB::table('kiosk_heartbeats')
-            ->where('created_at', '>=', $start->copy()->setTimezone('UTC')->toDateTimeString())
-            ->orderBy('created_at')
-            ->get(['created_at', 'kiosk_id']);
+            ->where('last_seen', '>=', $start->toDateTimeString())
+            ->orderBy('last_seen')
+            ->get(['last_seen', 'kiosk_id']);
 
-        // Group by date in Manila timezone (convert from UTC in PHP)
+        // Group by date in Manila timezone (last_seen is already in Manila timezone)
         $heartbeatCounts = [];
         foreach ($heartbeats as $hb) {
-            // created_at may include microseconds or different formats; parse reliably as UTC then convert to Manila
+            // last_seen is already in Manila timezone, just extract the date
             try {
-                $manilaDate = Carbon::parse($hb->created_at, 'UTC')
-                    ->setTimezone('Asia/Manila')
+                $manilaDate = Carbon::parse($hb->last_seen, 'Asia/Manila')
                     ->toDateString();
             } catch (\Exception $e) {
                 // Fallback: try to cast directly to string date portion
-                $manilaDate = substr((string)$hb->created_at, 0, 10);
+                $manilaDate = substr((string)$hb->last_seen, 0, 10);
             }
 
             if (!isset($heartbeatCounts[$manilaDate])) {
@@ -226,11 +225,11 @@ class KioskController extends Controller
         // Fall back to attendance logs if no heartbeats are available.
         $sevenDaysAgo = Carbon::now('Asia/Manila')->subDays(7);
 
-        // Count distinct days with heartbeats for this kiosk (convert UTC->Manila)
+        // Count distinct days with heartbeats for this kiosk (last_seen is already in Manila timezone)
         $heartbeatDays = DB::table('kiosk_heartbeats')
-            ->select(DB::raw("DATE(CONVERT_TZ(last_seen, '+00:00', '+08:00')) as date"))
+            ->select(DB::raw("DATE(last_seen) as date"))
             ->where('kiosk_id', $kiosk->kiosk_id)
-            ->where('last_seen', '>=', $sevenDaysAgo->copy()->setTimezone('UTC')->toDateTimeString())
+            ->where('last_seen', '>=', $sevenDaysAgo->toDateTimeString())
             ->groupBy('date')
             ->get()
             ->count();
