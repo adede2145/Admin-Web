@@ -163,7 +163,7 @@
             </div>
 
             <div class="mt-4">
-                {{ $auditLogs->withQueryString()->links() }}
+                {{ $auditLogs->withQueryString()->links('vendor.pagination.bootstrap-5') }}
             </div>
         </div>
     </div>
