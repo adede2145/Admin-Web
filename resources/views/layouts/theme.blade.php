@@ -135,6 +135,11 @@
             .aa-sidebar { position:fixed; transform:translateX(-100%); transition:transform .2s ease; z-index:1040; }
             .aa-sidebar.show { transform:translateX(0); }
         }
+        /* Pagination icon size fix */
+        .pagination .page-link i,
+        .pagination .page-link .bi {
+            font-size: 1rem !important;
+        }
     </style>
 </head>
 <body>

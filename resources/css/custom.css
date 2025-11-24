@@ -144,3 +144,9 @@
         transform: translateY(0);
     }
 }
+
+/* Pagination icon size fix */
+.pagination .page-link i,
+.pagination .page-link .bi {
+    font-size: 1rem !important;
+}
