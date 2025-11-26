@@ -540,6 +540,8 @@ class AttendanceController extends Controller
                     return $this->downloadAsCSV($report, $overrides, $filename);
                 case 'excel':
                     return $this->downloadAsExcel($report, $overrides, $filename);
+                case 'docx':
+                    return $this->downloadAsDOCX($report, $overrides, $filename);
                 default:
                     return $this->downloadAsHTML($report, $overrides, $filename);
             }
@@ -672,92 +674,327 @@ class AttendanceController extends Controller
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '.csv"');
     }
 
-    private function downloadAsExcel($report, $overrides, $filename)
+    
+    private function downloadAsDOCX($report, $overrides, $filename)
     {
-        $spreadsheet = new Spreadsheet();
-
-        // Employee Summary Sheet
-        $summarySheet = $spreadsheet->getActiveSheet();
-        $summarySheet->setTitle('Employee Summary');
-
-        $summarySheet->setCellValue('A1', 'DTR Report: ' . $report->report_title);
-        $summarySheet->setCellValue('A2', 'Generated on: ' . $report->formatted_generated_on);
-        $summarySheet->setCellValue('A3', 'Department: ' . $report->department_name);
-        $summarySheet->setCellValue('A4', 'Period: ' . $report->formatted_period);
-
-        $summarySheet->setCellValue('A6', 'Employee Summary');
-        $summarySheet->setCellValue('A7', 'Employee ID');
-        $summarySheet->setCellValue('B7', 'Name');
-        $summarySheet->setCellValue('C7', 'Department');
-        $summarySheet->setCellValue('D7', 'Present Days');
-        $summarySheet->setCellValue('E7', 'Absent Days');
-        $summarySheet->setCellValue('F7', 'Total Hours');
-        $summarySheet->setCellValue('G7', 'Overtime Hours');
-        $summarySheet->setCellValue('H7', 'Attendance Rate');
-
-        $row = 8;
-        foreach ($report->summaries as $summary) {
-            $summarySheet->setCellValue('A' . $row, $summary->employee_id);
-            $summarySheet->setCellValue('B' . $row, $summary->employee->full_name);
-            $summarySheet->setCellValue('C' . $row, $summary->employee->department->department_name);
-            $summarySheet->setCellValue('D' . $row, $summary->present_days);
-            $summarySheet->setCellValue('E' . $row, $summary->absent_days);
-            $summarySheet->setCellValue('F' . $row, $summary->total_hours);
-            $summarySheet->setCellValue('G' . $row, $summary->overtime_hours);
-            $summarySheet->setCellValue('H' . $row, $summary->attendance_rate . '%');
-            $row++;
+        try {
+            // Process only the first employee for now
+            if ($report->summaries->isEmpty()) {
+                throw new \Exception('No employee data found in the report.');
+            }
+            
+            $summary = $report->summaries->first();
+            $employee = $summary->employee;
+            
+            // Load template
+            $templatePath = storage_path('app/templates/dtr_template.docx');
+            if (!file_exists($templatePath)) {
+                throw new \Exception('Template file not found at: ' . $templatePath);
+            }
+            
+            $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor($templatePath);
+            
+            // Set period
+            $startDate = \Carbon\Carbon::parse($report->start_date);
+            $endDate = \Carbon\Carbon::parse($report->end_date);
+            
+            // Prepare period label parts
+            $periodPrefix = '';
+            $periodDate = '';
+            if ($report->report_type === 'monthly') {
+                $periodPrefix = 'For the month of:';
+                $periodDate = $startDate->format('F j') . '-' . $endDate->format('j, Y');
+            } elseif ($report->report_type === 'weekly') {
+                $periodPrefix = 'For the week of:';
+                $periodDate = $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+            } else {
+                $periodPrefix = 'For the period:';
+                $periodDate = $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+            }
+            
+            // Get attendance details for this employee
+            $employeeDetails = $report->details->where('employee_id', $employee->employee_id);
+            $detailsByDate = [];
+            foreach ($employeeDetails as $detail) {
+                $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+                $detailsByDate[$dateKey] = $detail;
+            }
+            
+            // Prepare days data
+            $daysData = [];
+            $currentDate = $startDate->copy();
+            
+            while ($currentDate->lte($endDate)) {
+                $dateKey = $currentDate->toDateString();
+                $detail = $detailsByDate[$dateKey] ?? null;
+                
+                // Check for override
+                $ovKey = $employee->employee_id . '|' . $dateKey;
+                $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+                
+                // Check if weekend
+                $isWeekend = $currentDate->isWeekend();
+                $dayName = $isWeekend ? strtoupper($currentDate->format('l')) : '';
+                
+                // Calculate AM/PM times and undertime
+                $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+                
+                $daysData[] = [
+                    'day' => $currentDate->format('j'),
+                    'am_arrival' => $amData['am_arrival'] ?: '',
+                    'am_departure' => $amData['am_departure'] ?: '',
+                    'pm_arrival' => $amData['pm_arrival'] ?: '',
+                    'pm_departure' => $amData['pm_departure'] ?: '',
+                    'undertime_hours' => $amData['undertime_hours'] !== '' ? $amData['undertime_hours'] : '',
+                    'undertime_minutes' => $amData['undertime_minutes'] !== '' ? $amData['undertime_minutes'] : '',
+                    'is_weekend' => $isWeekend,
+                    'day_name' => $dayName,
+                    'is_leave' => $ov !== null,
+                    'leave_text' => $ov ? strtoupper($ov->remarks ?: 'LEAVE') : '',
+                ];
+                
+                $currentDate->addDay();
+            }
+            
+            // Calculate totals
+            $totalUndertime = $this->calculateTotalUndertime($employeeDetails, $overrides, $employee->employee_id, $startDate, $endDate);
+            
+            // Set basic template variables
+            $templateProcessor->setValue('employee_name', $employee->full_name);
+            $templateProcessor->setValue('period_label', $periodPrefix);
+            $templateProcessor->setValue('period_date', $periodDate);
+            $templateProcessor->setValue('office_hours', '8:00AM-12:00NN  /  1:00PM-5:00PM');
+            
+            // Prepare summary text
+            $summaryParts = [];
+            if ($totalUndertime['leave_days'] > 0) {
+                $summaryParts[] = $totalUndertime['leave_days'] . ' day' . ($totalUndertime['leave_days'] > 1 ? 's' : '') . ' leave w/ pay';
+            }
+            if ($totalUndertime['tardy_days'] > 0) {
+                $summaryParts[] = $totalUndertime['tardy_days'] . ' day' . ($totalUndertime['tardy_days'] > 1 ? 's' : '') . ' tardy';
+            } else {
+                $summaryParts[] = 'no tardy';
+            }
+            if ($totalUndertime['has_undertime']) {
+                $summaryParts[] = $totalUndertime['hours'] . 'h ' . $totalUndertime['minutes'] . 'm undertime';
+            } else {
+                $summaryParts[] = 'no undertime';
+            }
+            $summaryText = implode('; ', $summaryParts);
+            $templateProcessor->setValue('summary_text', $summaryText);
+            
+            // Clone the row for days data
+            $templateProcessor->cloneRow('day', count($daysData));
+            
+            // Keep track of which rows are weekends/leaves for later merging
+            $weekendRowIndices = [];
+            
+            // Fill in day data
+            $index = 1;
+            foreach ($daysData as $dayData) {
+                $templateProcessor->setValue('day#' . $index, $dayData['day']);
+            
+                // Handle weekends and leave days (span across all columns)
+                if ($dayData['is_leave'] || $dayData['is_weekend']) {
+                    $displayText = $dayData['is_leave'] ? $dayData['leave_text'] : $dayData['day_name'];
+                    $templateProcessor->setValue('am_arrival#' . $index, $displayText);
+                    $templateProcessor->setValue('am_departure#' . $index, '');
+                    $templateProcessor->setValue('pm_arrival#' . $index, '');
+                    $templateProcessor->setValue('pm_departure#' . $index, '');
+                    $templateProcessor->setValue('undertime_hours#' . $index, '');
+                    $templateProcessor->setValue('undertime_minutes#' . $index, '');
+                    $weekendRowIndices[] = $index - 1; // Store for later processing
+                } else {
+                    // Regular day
+                    $templateProcessor->setValue('am_arrival#' . $index, $dayData['am_arrival'] ? $dayData['am_arrival'] . ' ' : '');
+                    $templateProcessor->setValue('am_departure#' . $index, $dayData['am_departure'] ? $dayData['am_departure'] . ' ' : '');
+                    $templateProcessor->setValue('pm_arrival#' . $index, $dayData['pm_arrival'] ? $dayData['pm_arrival'] . ' ' : '');
+                    $templateProcessor->setValue('pm_departure#' . $index, $dayData['pm_departure'] ? $dayData['pm_departure'] . ' ' : '');
+                    $templateProcessor->setValue('undertime_hours#' . $index, $dayData['undertime_hours']);
+                    $templateProcessor->setValue('undertime_minutes#' . $index, $dayData['undertime_minutes']);
+                }
+                $index++;
+            }
+            
+            // Save intermediate file
+            $tempOutputPath = storage_path('app/temp_dtr_' . uniqid() . '.docx');
+            $templateProcessor->saveAs($tempOutputPath);
+                
+            // Post-process: Merge cells for weekend/leave rows
+            if (!empty($weekendRowIndices)) {
+                $this->mergeCellsInDOCX($tempOutputPath, $weekendRowIndices, $daysData);
+            }
+            
+            // Move to final output path
+            $outputPath = storage_path('app/public/DTR.docx');
+            if (file_exists($outputPath)) {
+                @unlink($outputPath);
+            }
+            rename($tempOutputPath, $outputPath);
+            
+            return response()->download($outputPath, $filename . '.docx')->deleteFileAfterSend();
+            
+        } catch (\Exception $e) {
+            Log::error('DOCX export error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            throw new \Exception('Failed to generate DOCX: ' . $e->getMessage());
         }
+    }
 
-        // Detailed Records Sheet
-        $detailSheet = $spreadsheet->createSheet();
-        $detailSheet->setTitle('Detailed Records');
-
-        $detailSheet->setCellValue('A1', 'Detailed Attendance Records');
-        $detailSheet->setCellValue('A2', 'Employee ID');
-        $detailSheet->setCellValue('B2', 'Employee Name');
-        $detailSheet->setCellValue('C2', 'Date');
-        $detailSheet->setCellValue('D2', 'Time In');
-        $detailSheet->setCellValue('E2', 'Time Out');
-        $detailSheet->setCellValue('F2', 'Total Hours');
-        $detailSheet->setCellValue('G2', 'Overtime');
-        $detailSheet->setCellValue('H2', 'Status');
-        $detailSheet->setCellValue('I2', 'Remarks');
-
-        $row = 3;
-        foreach ($report->details as $detail) {
-            // Check for override
-            $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
-            $ovKey = $detail->employee_id . '|' . $dateKey;
-            $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
-
-            $status = $ov ? 'Leave' : ucfirst($detail->status);
-            $remarks = $ov ? ('Leave' . ($ov->remarks ? ': ' . $ov->remarks : '')) : ($detail->remarks ?? '');
-
-            $detailSheet->setCellValue('A' . $row, $detail->employee_id);
-            $detailSheet->setCellValue('B' . $row, $detail->employee->full_name);
-            $detailSheet->setCellValue('C' . $row, $detail->formatted_date);
-            $detailSheet->setCellValue('D' . $row, $detail->formatted_time_in);
-            $detailSheet->setCellValue('E' . $row, $detail->formatted_time_out);
-            $detailSheet->setCellValue('F' . $row, $detail->total_hours);
-            $detailSheet->setCellValue('G' . $row, $detail->overtime_hours);
-            $detailSheet->setCellValue('H' . $row, $status);
-            $detailSheet->setCellValue('I' . $row, $remarks);
-            $row++;
+    private function mergeCellsInDOCX($filePath, $weekendRowIndices, $daysData)
+    {
+        try {
+            // Load the DOCX file
+            $zip = new \ZipArchive();
+            if ($zip->open($filePath) !== true) {
+                Log::warning('Could not open DOCX for cell merging');
+                return;
+            }
+            
+            // Read document.xml
+            $documentXml = $zip->getFromName('word/document.xml');
+            if ($documentXml === false) {
+                $zip->close();
+                Log::warning('Could not read document.xml');
+                return;
+            }
+            
+            // Parse XML
+            $dom = new \DOMDocument();
+            $dom->loadXML($documentXml);
+            $xpath = new \DOMXPath($dom);
+            $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+            
+            // Find all table rows
+            $rows = $xpath->query('//w:tbl//w:tr');
+            
+            // Find the data table (look for rows with our data)
+            $dataTableStartRow = null;
+            
+            // Look for the first numeric day value to identify data rows
+            for ($rowIndex = 0; $rowIndex < $rows->length; $rowIndex++) {
+                $row = $rows->item($rowIndex);
+                $cells = $xpath->query('.//w:tc', $row);
+                
+                if ($cells->length === 0) {
+                    continue;
+                }
+                
+                // Check first cell for a day number
+                $firstCell = $cells->item(0);
+                $textNodes = $xpath->query('.//w:t', $firstCell);
+                
+                foreach ($textNodes as $textNode) {
+                    $text = trim($textNode->nodeValue);
+                    // Look for single digit or double digit (day numbers 1-31)
+                    if (is_numeric($text) && $text >= 1 && $text <= 31) {
+                        $dataTableStartRow = $rowIndex;
+                        break 2;
+                    }
+                }
+            }
+            
+            if ($dataTableStartRow === null) {
+                $zip->close();
+                Log::warning('Could not find data table start row');
+                return;
+            }
+            
+            Log::info('Found data table at row: ' . $dataTableStartRow);
+            
+            // Merge cells for weekend rows
+            foreach ($weekendRowIndices as $relativeIndex) {
+                $actualRowIndex = $dataTableStartRow + $relativeIndex;
+                
+                if ($actualRowIndex >= $rows->length) {
+                    continue;
+                }
+                
+                $row = $rows->item($actualRowIndex);
+                $cells = $xpath->query('.//w:tc', $row);
+                
+                if ($cells->length < 2) {
+                    continue; // Not enough cells
+                }
+                
+                // Count total cells to determine span
+                $totalCells = $cells->length;
+                
+                // We want to merge all cells except the first one (Day column)
+                // So we need 6 columns to span (assuming 7 total: Day + 6 data columns)
+                $columnsToSpan = max(1, $totalCells - 1);
+                
+                // Get the second cell (first cell after "Day" column)
+                $firstDataCell = $cells->item(1);
+                
+                // Find or create tcPr (table cell properties)
+                $tcPr = $xpath->query('.//w:tcPr', $firstDataCell)->item(0);
+                if (!$tcPr) {
+                    $tcPr = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:tcPr');
+                    $firstDataCell->insertBefore($tcPr, $firstDataCell->firstChild);
+                }
+                
+                // Add or update gridSpan
+                $existingGridSpan = $xpath->query('.//w:gridSpan', $tcPr)->item(0);
+                if ($existingGridSpan) {
+                    $tcPr->removeChild($existingGridSpan);
+                }
+                
+                // Create new gridSpan element with attribute
+                $gridSpan = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:gridSpan');
+                /** @var \DOMElement $gridSpan */
+                $gridSpan->setAttribute('w:val', (string)$columnsToSpan);
+                $tcPr->appendChild($gridSpan);
+                
+                // Also center-align the text in the merged cell
+                $existingJc = $xpath->query('.//w:jc', $tcPr)->item(0);
+                if ($existingJc) {
+                    $tcPr->removeChild($existingJc);
+                }
+                $jc = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:jc');
+                /** @var \DOMElement $jc */
+                $jc->setAttribute('w:val', 'center');
+                $tcPr->appendChild($jc);
+                
+                // Make text bold for weekends/leaves
+                $paragraphs = $xpath->query('.//w:p', $firstDataCell);
+                foreach ($paragraphs as $paragraph) {
+                    $runs = $xpath->query('.//w:r', $paragraph);
+                    foreach ($runs as $run) {
+                        // Find or create run properties (rPr)
+                        $rPr = $xpath->query('.//w:rPr', $run)->item(0);
+                        if (!$rPr) {
+                            $rPr = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:rPr');
+                            $run->insertBefore($rPr, $run->firstChild);
+                        }
+                        
+                        // Add bold element if not exists
+                        $existingBold = $xpath->query('.//w:b', $rPr)->item(0);
+                        if (!$existingBold) {
+                            $bold = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:b');
+                            $rPr->appendChild($bold);
+                        }
+                    }
+                }
+                
+                // Remove subsequent cells (except first) - they become part of the merged cell
+                $cellsToRemove = [];
+                for ($i = 2; $i < $cells->length; $i++) {
+                    $cellsToRemove[] = $cells->item($i);
+                }
+                
+                foreach ($cellsToRemove as $cellToRemove) {
+                    $row->removeChild($cellToRemove);
+                }
+            }
+            
+            // Save modified XML back
+            $zip->addFromString('word/document.xml', $dom->saveXML());
+            $zip->close();
+            
+        } catch (\Exception $e) {
+            Log::error('Cell merging failed', ['error' => $e->getMessage()]);
+            // Don't throw - fail gracefully
         }
-
-        // Auto-size columns
-        foreach (range('A', 'I') as $col) {
-            $detailSheet->getColumnDimension($col)->setAutoSize(true);
-        }
-        foreach (range('A', 'H') as $col) {
-            $summarySheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        $writer = new Xlsx($spreadsheet);
-        $tempFile = tempnam(sys_get_temp_dir(), 'dtr_excel_');
-        $writer->save($tempFile);
-
-        return response()->download($tempFile, $filename . '.xlsx')->deleteFileAfterSend();
     }
 
     private function generateHTMLContent($report, $overrides = null)

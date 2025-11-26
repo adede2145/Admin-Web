@@ -14,8 +14,8 @@
                         <i class="bi bi-download me-2"></i>Download
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'html']) }}"><i class="bi bi-filetype-html me-2 text-primary"></i>HTML</a></li>
                         <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'pdf']) }}"><i class="bi bi-filetype-pdf me-2 text-danger"></i>PDF</a></li>
+                        <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'docx']) }}"><i class="bi bi-filetype-docx me-2 text-info"></i>DOCX</a></li>
                         <li><a class="dropdown-item" href="{{ route('dtr.download', [$report->report_id, 'csv']) }}"><i class="bi bi-filetype-csv me-2 text-success"></i>CSV</a></li>
                     </ul>
                 </div>
