@@ -133,53 +133,21 @@
         .aa-card .card-header .card-title { font-size:1.15rem; font-weight:700; }
         .aa-card .card-header .card-title i { font-size:1.25rem; }
         @media (max-width: 992px) {
-            .aa-sidebar { 
-                position: fixed; 
-                top: 56px; 
-                height: calc(100vh - 56px);
-                transform: translateX(-100%); 
-                transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1); 
-                z-index: 1040; 
-                box-shadow: 4px 0 24px rgba(0,0,0,0.25);
-            }
-            .aa-sidebar.show { transform: translateX(0); }
+            .aa-sidebar { position:fixed; transform:translateX(-100%); transition:transform .2s ease; z-index:1040; }
+            .aa-sidebar.show { transform:translateX(0); }
         }
         /* Pagination icon size fix */
         .pagination .page-link i,
         .pagination .page-link .bi {
             font-size: 1rem !important;
         }
-
-        /* Mobile Sidebar Overlay */
-        .aa-sidebar-overlay {
-            position: fixed;
-            top: 56px;
-            left: 0;
-            width: 100%;
-            height: calc(100vh - 56px);
-            background: rgba(0,0,0,0.5);
-            z-index: 1035;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-            backdrop-filter: blur(2px);
-        }
-        .aa-sidebar-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        @media (min-width: 992px) {
-            .aa-sidebar-overlay { display: none !important; }
-        }
     </style>
 </head>
 <body>
 <div class="aa-app">
     <header class="aa-topbar">
-        <div class="logo d-flex align-items-center user-select-none" onclick="toggleSidebar()" style="cursor: pointer;">
-            <i class="bi bi-journal-text me-2" style="font-size: 1.5rem;"></i>
-            AUTO AUDIT
-        </div>
+        <button class="btn btn-light d-lg-none" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <span class="logo d-none d-md-block"><i class="bi bi-journal-text me-2"></i>AUTO AUDIT</span>
         <div class="ms-auto d-flex align-items-center gap-3">
             <div class="dropdown">
                 <button class="btn btn-link text-white text-decoration-none d-flex align-items-center dropdown-toggle p-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -200,7 +168,6 @@
         </div>
     </header>
     <div class="aa-main-content">
-        <div id="sidebarOverlay" class="aa-sidebar-overlay" onclick="toggleSidebar()"></div>
         <aside id="aaSidebar" class="aa-sidebar">
             <nav class="aa-nav-custom">
                 <a class="aa-nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
@@ -274,8 +241,6 @@
 
     function toggleSidebar(){
         document.getElementById('aaSidebar').classList.toggle('show');
-        const overlay = document.getElementById('sidebarOverlay');
-        if(overlay) overlay.classList.toggle('show');
     }
 
     // Handle Local Registration Station button
