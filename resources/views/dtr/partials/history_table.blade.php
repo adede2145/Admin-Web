@@ -31,6 +31,56 @@
         color: #3d0a0a !important;
         font-weight: 600;
     }
+    
+    /* Responsive modal styles */
+    @media (max-width: 767.98px) {
+        .modal-body-scrollable {
+            max-height: 85vh;
+        }
+        
+        .modal-header-maroon {
+            padding: 1rem;
+            margin: -1rem -1rem 0.5rem -1rem;
+        }
+        
+        .modal-header-maroon h5 {
+            font-size: 1rem;
+        }
+        
+        .hide-mobile {
+            display: none !important;
+        }
+        
+        .table {
+            font-size: 0.75rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.4rem 0.2rem;
+        }
+        
+        .badge {
+            font-size: 0.65rem;
+        }
+        
+        .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.7rem;
+        }
+        
+        /* Filter form adjustments */
+        .form-select,
+        .form-control {
+            font-size: 0.875rem;
+        }
+    }
+    
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        .hide-tablet {
+            display: none !important;
+        }
+    }
 </style>
 <div class="modal-header-maroon d-flex justify-content-between align-items-center">
     <h5 class="modal-title mb-0">
@@ -40,9 +90,9 @@
 </div>
 <div class="modal-body-scrollable px-2 pt-2 pb-4">
     <!-- Filters -->
-    <form id="dtrHistoryFilterForm" class="row g-3 mb-3">
-        <div class="col-md-2">
-            <label class="form-label">Report Type</label>
+    <form id="dtrHistoryFilterForm" class="row g-2 mb-3">
+        <div class="col-12 col-sm-6 col-md-2">
+            <label class="form-label fw-semibold">Report Type</label>
             <select name="report_type" class="form-select">
                 <option value="">All Types</option>
                 <option value="weekly">Weekly</option>
@@ -50,35 +100,39 @@
                 <option value="custom">Custom</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <label class="form-label">Status</label>
+        <div class="col-12 col-sm-6 col-md-2">
+            <label class="form-label fw-semibold">Status</label>
             <select name="status" class="form-select">
                 <option value="">All Status</option>
                 <option value="generated">Generated</option>
                 <option value="archived">Archived</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <label class="form-label">Start Date</label>
+        <div class="col-12 col-sm-6 col-md-2">
+            <label class="form-label fw-semibold">Start Date</label>
             <input type="date" name="start_date" class="form-control">
         </div>
-        <div class="col-md-2">
-            <label class="form-label">End Date</label>
+        <div class="col-12 col-sm-6 col-md-2">
+            <label class="form-label fw-semibold">End Date</label>
             <input type="date" name="end_date" class="form-control">
         </div>
-        <div class="col-md-2">
-            <label class="form-label">&nbsp;</label>
+        <div class="col-12 col-sm-6 col-md-2">
+            <label class="form-label d-none d-md-block">&nbsp;</label>
             <div class="d-grid">
                 <button type="submit" class="btn btn-filter-yellow">
-                    <i class="bi bi-search me-2"></i>Filter
+                    <i class="bi bi-search me-1"></i>
+                    <span class="d-none d-sm-inline">Filter</span>
+                    <span class="d-sm-none">Search</span>
                 </button>
             </div>
         </div>
-        <div class="col-md-2">
-            <label class="form-label">&nbsp;</label>
+        <div class="col-12 col-sm-6 col-md-2">
+            <label class="form-label d-none d-md-block">&nbsp;</label>
             <div class="d-grid">
                 <button type="button" class="btn btn-outline-secondary" id="dtrHistoryResetBtn">
-                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    <span class="d-none d-sm-inline">Reset</span>
+                    <span class="d-sm-none">Clear</span>
                 </button>
             </div>
         </div>
@@ -87,15 +141,15 @@
         <table class="table table-hover">
             <thead class="table-header-transparent">
                 <tr>
-                    <th scope="col" class="table-header-red">Report ID</th>
+                    <th scope="col" class="table-header-red">ID</th>
                     <th scope="col" class="table-header-red">Title</th>
-                    <th scope="col" class="table-header-red">Office</th>
-                    <th scope="col" class="table-header-red">Type</th>
-                    <th scope="col" class="table-header-red">Period</th>
-                    <th scope="col" class="table-header-red">Employees</th>
-                    <th scope="col" class="table-header-red">Total Hours</th>
-                    <th scope="col" class="table-header-red">Generated</th>
-                    <th scope="col" class="table-header-red">Status</th>
+                    <th scope="col" class="table-header-red hide-mobile hide-tablet">Office</th>
+                    <th scope="col" class="table-header-red hide-mobile">Type</th>
+                    <th scope="col" class="table-header-red hide-mobile hide-tablet">Period</th>
+                    <th scope="col" class="table-header-red hide-mobile hide-tablet">Employees</th>
+                    <th scope="col" class="table-header-red hide-mobile hide-tablet">Hours</th>
+                    <th scope="col" class="table-header-red hide-mobile">Generated</th>
+                    <th scope="col" class="table-header-red hide-mobile">Status</th>
                     <th scope="col" class="table-header-red">Actions</th>
                 </tr>
             </thead>
@@ -106,47 +160,56 @@
                             <code class="text-primary">#{{ $report->report_id }}</code>
                         </td>
                         <td>
-                            <div class="fw-bold">{{ $report->report_title }}</div>
-                            <small class="text-muted">by {{ $report->admin_name }}</small>
+                            <div class="fw-bold small">{{ $report->report_title }}</div>
+                            <small class="text-muted d-none d-md-inline">by {{ $report->admin_name }}</small>
+                            <div class="d-md-none mt-1">
+                                <span class="badge bg-{{ $report->report_type === 'weekly' ? 'success' : ($report->report_type === 'monthly' ? 'warning' : 'info') }} me-1">
+                                    {{ ucfirst($report->report_type) }}
+                                </span>
+                                <span class="badge bg-{{ $report->status === 'generated' ? 'success' : 'secondary' }}">
+                                    {{ ucfirst($report->status) }}
+                                </span>
+                            </div>
                         </td>
-                        <td>
+                        <td class="hide-mobile hide-tablet">
                             <span class="badge bg-info">
                                 {{ $report->department_name }}
                             </span>
                         </td>
-                        <td>
+                        <td class="hide-mobile">
                             <span class="badge bg-{{ $report->report_type === 'weekly' ? 'success' : ($report->report_type === 'monthly' ? 'warning' : 'info') }}">
                                 {{ ucfirst($report->report_type) }}
                             </span>
                         </td>
-                        <td>
-                            <div class="text-muted">
+                        <td class="hide-mobile hide-tablet">
+                            <small class="text-muted">
                                 {{ $report->formatted_period }}
-                            </div>
+                            </small>
+                            <br>
                             <small class="text-muted">{{ $report->total_days }} days</small>
                         </td>
-                        <td>
+                        <td class="hide-mobile hide-tablet">
                             <span class="badge bg-secondary">
-                                {{ $report->total_employees }} employees
+                                {{ $report->total_employees }}
                             </span>
                         </td>
-                        <td>
-                            <div class="fw-bold text-success">
-                                {{ number_format($report->total_hours, 2) }} hrs
-                            </div>
+                        <td class="hide-mobile hide-tablet">
+                            <small class="fw-bold text-success">
+                                {{ number_format($report->total_hours, 2) }}
+                            </small>
                         </td>
-                        <td>
-                            <div class="text-muted">
+                        <td class="hide-mobile">
+                            <small class="text-muted">
                                 {{ $report->formatted_generated_on }}
-                            </div>
+                            </small>
                         </td>
-                        <td>
+                        <td class="hide-mobile">
                             <span class="badge bg-{{ $report->status === 'generated' ? 'success' : 'secondary' }}">
                                 {{ ucfirst($report->status) }}
                             </span>
                         </td>
                         <td>
-                            <div class="d-flex gap-1">
+                            <div class="d-flex gap-1 flex-nowrap">
                                 <a href="{{ route('dtr.details', $report->report_id) }}" class="btn btn-outline-primary btn-sm" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </a>

@@ -60,26 +60,46 @@
     /* Inline Filters Layout */
     .filters-inline {
         display: flex;
-        flex-wrap: wrap; /* allow wrapping instead of horizontal scroll */
+        flex-wrap: wrap;
         gap: 12px 16px;
         align-items: flex-end;
-        overflow: visible; /* prevent scrollbars */
+        overflow: visible;
         padding-bottom: 4px;
     }
     .filters-inline .filter-item {
-        flex: 1 1 220px; /* grow/shrink with a sensible base */
+        flex: 1 1 220px;
         min-width: 200px;
     }
-    /* Toolbar row shouldn't stretch tall */
     .filters-inline .filter-toolbar-row { flex: 0 0 100%; }
     .filters-inline .quick-filter-group { width: auto; }
     .filters-inline .quick-select { width: 260px; }
+    
+    /* Mobile Responsive Filters */
     @media (max-width: 1200px) {
         .filters-inline .filter-item { flex-basis: 260px; }
     }
     @media (max-width: 992px) {
         .filters-inline { gap: 10px 12px; }
-        .filters-inline .filter-item { flex-basis: 300px; }
+        .filters-inline .filter-item { 
+            flex-basis: 100%; 
+            min-width: 100%;
+        }
+        .filter-card .card-body {
+            padding: 1rem;
+        }
+    }
+    @media (max-width: 768px) {
+        .filters-inline .quick-select { 
+            width: 100%; 
+        }
+        .filters-inline .quick-inline {
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+        .filters-inline .quick-texts {
+            text-align: center !important;
+            min-width: 100% !important;
+        }
     }
 
     /* Enhanced Table Styling */
@@ -121,6 +141,38 @@
         vertical-align: middle;
         border: none;
         font-size: 0.9rem;
+    }
+
+    /* Mobile Table Adjustments */
+    @media (max-width: 992px) {
+        .attendance-table thead th {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        .attendance-table tbody td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.85rem;
+        }
+        #attendance-logs-table {
+            max-height: 400px !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .attendance-table {
+            font-size: 0.8rem;
+        }
+        .attendance-table thead th {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.7rem;
+        }
+        .attendance-table tbody td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.75rem;
+        }
+        .action-buttons .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
     }
 
     /* Enhanced Badge Styling */
@@ -204,11 +256,176 @@
     /* Center pagination controls consistently (including after AJAX refresh) */
     #paginationContainer nav { display: flex; justify-content: center; }
     #paginationContainer .pagination { justify-content: center; }
+
+    /* Responsive Header */
+    @media (max-width: 768px) {
+        .page-header-responsive {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+        .page-header-responsive h1 {
+            font-size: 1.5rem !important;
+        }
+        .page-header-responsive p {
+            font-size: 0.9rem !important;
+        }
+        .page-header-responsive > div:last-child {
+            margin-top: 1rem;
+            width: 100%;
+        }
+        .page-header-responsive .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            margin-right: 0 !important;
+        }
+    }
+
+    /* Responsive Summary Cards */
+    @media (max-width: 992px) {
+        .col-lg-9, .col-lg-3 {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+    }
+
+    /* Responsive Badges and Status */
+    @media (max-width: 768px) {
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.5rem;
+        }
+        .employee-avatar {
+            width: 24px;
+            height: 24px;
+            font-size: 0.7rem;
+        }
+    }
+
+    /* Responsive Active Filters */
+    @media (max-width: 768px) {
+        .active-filters-container {
+            font-size: 0.85rem;
+        }
+        .active-filters-container .badge {
+            font-size: 0.65rem;
+            margin-bottom: 0.25rem;
+        }
+    }
+
+    /* Responsive Modals */
+    @media (max-width: 576px) {
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+        .modal-body {
+            padding: 1rem !important;
+        }
+        .modal-footer .btn {
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+        }
+    }
+
+    /* Table Container Responsive */
+    @media (max-width: 768px) {
+        .table-responsive {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+    }
+
+    /* Responsive Summary Stats */
+    @media (max-width: 992px) {
+        .summary-stat {
+            padding: 1rem !important;
+        }
+        .summary-stat .display-1 {
+            font-size: 2.5rem !important;
+        }
+        .summary-stat .fs-2 {
+            font-size: 1.5rem !important;
+        }
+        .summary-stat .fs-5 {
+            font-size: 1rem !important;
+        }
+    }
+
+    /* Container Padding Responsive */
+    @media (max-width: 576px) {
+        .container-fluid {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        .aa-card {
+            border-radius: 8px;
+        }
+    }
+
+    /* Alert Responsive */
+    @media (max-width: 768px) {
+        #refreshStatus {
+            font-size: 0.85rem;
+            padding: 0.5rem !important;
+        }
+        #refreshStatus .float-end {
+            float: none !important;
+            display: block;
+            margin-top: 0.25rem;
+        }
+    }
+
+    /* Modal Form Responsive */
+    @media (max-width: 576px) {
+        .modal-body .row > [class*="col-"] {
+            margin-bottom: 0.75rem;
+        }
+        .modal-body .form-control,
+        .modal-body .form-select {
+            font-size: 0.9rem;
+        }
+        .modal-body .form-label {
+            font-size: 0.85rem;
+        }
+        .modal-title {
+            font-size: 1rem !important;
+        }
+    }
+
+    /* Ensure modals don't overflow on small screens */
+    @media (max-width: 576px) {
+        .modal-xl,
+        .modal-lg {
+            max-width: 100%;
+        }
+    }
+
+    /* Responsive Typography */
+    @media (max-width: 768px) {
+        h1.fs-2 {
+            font-size: 1.5rem !important;
+        }
+        h4.card-title {
+            font-size: 1.1rem !important;
+        }
+        h5 {
+            font-size: 1rem !important;
+        }
+    }
+
+    /* Filter Card Header Responsive */
+    @media (max-width: 576px) {
+        .card-header h6 {
+            font-size: 0.9rem;
+        }
+        .card-header small {
+            font-size: 0.7rem;
+        }
+    }
 </style>
-<div class="container-fluid">
+<div class="container-fluid px-2 px-md-3">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header-responsive">
         <div>
             <h1 class="fw-bold fs-2 mb-0">
                 <i class="bi bi-clock me-2 fs-4"></i>Attendance Management
@@ -223,10 +440,10 @@
         <div>
 
             <button type="button" class="btn btn-danger me-2" id="openDTRHistoryModal">
-                <i class="bi bi-clock-history me-2"></i>DTR History
+                <i class="bi bi-clock-history me-2"></i><span class="d-none d-md-inline">DTR History</span><span class="d-md-none">History</span>
             </button>
             <button class="btn btn-warning text-dark fw-semibold me-2" data-bs-toggle="modal" data-bs-target="#generateDTRModal">
-                <i class="bi bi-file-earmark-text me-2"></i>Generate DTR Report
+                <i class="bi bi-file-earmark-text me-2"></i><span class="d-none d-md-inline">Generate DTR Report</span><span class="d-md-none">Generate</span>
             </button>
         </div>
     </div>
@@ -391,11 +608,11 @@
                                     <option value="this_month">This Month</option>
                                     <option value="last_30_days">Last 30 Days</option>
                                 </select>
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-warning text-dark fw-semibold" id="applyFiltersBtn">
+                                <div class="d-flex gap-2 flex-column flex-sm-row w-100">
+                                    <button type="submit" class="btn btn-warning text-dark fw-semibold w-100 w-sm-auto" id="applyFiltersBtn">
                                         <i class="bi bi-search me-1"></i>Apply
                                     </button>
-                                    <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary">
+                                    <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary w-100 w-sm-auto">
                                         <i class="bi bi-arrow-clockwise me-1"></i>Reset
                                     </a>
                                 </div>
@@ -489,12 +706,12 @@
             @endphp
 
             @if(count($activeFilters) > 0)
-            <div class="mt-3 pt-3 border-top">
-                <div class="d-flex align-items-center flex-wrap">
+            <div class="mt-3 pt-3 border-top active-filters-container">
+                <div class="d-flex align-items-start align-items-md-center flex-column flex-md-row flex-wrap">
                     <span class="text-muted small me-3 mb-2">
                         <i class="bi bi-funnel-fill me-1"></i>Active Filters:
                     </span>
-                    <div class="d-flex flex-wrap gap-2">
+                    <div class="d-flex flex-wrap gap-2 w-100 w-md-auto">
                         @foreach($activeFilters as $filter)
                         <span class="badge {{ $filter['removable'] ? 'bg-primary' : 'bg-secondary' }} d-flex align-items-center">
                             @if(isset($filter['icon']))
@@ -563,15 +780,15 @@
     $latestTimeIn = $latestTimeInLog ? \Carbon\Carbon::parse($latestTimeInLog->time_in)->format('h:i A') : 'N/A';
     @endphp
 
-    <div class="row">
-        <div class="col-lg-9">
+    <div class="row g-3">
+        <div class="col-lg-9 col-12">
             <div class="aa-card" style="min-height: 500px;">
                 <div class="card-header header-maroon">
                     <h4 class="card-title mb-0">
                         <i class="bi bi-list-ul me-2"></i>Attendance Records
                     </h4>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body p-2 p-md-4">
                     <!-- Auto-refresh status indicator -->
                     <div id="refreshStatus" class="alert alert-info mb-3">
                         <i class="bi bi-arrow-clockwise me-2"></i>
@@ -579,8 +796,8 @@
                         <span class="float-end">Last updated: <span id="lastUpdated">--</span></span>
                     </div>
 
-                    <div id="attendance-logs-table" class="table-responsive scroll-hide" style="max-height: 580px; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none;">
-                        <table class="table table-hover attendance-table">
+                    <div id="attendance-logs-table" class="table-responsive scroll-hide" style="max-height: 580px; overflow-y: auto; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;">
+                        <table class="table table-hover attendance-table" style="min-width: 800px;">
                             <thead>
                                 <tr>
                                     <th scope="col">ID</th>
@@ -614,26 +831,156 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3">
-            <div class="aa-card" style="min-height: 500px;">
+        <div class="col-lg-3 col-12">
+            <div class="aa-card">
                 <div class="card-header header-maroon">
                     <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Summary Today</h5>
                 </div>
-                <div class="card-body text-center p-4">
-                    <div class="fw-semibold mb-2 fs-5"><i class="bi bi-person-check me-2"></i>Total Present</div>
-                    <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $presentToday }}</div>
-                    <div class="text-muted small mb-4">Today</div>
-                    <div class="fw-semibold mb-2 fs-5"><i class="bi bi-graph-up me-2"></i>Attendance Rate</div>
-                    <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $attendanceRate }}%</div>
-                    <div class="text-muted small">Today</div>
-                    <div class="fw-semibold mb-2 fs-5 mt-4"><i class="bi bi-clock me-2"></i>Latest Time In</div>
-                    <div class="fw-bold fs-2" style="color:var(--aa-maroon)">{{ $latestTimeIn }}</div>
-                    <div class="text-muted small">Today</div>
-                    <div class="fw-semibold mb-2 fs-5 mt-4"><i class="bi bi-clock-history me-2"></i>Timed Out</div>
-                    <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $timedOutToday }}</div>
-                    <div class="text-muted small">Today</div>
+                <div class="card-body text-center p-3 p-md-4 summary-stat">
+                    <div class="mb-3">
+                        <div class="fw-semibold mb-2 fs-5"><i class="bi bi-person-check me-2"></i>Total Present</div>
+                        <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $presentToday }}</div>
+                        <div class="text-muted small">Today</div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="mb-3">
+                        <div class="fw-semibold mb-2 fs-5"><i class="bi bi-graph-up me-2"></i>Attendance Rate</div>
+                        <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $attendanceRate }}%</div>
+                        <div class="text-muted small">Today</div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="mb-3">
+                        <div class="fw-semibold mb-2 fs-5"><i class="bi bi-clock me-2"></i>Latest Time In</div>
+                        <div class="fw-bold fs-2" style="color:var(--aa-maroon)">{{ $latestTimeIn }}</div>
+                        <div class="text-muted small">Today</div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="mb-0">
+                        <div class="fw-semibold mb-2 fs-5"><i class="bi bi-clock-history me-2"></i>Timed Out</div>
+                        <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $timedOutToday }}</div>
+                        <div class="text-muted small">Today</div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate DTR Modal (Enhanced) -->
+<div class="modal fade" id="generateDTRModal" tabindex="-1" aria-labelledby="generateDTRModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
+                <h5 class="modal-title fw-bold d-flex align-items-center mb-0" id="generateDTRModalLabel">
+                    <i class="bi bi-file-earmark-text me-2 fs-5"></i>Generate DTR Report
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
+            </div>
+            <form action="{{ route('attendance.dtr') }}" method="POST" id="dtrForm" data-dtr-form="true">
+                @csrf
+                <div class="modal-body p-4" style="background-color: #f8f9fa;">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="report_type" class="form-label fw-bold" style="color: #800000;">
+                                <i class="bi bi-gear me-1"></i>Report Type
+                            </label>
+                            <select class="form-select" id="report_type" name="report_type" required>
+                                <option value="weekly">Weekly Report</option>
+                                <option value="monthly" selected>Monthly Report</option>
+                                <option value="custom">Custom Period</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="department_id" class="form-label fw-bold" style="color: #800000;">
+                                <i class="bi bi-building me-1"></i>Office
+                            </label>
+                            <select class="form-select" id="department_id" name="department_id">
+                                <option value="">All Offices</option>
+                                {{-- Assuming departments might be passed, if not, this is a placeholder --}}
+                                @if(isset($departments))
+                                    @foreach($departments as $dept)
+                                        <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="color: #800000;">
+                            <i class="bi bi-people me-1"></i>Employees to include
+                        </label>
+                        
+                        <!-- Search Container (No Select All) -->
+                        <div class="bg-white p-2 border rounded-top border-bottom-0">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" id="employeeSearch" placeholder="Search employee...">
+                            </div>
+                        </div>
+
+                        <div class="card rounded-top-0">
+                            <div class="card-body p-0" style="height: 200px; overflow-y: auto;">
+                                <ul class="list-group list-group-flush" id="employeeList">
+                                    @foreach(($employeesForDTR ?? []) as $employee)
+                                        <li class="list-group-item">
+                                            <div class="form-check">
+                                                <input class="form-check-input employee-checkbox" type="checkbox" name="employee_ids[]" value="{{ $employee->id ?? $employee->employee_id }}" id="emp_{{ $employee->id ?? $employee->employee_id }}">
+                                                <label class="form-check-label w-100" for="emp_{{ $employee->id ?? $employee->employee_id }}">
+                                                    <span class="fw-bold">{{ $employee->full_name }}</span>
+                                                    @if($employee->department)
+                                                        <small class="text-muted ms-1">({{ $employee->department->department_name ?? 'N/A' }})</small>
+                                                    @endif
+                                                </label>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-text">Leave empty to include all employees in the selected office.</div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="start_date" class="form-label fw-bold" style="color: #800000;">
+                                <i class="bi bi-calendar-event me-1"></i>Start Date
+                            </label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                            <div class="form-text" id="startDateHelp">First day of current month</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end_date" class="form-label fw-bold" style="color: #800000;">
+                                <i class="bi bi-calendar-check me-1"></i>End Date
+                            </label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                            <div class="form-text" id="endDateHelp">Last day of current month</div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 p-3 p-md-4" style="background: white;">
+                    <div class="d-flex gap-2 flex-column flex-sm-row w-100">
+                        <button type="button" class="btn btn-outline-secondary btn-lg px-4 flex-fill" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-lg px-4 fw-bold text-white flex-fill"
+                                style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                            <i class="bi bi-file-earmark-text me-2"></i><span class="d-none d-sm-inline">Generate Report</span><span class="d-sm-none">Generate</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- DTR History Modal -->
+<div class="modal fade" id="dtrHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         </div>
     </div>
 </div>
@@ -745,19 +1092,21 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4" style="background: white;">
-                    <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
-                            style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
-                            onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
-                            onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
-                        <i class="bi bi-x-circle me-2"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
-                            style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
-                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
-                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
-                        <i class="bi bi-file-earmark-text me-2"></i>Generate Report
-                    </button>
+                <div class="modal-footer border-0 p-3 p-md-4" style="background: white;">
+                    <div class="d-flex gap-2 flex-column flex-sm-row w-100">
+                        <button type="button" class="btn btn-lg px-4 flex-fill" data-bs-dismiss="modal"
+                                style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-lg px-4 fw-bold text-white flex-fill"
+                                style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                            <i class="bi bi-file-earmark-text me-2"></i><span class="d-none d-sm-inline">Generate Report</span><span class="d-sm-none">Generate</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -766,7 +1115,7 @@
 
 <!-- DTR History Modal -->
 <div class="modal fade" id="dtrHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-body" id="dtrHistoryModalBody">
                 <div class="text-center p-5">
@@ -860,19 +1209,21 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4" style="background: white;">
-                    <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
-                            style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
-                            onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
-                            onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
-                        <i class="bi bi-x-circle me-2"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
-                            style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
-                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
-                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
-                        <i class="bi bi-check-circle me-2"></i>Update Record
-                    </button>
+                <div class="modal-footer border-0 p-3 p-md-4" style="background: white;">
+                    <div class="d-flex gap-2 flex-column flex-sm-row w-100">
+                        <button type="button" class="btn btn-lg px-4 flex-fill" data-bs-dismiss="modal"
+                                style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-lg px-4 fw-bold text-white flex-fill"
+                                style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                            <i class="bi bi-check-circle me-2"></i><span class="d-none d-sm-inline">Update Record</span><span class="d-sm-none">Update</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1185,23 +1536,8 @@
         window.location.href = '{{ route("attendance.index") }}';
     }
 
-    document.getElementById('empSelectAll')?.addEventListener('change', function(e) {
-        document.querySelectorAll('.emp-item').forEach(cb => {
-            cb.checked = e.target.checked;
-        });
-    });
-
-    // Filter employee checklist by department selection (super admin only)
-    document.getElementById('dtrDepartmentSelect')?.addEventListener('change', function() {
-        const deptId = this.value;
-        document.querySelectorAll('.emp-item').forEach(cb => {
-            const label = document.querySelector('label[for="' + cb.id + '"]');
-            const text = label ? label.textContent : '';
-            // Expect department name in parentheses in label; simple client-side filter
-            const show = !deptId || text.includes('(') ? text.includes('(' + this.options[this.selectedIndex].text + ')') : true;
-            cb.closest('.form-check').style.display = show ? '' : 'none';
-        });
-    });
+    // Enhanced modal no longer has "Select All" or department-specific filtering
+    // Employee search functionality is now handled in the DOMContentLoaded event above
 
     // Add event listener for delete buttons
     document.addEventListener('click', function(e) {
@@ -1916,18 +2252,18 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a id="downloadPhotoBtn" href="#" class="btn btn-info" download>
-                    <i class="bi bi-download me-2"></i>Download Photo
+            <div class="modal-footer flex-column flex-sm-row">
+                <button type="button" class="btn btn-secondary w-100 w-sm-auto mb-2 mb-sm-0" data-bs-dismiss="modal">Close</button>
+                <a id="downloadPhotoBtn" href="#" class="btn btn-info w-100 w-sm-auto mb-2 mb-sm-0" download>
+                    <i class="bi bi-download me-2"></i><span class="d-none d-sm-inline">Download Photo</span><span class="d-sm-none">Download</span>
                 </a>
 
                 <!-- Verification Buttons (only show for pending RFID records) -->
-                <div id="verificationButtons" class="d-none">
-                    <button type="button" class="btn btn-success" onclick="approveFromModal()">
+                <div id="verificationButtons" class="d-none w-100 w-sm-auto">
+                    <button type="button" class="btn btn-success w-100 w-sm-auto mb-2 mb-sm-0 me-sm-2" onclick="approveFromModal()">
                         <i class="bi bi-check-circle me-2"></i>Approve
                     </button>
-                    <button type="button" class="btn btn-danger" onclick="rejectFromModal()">
+                    <button type="button" class="btn btn-danger w-100 w-sm-auto" onclick="rejectFromModal()">
                         <i class="bi bi-x-circle me-2"></i>Reject
                     </button>
                 </div>
@@ -1939,7 +2275,7 @@
 <!-- Success Modal for Generated DTR Report -->
 @if(session('generated_report_id'))
 <div class="modal fade" id="generatedReportModal" tabindex="-1" aria-labelledby="generatedReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
                 <h5 class="modal-title text-white mb-0" id="generatedReportModalLabel">
@@ -1953,26 +2289,32 @@
                     Your DTR report has been generated successfully! Report ID: <strong>#{{ session('generated_report_id') }}</strong>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
+                <div class="row g-3">
+                    <div class="col-md-6 col-12">
+                        <div class="card h-100">
                             <div class="card-body text-center">
                                 <i class="bi bi-eye display-4 text-primary mb-3"></i>
                                 <h5>View Report Details</h5>
                                 <p class="text-muted">Review the complete report with all employee attendance details</p>
-                                <a href="{{ route('dtr.details', session('generated_report_id')) }}" class="btn btn-primary">
+                                <a href="{{ route('dtr.details', session('generated_report_id')) }}" class="btn btn-primary w-100">
                                     <i class="bi bi-eye me-2"></i>View Details
                                 </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card">
+                    <div class="col-md-6 col-12">
+                        <div class="card h-100">
                             <div class="card-body text-center">
                                 <i class="bi bi-download display-4 text-success mb-3"></i>
                                 <h5>Download Report</h5>
                                 <p class="text-muted">Download the report in your preferred format</p>
-                                <div class="btn-group">
+                                <div class="btn-group-vertical w-100 d-md-none mb-2">
+                                    <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'html']) }}" class="btn btn-success"><i class="bi bi-filetype-html me-2"></i>HTML</a>
+                                    <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'pdf']) }}" class="btn btn-danger"><i class="bi bi-filetype-pdf me-2"></i>PDF</a>
+                                    <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'excel']) }}" class="btn btn-warning"><i class="bi bi-file-earmark-excel me-2"></i>Excel</a>
+                                    <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'csv']) }}" class="btn btn-secondary"><i class="bi bi-filetype-csv me-2"></i>CSV</a>
+                                </div>
+                                <div class="btn-group d-none d-md-flex">
                                     <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'html']) }}" class="btn btn-success"><i class="bi bi-filetype-html me-2"></i>HTML</a>
                                     <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'pdf']) }}" class="btn btn-danger"><i class="bi bi-filetype-pdf me-2"></i>PDF</a>
                                     <a href="{{ route('dtr.download', ['id' => session('generated_report_id'), 'format' => 'excel']) }}" class="btn btn-warning"><i class="bi bi-file-earmark-excel me-2"></i>Excel</a>
@@ -2203,6 +2545,103 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateDatesForReportType();
             });
         }
+    }
+    });
+</script>
+
+<!-- DTR Report Type Date Adjustment Script & Employee Search -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dtrReportType = document.getElementById('report_type');
+    const dtrStartDate = document.getElementById('start_date');
+    const dtrEndDate = document.getElementById('end_date');
+    const dtrStartDateHelp = document.getElementById('startDateHelp');
+    const dtrEndDateHelp = document.getElementById('endDateHelp');
+    
+    if (dtrReportType && dtrStartDate && dtrEndDate) {
+        // Function to format date as YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Function to get start of week (Monday)
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+            return new Date(d.setDate(diff));
+        }
+        
+        // Function to get end of week (Sunday)
+        function getEndOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() + (7 - day) % 7;
+            return new Date(d.setDate(diff));
+        }
+        
+        // Function to update dates based on report type
+        function updateDatesForReportType() {
+            const reportType = dtrReportType.value;
+            const today = new Date();
+            let startDate, endDate, startHelp, endHelp;
+            
+            if (reportType === 'weekly') {
+                // Set to current week (Monday to Sunday)
+                startDate = getStartOfWeek(today);
+                endDate = getEndOfWeek(today);
+                startHelp = 'Start of current week (Monday)';
+                endHelp = 'End of current week (Sunday)';
+            } else if (reportType === 'monthly') {
+                // Set to current month (1st to last day)
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                startHelp = 'First day of current month';
+                endHelp = 'Last day of current month';
+            } else {
+                // Custom - don't auto-adjust
+                return;
+            }
+            
+            dtrStartDate.value = formatDate(startDate);
+            dtrEndDate.value = formatDate(endDate);
+            
+            if (dtrStartDateHelp) dtrStartDateHelp.textContent = startHelp;
+            if (dtrEndDateHelp) dtrEndDateHelp.textContent = endHelp;
+        }
+        
+        // Listen for report type changes
+        dtrReportType.addEventListener('change', updateDatesForReportType);
+        
+        // Initialize dates when modal opens
+        const generateDTRModal = document.getElementById('generateDTRModal');
+        if (generateDTRModal) {
+            generateDTRModal.addEventListener('shown.bs.modal', function() {
+                updateDatesForReportType();
+            });
+        }
+    }
+
+    // Employee Search functionality
+    const searchInput = document.getElementById('employeeSearch');
+    const employeeList = document.getElementById('employeeList');
+    if (searchInput && employeeList) {
+        const items = employeeList.getElementsByTagName('li');
+        searchInput.addEventListener('keyup', function() {
+            const filter = searchInput.value.toLowerCase();
+            for (let i = 0; i < items.length; i++) {
+                const label = items[i].getElementsByTagName('label')[0];
+                const txtValue = label.textContent || label.innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    items[i].style.display = "";
+                } else {
+                    items[i].style.display = "none";
+                }
+            }
+        });
     }
 });
 </script>

@@ -278,118 +278,102 @@
             </button>
         </div>
 
-        <!-- Generate DTR Modal (copied from attendance) -->
-        <div class="modal fade" id="generateDTRModal" tabindex="-1">
+        <!-- Generate DTR Modal (Enhanced) -->
+        <div class="modal fade" id="generateDTRModal" tabindex="-1" aria-labelledby="generateDTRModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
                     <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
-                        <h5 class="modal-title fw-bold d-flex align-items-center mb-0">
+                        <h5 class="modal-title fw-bold d-flex align-items-center mb-0" id="generateDTRModalLabel">
                             <i class="bi bi-file-earmark-text me-2 fs-5"></i>Generate DTR Report
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
                     </div>
-                    <form action="{{ route('attendance.dtr') }}" method="POST" data-dtr-form="true">
+                    <form action="{{ route('attendance.dtr') }}" method="POST" id="dtrForm">
                         @csrf
-                        <div class="modal-body p-4" style="background: #fafbfc;">
-                            <div class="row g-3">
+                        <div class="modal-body p-4" style="background-color: #f8f9fa;">
+                            
+                            <div class="row g-3 mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                        <i class="bi bi-gear me-2 fs-6"></i>Report Type
+                                    <label for="report_type" class="form-label fw-bold" style="color: #800000;">
+                                        <i class="bi bi-gear me-1"></i>Report Type
                                     </label>
-                                    <select name="report_type" id="dtrReportType" class="form-select form-select-lg border-2" required
-                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
-                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
-                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                    <select class="form-select" id="report_type" name="report_type" required>
                                         <option value="weekly">Weekly Report</option>
-                                        <option value="monthly">Monthly Report</option>
+                                        <option value="monthly" selected>Monthly Report</option>
                                         <option value="custom">Custom Period</option>
                                     </select>
                                 </div>
-
-                                @if(auth()->user()->role->role_name === 'super_admin')
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                        <i class="bi bi-building me-2 fs-6"></i>Department
+                                    <label for="department_id" class="form-label fw-bold" style="color: #800000;">
+                                        <i class="bi bi-building me-1"></i>Office
                                     </label>
-                                    <select name="department_id" class="form-select form-select-lg border-2" id="dtrDepartmentSelect"
-                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
-                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
-                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                        <option value="">All Departments</option>
-                                        @foreach($departments as $dept)
-                                        <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
-                                        @endforeach
+                                    <select class="form-select" id="department_id" name="department_id">
+                                        <option value="">All Offices</option>
+                                        {{-- Assuming departments might be passed, if not, this is a placeholder --}}
+                                        @if(isset($departments))
+                                            @foreach($departments as $dept)
+                                                <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
+                                            @endforeach
+                                        @endif
                                     </select>
                                 </div>
-                                @else
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                        <i class="bi bi-building me-2 fs-6"></i>Department
-                                    </label>
-                                    <input type="text" class="form-control form-control-lg border-2" value="{{ auth()->user()->department->department_name ?? 'N/A' }}" readonly
-                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
-                                    <input type="hidden" name="department_id" value="{{ auth()->user()->department_id }}">
-                                    <div class="form-text">You can only generate reports for your department</div>
-                                </div>
-                                @endif
+                            </div>
 
-                                <div class="col-12">
-                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                        <i class="bi bi-people me-2 fs-6"></i>Employees to include
-                                    </label>
-                                    <div class="border rounded p-3" style="max-height:220px;overflow:auto; background: #fff; border-color: #dee2e6 !important;">
-                                        <div class="form-check mb-3 p-2" style="background: #f8f9fa; border-radius: 6px;">
-                                            <input class="form-check-input" type="checkbox" id="empSelectAll">
-                                            <label class="form-check-label fw-semibold" for="empSelectAll" style="color: var(--aa-maroon);">
-                                                <i class="bi bi-check-all me-2"></i>Select All Employees
-                                            </label>
-                                        </div>
-                                        @foreach(($employeesForDTR ?? []) as $emp)
-                                        <div class="form-check mb-2 p-2" style="border-left: 3px solid #e9ecef; padding-left: 10px;">
-                                            <input class="form-check-input emp-item" type="checkbox" name="employee_ids[]" value="{{ $emp->employee_id }}" id="emp_{{ $emp->employee_id }}">
-                                            <label class="form-check-label" for="emp_{{ $emp->employee_id }}" style="font-size: 0.95rem;">
-                                                <strong>{{ $emp->full_name }}</strong> 
-                                                <span class="text-muted ms-1">({{ $emp->department->department_name ?? 'N/A' }})</span>
-                                            </label>
-                                        </div>
-                                        @endforeach
-                                        @if(($employeesForDTR ?? [])->isEmpty())
-                                        <div class="text-center p-3 text-muted">
-                                            <i class="bi bi-exclamation-triangle me-2"></i>
-                                            No employees found for DTR generation.
-                                        </div>
-                                        @endif
+                            <div class="mb-3">
+                                <label class="form-label fw-bold" style="color: #800000;">
+                                    <i class="bi bi-people me-1"></i>Employees to include
+                                </label>
+                                
+                                <!-- Search Container (No Select All) -->
+                                <div class="bg-white p-2 border rounded-top border-bottom-0">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                                        <input type="text" class="form-control border-start-0 ps-0" id="employeeSearch" placeholder="Search employee...">
                                     </div>
-                                    <div class="form-text">Leave empty to include all employees in the selected department.</div>
                                 </div>
 
+                                <div class="card rounded-top-0">
+                                    <div class="card-body p-0" style="height: 200px; overflow-y: auto;">
+                                        <ul class="list-group list-group-flush" id="employeeList">
+                                            @foreach(($employeesForDTR ?? []) as $employee)
+                                                <li class="list-group-item">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input employee-checkbox" type="checkbox" name="employee_ids[]" value="{{ $employee->id ?? $employee->employee_id }}" id="emp_{{ $employee->id ?? $employee->employee_id }}">
+                                                        <label class="form-check-label w-100" for="emp_{{ $employee->id ?? $employee->employee_id }}">
+                                                            <span class="fw-bold">{{ $employee->full_name }}</span>
+                                                            @if($employee->department)
+                                                                <small class="text-muted ms-1">({{ $employee->department->department_name ?? 'N/A' }})</small>
+                                                            @endif
+                                                        </label>
+                                                    </div>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="form-text">Leave empty to include all employees in the selected office.</div>
+                            </div>
+
+                            <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                        <i class="bi bi-calendar-date me-2 fs-6"></i>Start Date
+                                    <label for="start_date" class="form-label fw-bold" style="color: #800000;">
+                                        <i class="bi bi-calendar-event me-1"></i>Start Date
                                     </label>
-                                    <input type="date" name="start_date" id="dtrStartDate" class="form-control form-control-lg border-2" value="{{ now()->startOfMonth()->toDateString() }}" required
-                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
-                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
-                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                    <div class="form-text" id="dtrStartDateHelp">Defaults to the first day of this month</div>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                    <div class="form-text" id="startDateHelp">First day of current month</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
-                                        <i class="bi bi-calendar-check me-2 fs-6"></i>End Date
+                                    <label for="end_date" class="form-label fw-bold" style="color: #800000;">
+                                        <i class="bi bi-calendar-check me-1"></i>End Date
                                     </label>
-                                    <input type="date" name="end_date" id="dtrEndDate" class="form-control form-control-lg border-2" value="{{ now()->toDateString() }}" required
-                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
-                                           onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
-                                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                    <div class="form-text" id="dtrEndDateHelp">Defaults to today</div>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                    <div class="form-text" id="endDateHelp">Last day of current month</div>
                                 </div>
                             </div>
+
                         </div>
                         <div class="modal-footer border-0 p-4" style="background: white;">
-                            <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
-                                    style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
-                                    onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
-                                    onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                            <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </button>
                             <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
@@ -527,13 +511,13 @@
             window.location.search = params.toString();
         });
 
-        // DTR Report Type Date Adjustment Script (same as attendance page)
+        // DTR Report Type Date Adjustment Script & Search Logic
         document.addEventListener('DOMContentLoaded', function() {
-            const dtrReportType = document.getElementById('dtrReportType');
-            const dtrStartDate = document.getElementById('dtrStartDate');
-            const dtrEndDate = document.getElementById('dtrEndDate');
-            const dtrStartDateHelp = document.getElementById('dtrStartDateHelp');
-            const dtrEndDateHelp = document.getElementById('dtrEndDateHelp');
+            const dtrReportType = document.getElementById('report_type');
+            const dtrStartDate = document.getElementById('start_date');
+            const dtrEndDate = document.getElementById('end_date');
+            const dtrStartDateHelp = document.getElementById('startDateHelp');
+            const dtrEndDateHelp = document.getElementById('endDateHelp');
             
             if (dtrReportType && dtrStartDate && dtrEndDate) {
                 // Function to format date as YYYY-MM-DD
@@ -600,6 +584,25 @@
                         updateDatesForReportType();
                     });
                 }
+            }
+
+            // Search functionality
+            const searchInput = document.getElementById('employeeSearch');
+            const employeeList = document.getElementById('employeeList');
+            if (searchInput && employeeList) {
+                const items = employeeList.getElementsByTagName('li');
+                searchInput.addEventListener('keyup', function() {
+                    const filter = searchInput.value.toLowerCase();
+                    for (let i = 0; i < items.length; i++) {
+                        const label = items[i].getElementsByTagName('label')[0];
+                        const txtValue = label.textContent || label.innerText;
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                            items[i].style.display = "";
+                        } else {
+                            items[i].style.display = "none";
+                        }
+                    }
+                });
             }
         });
     </script>

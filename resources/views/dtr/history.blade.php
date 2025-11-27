@@ -1,11 +1,96 @@
 @extends('layouts.theme')
 @section('content')
+<style>
+    /* Responsive DTR History Styles */
+    .dtr-history-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .dtr-history-title {
+        flex: 1;
+        min-width: 250px;
+    }
+    
+    .dtr-history-actions {
+        flex-shrink: 0;
+    }
+    
+    /* Mobile responsive adjustments */
+    @media (max-width: 767.98px) {
+        .dtr-history-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .dtr-history-title h1 {
+            font-size: 1.5rem;
+        }
+        
+        .dtr-history-title p {
+            font-size: 0.9rem;
+        }
+        
+        .dtr-history-actions .btn {
+            width: 100%;
+        }
+        
+        /* Hide less important columns on mobile */
+        .hide-mobile {
+            display: none !important;
+        }
+        
+        /* Stack filter inputs */
+        .filter-row .col-md-2 {
+            margin-bottom: 0.75rem;
+        }
+        
+        /* Adjust table font sizes */
+        .table {
+            font-size: 0.8rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.5rem 0.25rem;
+        }
+        
+        /* Modal success cards */
+        .modal-success-card {
+            margin-bottom: 1rem;
+        }
+        
+        .btn-group {
+            width: 100%;
+        }
+        
+        .btn-group .btn {
+            font-size: 0.75rem;
+        }
+    }
+    
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        /* Hide some columns on tablets */
+        .hide-tablet {
+            display: none !important;
+        }
+        
+        .dtr-history-title h1 {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+
 <div class="container-fluid">
     <!-- Success/Error Messages REMOVED (handled by toasts)-->
     {{-- Alerts removed --}}
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="dtr-history-header">
+        <div class="dtr-history-title">
             <h1 class="fw-bold fs-2 mb-0">
                 <i class="bi bi-file-earmark-text me-2 fs-4"></i>DTR Report History
             </h1>
@@ -16,9 +101,11 @@
             </p>
             @endif
         </div>
-        <div>
+        <div class="dtr-history-actions">
             <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to Attendance
+                <i class="bi bi-arrow-left me-1"></i>
+                <span class="d-none d-sm-inline">Back to Attendance</span>
+                <span class="d-sm-none">Back</span>
             </a>
         </div>
     </div>
@@ -26,9 +113,9 @@
     <!-- Filters -->
     <div class="aa-card mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label">Report Type</label>
+            <form method="GET" class="row g-3 filter-row">
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label fw-semibold">Report Type</label>
                     <select name="report_type" class="form-select">
                         <option value="">All Types</option>
                         <option value="weekly" {{ request('report_type') === 'weekly' ? 'selected' : '' }}>Weekly</option>
@@ -36,35 +123,39 @@
                         <option value="custom" {{ request('report_type') === 'custom' ? 'selected' : '' }}>Custom</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Status</label>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label fw-semibold">Status</label>
                     <select name="status" class="form-select">
                         <option value="">All Status</option>
                         <option value="generated" {{ request('status') === 'generated' ? 'selected' : '' }}>Generated</option>
                         <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Start Date</label>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label fw-semibold">Start Date</label>
                     <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">End Date</label>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label fw-semibold">End Date</label>
                     <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label d-none d-md-block">&nbsp;</label>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search me-2"></i>Filter
+                            <i class="bi bi-search me-1"></i>
+                            <span class="d-none d-sm-inline">Filter</span>
+                            <span class="d-sm-none">Search</span>
                         </button>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label d-none d-md-block">&nbsp;</label>
                     <div class="d-grid">
                         <a href="{{ route('dtr.history') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            <span class="d-none d-sm-inline">Reset</span>
+                            <span class="d-sm-none">Clear</span>
                         </a>
                     </div>
                 </div>
@@ -84,15 +175,15 @@
                 <table class="table table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col">Report ID</th>
+                            <th scope="col"><span class="d-none d-sm-inline">Report </span>ID</th>
                             <th scope="col">Title</th>
-                            <th scope="col">Office</th>
-                            <th scope="col">Type</th>
-                            <th scope="col">Period</th>
-                            <th scope="col">Employees</th>
-                            <th scope="col">Total Hours</th>
-                            <th scope="col">Generated</th>
-                            <th scope="col">Status</th>
+                            <th scope="col" class="hide-mobile hide-tablet">Office</th>
+                            <th scope="col" class="hide-mobile">Type</th>
+                            <th scope="col" class="hide-mobile hide-tablet">Period</th>
+                            <th scope="col" class="hide-mobile hide-tablet">Employees</th>
+                            <th scope="col" class="hide-mobile hide-tablet">Hours</th>
+                            <th scope="col" class="hide-mobile">Generated</th>
+                            <th scope="col" class="hide-mobile">Status</th>
                             <th scope="col">Actions</th>
                         </tr>
                     </thead>
@@ -104,46 +195,54 @@
                             </td>
                             <td>
                                 <div class="fw-bold">{{ $report->report_title }}</div>
-                                <small class="text-muted">by {{ $report->admin_name }}</small>
+                                <small class="text-muted d-none d-md-inline">by {{ $report->admin_name }}</small>
+                                <div class="d-md-none mt-1">
+                                    <span class="badge bg-{{ $report->report_type === 'weekly' ? 'success' : ($report->report_type === 'monthly' ? 'warning' : 'info') }} me-1">
+                                        {{ ucfirst($report->report_type) }}
+                                    </span>
+                                    <span class="badge bg-{{ $report->status === 'generated' ? 'success' : 'secondary' }}">
+                                        {{ ucfirst($report->status) }}
+                                    </span>
+                                </div>
                             </td>
-                            <td>
+                            <td class="hide-mobile hide-tablet">
                                 <span class="badge bg-info">
                                     {{ $report->department_name }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="hide-mobile">
                                 <span class="badge bg-{{ $report->report_type === 'weekly' ? 'success' : ($report->report_type === 'monthly' ? 'warning' : 'info') }}">
                                     {{ ucfirst($report->report_type) }}
                                 </span>
                             </td>
-                            <td>
-                                <div class="text-muted">
+                            <td class="hide-mobile hide-tablet">
+                                <div class="text-muted small">
                                     {{ $report->formatted_period }}
                                 </div>
                                 <small class="text-muted">{{ $report->total_days }} days</small>
                             </td>
-                            <td>
+                            <td class="hide-mobile hide-tablet">
                                 <span class="badge bg-secondary">
-                                    {{ $report->total_employees }} employees
+                                    {{ $report->total_employees }}
                                 </span>
                             </td>
-                            <td>
-                                <div class="fw-bold text-success">
-                                    {{ number_format($report->total_hours, 2) }} hrs
+                            <td class="hide-mobile hide-tablet">
+                                <div class="fw-bold text-success small">
+                                    {{ number_format($report->total_hours, 2) }}
                                 </div>
                             </td>
-                            <td>
-                                <div class="text-muted">
+                            <td class="hide-mobile">
+                                <small class="text-muted">
                                     {{ $report->formatted_generated_on }}
-                                </div>
+                                </small>
                             </td>
-                            <td>
+                            <td class="hide-mobile">
                                 <span class="badge bg-{{ $report->status === 'generated' ? 'success' : 'secondary' }}">
                                     {{ ucfirst($report->status) }}
                                 </span>
                             </td>
                             <td>
-                                <div class="d-flex gap-1">
+                                <div class="d-flex gap-1 flex-nowrap">
                                     <a href="{{ route('dtr.details', $report->report_id) }}" class="btn btn-outline-primary btn-sm" title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </a>
@@ -197,8 +296,8 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
+                    <div class="col-12 col-md-6 mb-3 mb-md-0">
+                        <div class="card modal-success-card">
                             <div class="card-body text-center">
                                 <i class="bi bi-eye display-4 text-primary mb-3"></i>
                                 <h5>View Report Details</h5>
@@ -209,17 +308,25 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card">
+                    <div class="col-12 col-md-6">
+                        <div class="card modal-success-card">
                             <div class="card-body text-center">
                                 <i class="bi bi-download display-4 text-success mb-3"></i>
                                 <h5>Download Report</h5>
                                 <p class="text-muted">Download the report in your preferred format</p>
-                                <div class="btn-group">
-                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'html']) }}" class="btn btn-success"><i class="bi bi-filetype-html me-2"></i>HTML</a>
-                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'pdf']) }}" class="btn btn-danger"><i class="bi bi-filetype-pdf me-2"></i>PDF</a>
-                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'excel']) }}" class="btn btn-warning"><i class="bi bi-file-earmark-excel me-2"></i>Excel</a>
-                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'csv']) }}" class="btn btn-secondary"><i class="bi bi-filetype-csv me-2"></i>CSV</a>
+                                <div class="btn-group d-flex flex-wrap gap-2">
+                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'html']) }}" class="btn btn-success flex-fill">
+                                        <i class="bi bi-filetype-html me-1 d-none d-sm-inline"></i>HTML
+                                    </a>
+                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'pdf']) }}" class="btn btn-danger flex-fill">
+                                        <i class="bi bi-filetype-pdf me-1 d-none d-sm-inline"></i>PDF
+                                    </a>
+                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'excel']) }}" class="btn btn-warning flex-fill">
+                                        <i class="bi bi-file-earmark-excel me-1 d-none d-sm-inline"></i>Excel
+                                    </a>
+                                    <a href="{{ route('dtr.download', [session('generated_report_id'), 'csv']) }}" class="btn btn-secondary flex-fill">
+                                        <i class="bi bi-filetype-csv me-1 d-none d-sm-inline"></i>CSV
+                                    </a>
                                 </div>
                             </div>
                         </div>
