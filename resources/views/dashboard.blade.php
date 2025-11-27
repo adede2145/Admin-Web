@@ -291,14 +291,14 @@
                             <span><i class="bi bi-square-fill" style="color:#f7c948"></i> Fingerprint</span>
                         </div>
                     </div>
-                    <div class="text-center d-flex justify-content-center align-items-center card-chart-body" style="padding: 1rem;">
+                    <div class="text-center d-flex justify-content-center align-items-center card-chart-body" style="padding: 1rem; position: relative;">
                         <div
-                            style="width: 100%; max-width: 500px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
+                            style="width: 100%; max-width: 400px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
                             id="pieChartContainer">
                             <canvas id="loginPie" style="display: block; width: 100%; height: 100%;"></canvas>
                         </div>
-                        <div id="noDataMessage" class="text-muted d-flex align-items-center justify-content-center w-100" style="min-height: 350px; display: none !important;">
-                            <span class="fs-1 fw-semibold">No data for selected period</span>
+                        <div id="noDataMessage" class="text-muted position-absolute w-100 h-100 d-none align-items-center justify-content-center" style="top: 0; left: 0;">
+                            <span class="fs-4 fw-semibold">No data for selected period</span>
                         </div>
                     </div>
                 </div>
@@ -383,10 +383,10 @@
         // Check if there's any data
         if (rfid === 0 && fp === 0) {
             // Hide chart, show no data message
-            if (chartContainer) chartContainer.style.display = 'none';
+            if (chartContainer) chartContainer.classList.add('d-none');
             if (noDataMsg) {
-                noDataMsg.style.display = 'flex';
-                noDataMsg.style.removeProperty('display');
+                noDataMsg.classList.remove('d-none');
+                noDataMsg.classList.add('d-flex');
             }
             if (pieChartInstance) {
                 pieChartInstance.destroy();
@@ -396,8 +396,11 @@
         }
         
         // Show chart, hide no data message
-        if (chartContainer) chartContainer.style.display = 'flex';
-        if (noDataMsg) noDataMsg.style.display = 'none';
+        if (chartContainer) chartContainer.classList.remove('d-none');
+        if (noDataMsg) {
+            noDataMsg.classList.add('d-none');
+            noDataMsg.classList.remove('d-flex');
+        }
         
         if (pieChartInstance) {
             pieChartInstance.destroy();
@@ -418,6 +421,17 @@
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.label || '';
+                                var value = context.parsed || 0;
+                                var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                var percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ' + value + ' (' + percentage + '%)';
+                            }
+                        }
                     }
                 },
                 animations: {
