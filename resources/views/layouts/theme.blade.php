@@ -183,7 +183,16 @@
         <div class="ms-auto d-flex align-items-center gap-3">
             <div class="dropdown">
                 <button class="btn btn-link text-white text-decoration-none d-flex align-items-center dropdown-toggle p-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <div class="rounded-circle me-2" style="width:32px;height:32px;background:var(--aa-yellow);"></div>
+                    @if(auth()->user()->employee && auth()->user()->employee->photo_data)
+                        <img src="{{ route('employees.photo', auth()->user()->employee->employee_id) }}?v={{ auth()->user()->employee->employee_id }}_{{ md5(auth()->user()->employee->photo_data ?? uniqid()) }}" 
+                             alt="{{ auth()->user()->employee->full_name }}" 
+                             class="rounded-circle me-2" 
+                             style="width:32px;height:32px;object-fit:cover;" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="rounded-circle me-2" style="width:32px;height:32px;background:var(--aa-yellow);display:none;"></div>
+                    @else
+                        <div class="rounded-circle me-2" style="width:32px;height:32px;background:var(--aa-yellow);"></div>
+                    @endif
                     <span class="small d-none d-sm-inline">{{ auth()->user()->username ?? 'User' }}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
