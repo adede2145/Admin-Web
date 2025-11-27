@@ -577,6 +577,12 @@ class AttendanceController extends Controller
 
     private function downloadAsPDF($report, $overrides, $filename)
     {
+        // Check if multiple employees - if so, create ZIP
+        if ($report->summaries->count() > 1) {
+            return $this->downloadMultipleEmployeePDFs($report, $overrides, $filename);
+        }
+
+        // Single employee - use existing logic
         $htmlContent = $this->generateHTMLContent($report, $overrides);
 
         // Use Dompdf to convert HTML to PDF
@@ -592,6 +598,12 @@ class AttendanceController extends Controller
 
     private function downloadAsCSV($report, $overrides, $filename)
     {
+        // Check if multiple employees - if so, create ZIP
+        if ($report->summaries->count() > 1) {
+            return $this->downloadMultipleEmployeeCSVs($report, $overrides, $filename);
+        }
+
+        // Single employee - use existing logic
         $csvData = [];
         
         $startDate = \Carbon\Carbon::parse($report->start_date);
@@ -693,11 +705,16 @@ class AttendanceController extends Controller
     private function downloadAsDOCX($report, $overrides, $filename)
     {
         try {
-            // Process only the first employee for now
             if ($report->summaries->isEmpty()) {
                 throw new \Exception('No employee data found in the report.');
             }
-            
+
+            // Check if multiple employees - if so, create ZIP
+            if ($report->summaries->count() > 1) {
+                return $this->downloadMultipleEmployeeDOCXs($report, $overrides, $filename);
+            }
+
+            // Single employee - use existing logic
             $summary = $report->summaries->first();
             $employee = $summary->employee;
             
@@ -1657,6 +1674,405 @@ class AttendanceController extends Controller
             'tardy_days' => $tardyDays,
             'has_undertime' => $totalUndertimeMinutes > 0
         ];
+    }
+
+    /**
+     * Download multiple employee DTRs as DOCX files in a ZIP archive
+     */
+    private function downloadMultipleEmployeeDOCXs($report, $overrides, $filename)
+    {
+        try {
+            $tempFiles = [];
+            $zipFilename = $filename . '.zip';
+            $zipPath = storage_path('app/temp_dtr_' . uniqid() . '.zip');
+
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
+                throw new \Exception('Could not create ZIP file');
+            }
+
+            // Generate DOCX for each employee
+            foreach ($report->summaries as $summary) {
+                $employee = $summary->employee;
+                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $report->start_date . '_to_' . $report->end_date);
+                
+                try {
+                    $docxPath = $this->generateSingleEmployeeDOCX($report, $overrides, $employee);
+                    $tempFiles[] = $docxPath;
+                    
+                    // Add to ZIP
+                    $zip->addFile($docxPath, $employeeFilename . '.docx');
+                } catch (\Exception $e) {
+                    Log::error('Failed to generate DOCX for employee: ' . $employee->employee_id, ['error' => $e->getMessage()]);
+                    continue; // Skip this employee and continue with others
+                }
+            }
+
+            $zip->close();
+
+            // Clean up temp files
+            foreach ($tempFiles as $tempFile) {
+                if (file_exists($tempFile)) {
+                    @unlink($tempFile);
+                }
+            }
+
+            return response()->download($zipPath, $zipFilename)->deleteFileAfterSend();
+        } catch (\Exception $e) {
+            Log::error('Multiple employee DOCX export error', ['error' => $e->getMessage()]);
+            throw new \Exception('Failed to generate multiple employee DTRs: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download multiple employee DTRs as PDF files in a ZIP archive
+     */
+    private function downloadMultipleEmployeePDFs($report, $overrides, $filename)
+    {
+        try {
+            $tempFiles = [];
+            $zipFilename = $filename . '.zip';
+            $zipPath = storage_path('app/temp_dtr_' . uniqid() . '.zip');
+
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
+                throw new \Exception('Could not create ZIP file');
+            }
+
+            // Generate PDF for each employee
+            foreach ($report->summaries as $summary) {
+                $employee = $summary->employee;
+                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $report->start_date . '_to_' . $report->end_date);
+                
+                try {
+                    $pdfContent = $this->generateSingleEmployeePDF($report, $overrides, $employee);
+                    
+                    // Add to ZIP directly from content
+                    $zip->addFromString($employeeFilename . '.pdf', $pdfContent);
+                } catch (\Exception $e) {
+                    Log::error('Failed to generate PDF for employee: ' . $employee->employee_id, ['error' => $e->getMessage()]);
+                    continue; // Skip this employee and continue with others
+                }
+            }
+
+            $zip->close();
+
+            return response()->download($zipPath, $zipFilename)->deleteFileAfterSend();
+        } catch (\Exception $e) {
+            Log::error('Multiple employee PDF export error', ['error' => $e->getMessage()]);
+            throw new \Exception('Failed to generate multiple employee PDRs: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download multiple employee DTRs as CSV files in a ZIP archive
+     */
+    private function downloadMultipleEmployeeCSVs($report, $overrides, $filename)
+    {
+        try {
+            $zipFilename = $filename . '.zip';
+            $zipPath = storage_path('app/temp_dtr_' . uniqid() . '.zip');
+
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
+                throw new \Exception('Could not create ZIP file');
+            }
+
+            // Generate CSV for each employee
+            foreach ($report->summaries as $summary) {
+                $employee = $summary->employee;
+                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $report->start_date . '_to_' . $report->end_date);
+                
+                try {
+                    $csvContent = $this->generateSingleEmployeeCSV($report, $overrides, $employee);
+                    
+                    // Add to ZIP directly from content
+                    $zip->addFromString($employeeFilename . '.csv', $csvContent);
+                } catch (\Exception $e) {
+                    Log::error('Failed to generate CSV for employee: ' . $employee->employee_id, ['error' => $e->getMessage()]);
+                    continue; // Skip this employee and continue with others
+                }
+            }
+
+            $zip->close();
+
+            return response()->download($zipPath, $zipFilename)->deleteFileAfterSend();
+        } catch (\Exception $e) {
+            Log::error('Multiple employee CSV export error', ['error' => $e->getMessage()]);
+            throw new \Exception('Failed to generate multiple employee CSVs: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate a single employee DOCX file (returns path to temp file)
+     */
+    private function generateSingleEmployeeDOCX($report, $overrides, $employee)
+    {
+        // Load template
+        $templatePath = storage_path('app/templates/dtr_template.docx');
+        if (!file_exists($templatePath)) {
+            throw new \Exception('Template file not found at: ' . $templatePath);
+        }
+        
+        $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor($templatePath);
+        
+        // Set period
+        $startDate = \Carbon\Carbon::parse($report->start_date);
+        $endDate = \Carbon\Carbon::parse($report->end_date);
+        
+        // Prepare period label parts
+        $periodPrefix = '';
+        $periodDate = '';
+        if ($report->report_type === 'monthly') {
+            $periodPrefix = 'For the month of:';
+            $periodDate = $startDate->format('F j') . '-' . $endDate->format('j, Y');
+        } elseif ($report->report_type === 'weekly') {
+            $periodPrefix = 'For the week of:';
+            $periodDate = $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+        } else {
+            $periodPrefix = 'For the period:';
+            $periodDate = $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+        }
+        
+        // Get attendance details for this employee
+        $employeeDetails = $report->details->where('employee_id', $employee->employee_id);
+        $detailsByDate = [];
+        foreach ($employeeDetails as $detail) {
+            $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+            $detailsByDate[$dateKey] = $detail;
+        }
+        
+        // Prepare days data
+        $daysData = [];
+        $currentDate = $startDate->copy();
+        
+        while ($currentDate->lte($endDate)) {
+            $dateKey = $currentDate->toDateString();
+            $detail = $detailsByDate[$dateKey] ?? null;
+            
+            // Check for override
+            $ovKey = $employee->employee_id . '|' . $dateKey;
+            $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+            
+            // Check if weekend
+            $isWeekend = $currentDate->isWeekend();
+            $dayName = $isWeekend ? strtoupper($currentDate->format('l')) : '';
+            
+            // Calculate AM/PM times and undertime
+            $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+            
+            $daysData[] = [
+                'day' => $currentDate->format('j'),
+                'am_arrival' => $amData['am_arrival'] ?: '',
+                'am_departure' => $amData['am_departure'] ?: '',
+                'pm_arrival' => $amData['pm_arrival'] ?: '',
+                'pm_departure' => $amData['pm_departure'] ?: '',
+                'undertime_hours' => $amData['undertime_hours'] !== '' ? $amData['undertime_hours'] : '',
+                'undertime_minutes' => $amData['undertime_minutes'] !== '' ? $amData['undertime_minutes'] : '',
+                'is_weekend' => $isWeekend,
+                'day_name' => $dayName,
+                'is_leave' => $ov !== null,
+                'leave_text' => $ov ? strtoupper($ov->remarks ?: 'LEAVE') : '',
+            ];
+            
+            $currentDate->addDay();
+        }
+        
+        // Calculate totals
+        $totalUndertime = $this->calculateTotalUndertime($employeeDetails, $overrides, $employee->employee_id, $startDate, $endDate);
+        
+        // Set basic template variables
+        $templateProcessor->setValue('employee_name', $employee->full_name);
+        $templateProcessor->setValue('period_label', $periodPrefix);
+        $templateProcessor->setValue('period_date', $periodDate);
+        $templateProcessor->setValue('office_hours', '8:00AM-12:00NN  /  1:00PM-5:00PM');
+        
+        // Prepare summary text
+        $summaryParts = [];
+        if ($totalUndertime['leave_days'] > 0) {
+            $summaryParts[] = $totalUndertime['leave_days'] . ' day' . ($totalUndertime['leave_days'] > 1 ? 's' : '') . ' leave w/ pay';
+        }
+        if ($totalUndertime['tardy_days'] > 0) {
+            $summaryParts[] = $totalUndertime['tardy_days'] . ' day' . ($totalUndertime['tardy_days'] > 1 ? 's' : '') . ' tardy';
+        } else {
+            $summaryParts[] = 'no tardy';
+        }
+        if ($totalUndertime['has_undertime']) {
+            $summaryParts[] = $totalUndertime['hours'] . 'h ' . $totalUndertime['minutes'] . 'm undertime';
+        } else {
+            $summaryParts[] = 'no undertime';
+        }
+        $summaryText = implode('; ', $summaryParts);
+        $templateProcessor->setValue('summary_text', $summaryText);
+        
+        // Clone the row for days data
+        $templateProcessor->cloneRow('day', count($daysData));
+        
+        // Keep track of which rows are weekends/leaves for later merging
+        $weekendRowIndices = [];
+        
+        // Fill in day data
+        $index = 1;
+        foreach ($daysData as $dayData) {
+            $templateProcessor->setValue('day#' . $index, $dayData['day']);
+        
+            // Handle weekends and leave days (span across all columns)
+            if ($dayData['is_leave'] || $dayData['is_weekend']) {
+                $displayText = $dayData['is_leave'] ? $dayData['leave_text'] : $dayData['day_name'];
+                $templateProcessor->setValue('am_arrival#' . $index, $displayText);
+                $templateProcessor->setValue('am_departure#' . $index, '');
+                $templateProcessor->setValue('pm_arrival#' . $index, '');
+                $templateProcessor->setValue('pm_departure#' . $index, '');
+                $templateProcessor->setValue('undertime_hours#' . $index, '');
+                $templateProcessor->setValue('undertime_minutes#' . $index, '');
+                $weekendRowIndices[] = $index - 1; // Store for later processing
+            } else {
+                // Regular day
+                $templateProcessor->setValue('am_arrival#' . $index, $dayData['am_arrival'] ? $dayData['am_arrival'] . ' ' : '');
+                $templateProcessor->setValue('am_departure#' . $index, $dayData['am_departure'] ? $dayData['am_departure'] . ' ' : '');
+                $templateProcessor->setValue('pm_arrival#' . $index, $dayData['pm_arrival'] ? $dayData['pm_arrival'] . ' ' : '');
+                $templateProcessor->setValue('pm_departure#' . $index, $dayData['pm_departure'] ? $dayData['pm_departure'] . ' ' : '');
+                $templateProcessor->setValue('undertime_hours#' . $index, $dayData['undertime_hours']);
+                $templateProcessor->setValue('undertime_minutes#' . $index, $dayData['undertime_minutes']);
+            }
+            $index++;
+        }
+        
+        // Save intermediate file
+        $tempOutputPath = storage_path('app/temp_dtr_' . uniqid() . '.docx');
+        $templateProcessor->saveAs($tempOutputPath);
+            
+        // Post-process: Merge cells for weekend/leave rows
+        if (!empty($weekendRowIndices)) {
+            $this->mergeCellsInDOCX($tempOutputPath, $weekendRowIndices, $daysData);
+        }
+        
+        return $tempOutputPath;
+    }
+
+    /**
+     * Generate a single employee PDF file (returns PDF content)
+     */
+    private function generateSingleEmployeePDF($report, $overrides, $employee)
+    {
+        // Create a temporary report object with only this employee
+        $singleEmployeeReport = clone $report;
+        $singleEmployeeReport->setRelation('summaries', $report->summaries->where('employee_id', $employee->employee_id));
+        $singleEmployeeReport->setRelation('details', $report->details->where('employee_id', $employee->employee_id));
+
+        $htmlContent = $this->generateHTMLContent($singleEmployeeReport, $overrides);
+
+        // Use Dompdf to convert HTML to PDF
+        $dompdf = new \Dompdf\Dompdf();
+        $dompdf->loadHtml($htmlContent);
+        $dompdf->setPaper('Letter', 'portrait');
+        $dompdf->render();
+
+        return $dompdf->output();
+    }
+
+    /**
+     * Generate a single employee CSV file (returns CSV content)
+     */
+    private function generateSingleEmployeeCSV($report, $overrides, $employee)
+    {
+        $csvData = [];
+        
+        $startDate = \Carbon\Carbon::parse($report->start_date);
+        $endDate = \Carbon\Carbon::parse($report->end_date);
+        
+        // Format period based on report type
+        $periodLabel = '';
+        if ($report->report_type === 'monthly') {
+            $periodLabel = 'For the month of ' . $startDate->format('F Y');
+        } elseif ($report->report_type === 'weekly') {
+            $periodLabel = 'For the week of ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+        } else {
+            $periodLabel = 'For the period ' . $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+        }
+        
+        // Add headers for this employee
+        $csvData[] = ['Civil Service Form No. 48'];
+        $csvData[] = ['DAILY TIME RECORD'];
+        $csvData[] = [];
+        $csvData[] = [$employee->full_name];
+        $csvData[] = ['(Name)'];
+        $csvData[] = [];
+        $csvData[] = [$periodLabel];
+        $csvData[] = ['Official hours for arrival and departure: Regular days 8:00 AM - 5:00 PM', 'Saturdays: N/A'];
+        $csvData[] = [];
+        
+        // Table header
+        $csvData[] = ['Day', 'A.M. Arrival', 'A.M. Departure', 'P.M. Arrival', 'P.M. Departure', 'Undertime Hours', 'Undertime Min.'];
+        
+        // Get attendance details for this employee
+        $employeeDetails = $report->details->where('employee_id', $employee->employee_id);
+        $detailsByDate = [];
+        foreach ($employeeDetails as $detail) {
+            $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
+            $detailsByDate[$dateKey] = $detail;
+        }
+        
+        // Loop through the actual date range of the report
+        $currentDate = $startDate->copy();
+        
+        while ($currentDate->lte($endDate)) {
+            $dateKey = $currentDate->toDateString();
+            $detail = $detailsByDate[$dateKey] ?? null;
+            
+            // Check for override
+            $ovKey = $employee->employee_id . '|' . $dateKey;
+            $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
+            
+            // Calculate AM/PM times and undertime
+            $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+            
+            $csvData[] = [
+                $currentDate->format('j'),
+                $amData['am_arrival'],
+                $amData['am_departure'],
+                $amData['pm_arrival'],
+                $amData['pm_departure'],
+                $amData['undertime_hours'],
+                $amData['undertime_minutes']
+            ];
+            
+            $currentDate->addDay();
+        }
+        
+        // Total row
+        $totalUndertime = $this->calculateTotalUndertime($employeeDetails, $overrides, $employee->employee_id, $startDate, $endDate);
+        $csvData[] = ['Total', '', '', '', '', $totalUndertime['hours'], $totalUndertime['minutes']];
+        
+        $csvData[] = [];
+        $csvData[] = ['I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.'];
+        $csvData[] = [];
+        $csvData[] = ['VERIFIED as to the prescribed office hours'];
+        $csvData[] = [];
+        $csvData[] = ['________________________________________'];
+        $csvData[] = ['In Charge'];
+        $csvData[] = [];
+        
+        // Convert to CSV string
+        $csvContent = '';
+        foreach ($csvData as $row) {
+            $csvContent .= implode(',', array_map(function ($field) {
+                return '"' . str_replace('"', '""', $field ?? '') . '"';
+            }, $row)) . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    /**
+     * Sanitize filename to remove invalid characters
+     */
+    private function sanitizeFilename($filename)
+    {
+        // Remove invalid characters for Windows filenames
+        $filename = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $filename);
+        // Limit length to 200 characters
+        return substr($filename, 0, 200);
     }
 
     /**
