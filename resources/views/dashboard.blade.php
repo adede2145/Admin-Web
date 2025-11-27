@@ -49,32 +49,27 @@
             @endif
         </div>
         <div class="d-flex flex-wrap align-items-center gap-3">
+            @if(auth()->user()->role->role_name === 'super_admin')
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    @if(auth()->user()->role->role_name === 'super_admin')
                     All Employees
-                    @else
-                    {{ auth()->user()->department->department_name ?? 'Department' }} Employees
-                    @endif
                 </button>
                 <ul class="dropdown-menu border-0 shadow rounded-3">
-                    @if(auth()->user()->role->role_name === 'super_admin')
                     <li><a class="dropdown-item" href="#">All Employees</a></li>
-                    <li><a class="dropdown-item" href="#">By Department</a></li>
-                    @else
-                    <li><a class="dropdown-item" href="#">Department Employees</a></li>
-                    <li>
-                        <h6 class="dropdown-header">{{ auth()->user()->department->department_name ?? 'N/A' }}</h6>
-                    </li>
-                    @endif
+                    <li><a class="dropdown-item" href="#">By Office</a></li>
                 </ul>
             </div>
+            @else
+            <div class="btn btn-sm btn-outline-dark" style="cursor: default;">
+                {{ auth()->user()->department->department_name ?? 'Department' }} Employees
+            </div>
+            @endif
             <div class="d-flex align-items-center gap-2">
                 <span class="text-muted small">Select Period</span>
-                @php $period = request('period', 'today'); @endphp
+                @php $period = request('period', 'week'); @endphp
                 <select class="form-select form-select-sm" id="dashPeriod">
                     <option value="today" {{ $period==='today' ? 'selected' : '' }}>Today</option>
-                    <option value="week" {{ $period==='week' ? 'selected' : 'selected' }}>Last 7 Days</option>
+                    <option value="week" {{ $period==='week' ? 'selected' : '' }}>Last 7 Days</option>
                     <option value="month" {{ $period==='month' ? 'selected' : '' }}>This Month</option>
                 </select>
             </div>
@@ -297,17 +292,14 @@
                         </div>
                     </div>
                     <div class="text-center d-flex justify-content-center align-items-center card-chart-body" style="padding: 1rem;">
-                        @if(($rfidCount + $fpCount) > 0)
                         <div
                             style="width: 100%; max-width: 500px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
                             id="pieChartContainer">
                             <canvas id="loginPie" style="display: block; width: 100%; height: 100%;"></canvas>
                         </div>
-                        @else
-                        <div class="text-muted d-flex align-items-center justify-content-center w-100" style="min-height: 350px;">
+                        <div id="noDataMessage" class="text-muted d-flex align-items-center justify-content-center w-100" style="min-height: 350px; display: none !important;">
                             <span class="fs-1 fw-semibold">No data for selected period</span>
                         </div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -383,12 +375,35 @@
 
     function renderPieChart(rfid, fp) {
         var canvas = document.getElementById('loginPie');
+        var noDataMsg = document.getElementById('noDataMessage');
+        var chartContainer = document.getElementById('pieChartContainer');
+        
         if (!canvas || typeof Chart === 'undefined') return;
+        
+        // Check if there's any data
+        if (rfid === 0 && fp === 0) {
+            // Hide chart, show no data message
+            if (chartContainer) chartContainer.style.display = 'none';
+            if (noDataMsg) {
+                noDataMsg.style.display = 'flex';
+                noDataMsg.style.removeProperty('display');
+            }
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+                pieChartInstance = null;
+            }
+            return;
+        }
+        
+        // Show chart, hide no data message
+        if (chartContainer) chartContainer.style.display = 'flex';
+        if (noDataMsg) noDataMsg.style.display = 'none';
+        
         if (pieChartInstance) {
             pieChartInstance.destroy();
         }
         pieChartInstance = new Chart(canvas, {
-            type: 'pie', // Force pie chart
+            type: 'pie',
             data: {
                 labels: ['RFID', 'Fingerprint'],
                 datasets: [{
@@ -415,15 +430,21 @@
             }
         });
     }
+    
     document.addEventListener('DOMContentLoaded', function() {
         var sel = document.getElementById('dashPeriod');
-        var canvas = document.getElementById('loginPie');
-        // Always fetch and render for 'week' on load
-        fetch(`/dashboard/piechart-data?period=week`)
+        
+        // Fetch data for the currently selected period on load
+        var initialPeriod = sel ? sel.value : 'week';
+        fetch(`/dashboard/piechart-data?period=${initialPeriod}`)
             .then(res => res.json())
             .then(data => {
                 renderPieChart(data.rfidCount, data.fpCount);
+            })
+            .catch(err => {
+                console.error('Error fetching chart data:', err);
             });
+        
         if (sel) {
             sel.addEventListener('change', function() {
                 var period = this.value;
@@ -431,6 +452,9 @@
                     .then(res => res.json())
                     .then(data => {
                         renderPieChart(data.rfidCount, data.fpCount);
+                    })
+                    .catch(err => {
+                        console.error('Error fetching chart data:', err);
                     });
             });
         }

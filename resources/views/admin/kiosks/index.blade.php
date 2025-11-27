@@ -269,12 +269,15 @@
                                                 <a href="{{ route('kiosks.edit', $kiosk) }}" class="btn btn-outline-primary btn-sm" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-outline-info btn-sm view-uptime-btn" data-kiosk-id="{{ $kiosk->kiosk_id }}" title="View Uptime">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-danger btn-sm delete-kiosk-btn" data-kiosk-id="{{ $kiosk->kiosk_id }}" data-kiosk-location="{{ $kiosk->location }}" title="Delete">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                @if($kiosk->is_active && $kiosk->isOnline())
+                                                    <button type="button" class="btn btn-secondary btn-sm" disabled title="Cannot delete online kiosk">
+                                                        <i class="bi bi-shield-lock me-1"></i>Protected
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-outline-danger btn-sm delete-kiosk-btn" data-kiosk-id="{{ $kiosk->kiosk_id }}" data-kiosk-location="{{ $kiosk->location }}" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                @endif
                                             </div>
                                             <div class="ms-2 d-flex align-items-center">
                                                 <small class="text-muted kiosk-uptime">
@@ -881,6 +884,28 @@
                 } else {
                     // Never seen
                     uptimeEl.innerHTML = '<span class="text-muted">Never seen</span>';
+                }
+            }
+
+            // Update delete button state based on online status
+            const actionsCell = row.children[4];
+            if (actionsCell) {
+                const btnGroup = actionsCell.querySelector('.btn-group');
+                if (btnGroup) {
+                    const deleteBtn = btnGroup.querySelector('.delete-kiosk-btn');
+                    const protectedBtn = btnGroup.querySelector('.btn-secondary[disabled]');
+                    
+                    if (kiosk.is_active && kiosk.is_online) {
+                        // Kiosk is online - show protected button
+                        if (deleteBtn) {
+                            deleteBtn.outerHTML = '<button type="button" class="btn btn-secondary btn-sm" disabled title="Cannot delete online kiosk"><i class="bi bi-shield-lock me-1"></i>Protected</button>';
+                        }
+                    } else {
+                        // Kiosk is offline - show delete button
+                        if (protectedBtn) {
+                            protectedBtn.outerHTML = `<button type="button" class="btn btn-outline-danger btn-sm delete-kiosk-btn" data-kiosk-id="${kiosk.kiosk_id}" data-kiosk-location="${kiosk.location}" title="Delete"><i class="bi bi-trash"></i></button>`;
+                        }
+                    }
                 }
             }
         }
