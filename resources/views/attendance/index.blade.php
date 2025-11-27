@@ -254,8 +254,69 @@
     }
 
     /* Center pagination controls consistently (including after AJAX refresh) */
-    #paginationContainer nav { display: flex; justify-content: center; }
-    #paginationContainer .pagination { justify-content: center; }
+    #paginationContainer nav { 
+        display: flex; 
+        justify-content: center; 
+        width: 100%;
+    }
+    #paginationContainer .pagination { 
+        justify-content: center; 
+        flex-wrap: wrap;
+        margin-bottom: 0;
+    }
+    /* Ensure page numbers are always visible */
+    #paginationContainer .pagination .page-item {
+        display: inline-block;
+    }
+    #paginationContainer .pagination .page-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Pagination container spacing */
+    #paginationContainer {
+        padding: 1rem 0.5rem;
+        overflow: visible;
+    }
+    
+    /* Ensure pagination numbers are always visible on mobile */
+    @media (max-width: 768px) {
+        #paginationContainer {
+            padding: 0.75rem 0.25rem;
+        }
+        #paginationContainer .pagination {
+            font-size: 0.85rem;
+            gap: 2px;
+        }
+        #paginationContainer .pagination .page-link {
+            padding: 0.4rem 0.65rem;
+            min-width: 36px;
+            text-align: center;
+            font-weight: 500;
+        }
+        #paginationContainer .pagination .page-item {
+            margin: 2px;
+        }
+        /* Make sure previous/next arrows are visible */
+        #paginationContainer .pagination .page-item:first-child .page-link,
+        #paginationContainer .pagination .page-item:last-child .page-link {
+            padding: 0.4rem 0.5rem;
+        }
+    }
+    @media (max-width: 576px) {
+        #paginationContainer .pagination {
+            font-size: 0.75rem;
+        }
+        #paginationContainer .pagination .page-link {
+            padding: 0.3rem 0.5rem;
+            min-width: 30px;
+            font-size: 0.75rem;
+        }
+        #paginationContainer .pagination .page-item {
+            margin: 1px;
+        }
+    }
 
     /* Responsive Header */
     @media (max-width: 768px) {
@@ -331,6 +392,10 @@
         .table-responsive {
             border: 1px solid #dee2e6;
             border-radius: 8px;
+        }
+        /* Ensure pagination has enough bottom space */
+        .aa-card .card-body {
+            padding-bottom: 1rem !important;
         }
     }
 
@@ -824,7 +889,7 @@
                     <div id="paginationContainer">
                         @if($attendanceLogs->hasPages())
                         <div class="d-flex justify-content-center mt-3">
-                            {{ $attendanceLogs->onEachSide(1)->links('pagination::bootstrap-5') }}
+                            {{ $attendanceLogs->onEachSide(2)->links('pagination::bootstrap-5') }}
                         </div>
                         @endif
                     </div>
