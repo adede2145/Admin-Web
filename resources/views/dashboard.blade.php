@@ -400,7 +400,7 @@
                         @endif
                     </h1>
                 </div>
-                <div class="card-body p-4" style="padding-bottom: 4.5rem !important;">
+                <div class="card-body p-4" style="padding-bottom: 4.5rem !important;" id="recent-activity-container">
                     <div class="table-responsive scroll-hide">
                         <table class="table table-hover">
                             <thead style="background: #fff; position: sticky; top: 0; z-index: 10;">
@@ -411,7 +411,7 @@
 
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="recent-activity-tbody">
                                 @php
                                 if (auth()->user()->role->role_name === 'super_admin') {
                                 $recentLogs = \App\Models\AttendanceLog::with(['employee'])
@@ -442,7 +442,7 @@
                     </div>
                 </div>
                 @if($recentLogs->hasPages())
-                <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
+                <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;" id="recent-activity-pagination">
                     <div class="pagination-compact d-flex justify-content-center align-items-center">
                         {{ $recentLogs->links('pagination::bootstrap-5') }}
                     </div>
@@ -553,6 +553,61 @@
                     .catch(err => {
                         console.error('Error fetching chart data:', err);
                     });
+            });
+        }
+    });
+
+    // AJAX Pagination for Recent Activity
+    document.addEventListener('click', function(e) {
+        // Check if clicked element is a pagination link
+        if (e.target.closest('#recent-activity-pagination a.page-link')) {
+            e.preventDefault();
+            
+            const link = e.target.closest('a.page-link');
+            const url = link.getAttribute('href');
+            
+            if (!url || url === '#') return;
+            
+            // Add loading indicator
+            const tbody = document.getElementById('recent-activity-tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"><span class="visually-hidden">Loading...</span></div>Loading...</td></tr>';
+            }
+            
+            // Fetch new data
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Parse the HTML response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Update table body
+                const newTbody = doc.getElementById('recent-activity-tbody');
+                if (newTbody && tbody) {
+                    tbody.innerHTML = newTbody.innerHTML;
+                }
+                
+                // Update pagination
+                const paginationContainer = document.getElementById('recent-activity-pagination');
+                const newPagination = doc.getElementById('recent-activity-pagination');
+                
+                if (newPagination && paginationContainer) {
+                    paginationContainer.innerHTML = newPagination.innerHTML;
+                } else if (!newPagination && paginationContainer) {
+                    // Remove pagination if there are no more pages
+                    paginationContainer.remove();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading page:', error);
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-4">Error loading data. Please try again.</td></tr>';
+                }
             });
         }
     });
