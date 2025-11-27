@@ -28,23 +28,25 @@
 
     {{-- Employee statistics are now calculated in the controller --}}
 
-    <div class="row">
-        <div class="col-lg-9">
+    <div class="row g-3">
+        <div class="col-12 col-xl-9 order-2 order-xl-1">
             <!-- Employee List -->
             <div class="aa-card h-100">
                 <div class="card-header header-maroon">
-                    <div class="d-flex justify-content-center align-items-center" style="gap: 32px;">
+                    <div class="d-flex flex-column flex-lg-row justify-content-center align-items-center gap-3 gap-lg-4">
                         <h4 class="card-title mb-0">
                             <i class="bi bi-list-ul me-2"></i>Employee List
                         </h4>
-                        <form action="{{ route('employees.index') }}" method="GET" class="d-flex align-items-center justify-content-center" style="max-width: 450px; margin: 0 auto;">
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employees..." value="{{ request('search') }}" style="width: 320px; height: 38px;">
-                            <button type="submit" class="btn btn-sm ms-2 px-3" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a;"><i class="bi bi-search me-1"></i>Search</button>
-                            <button type="button" class="btn btn-sm ms-2 px-3" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a;" onclick="this.form.search.value=''; this.form.submit();"><i class="bi bi-x-circle me-1"></i>Clear</button>
+                        <form action="{{ route('employees.index') }}" method="GET" class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-lg-auto" style="max-width: 500px;">
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employees..." value="{{ request('search') }}" style="height: 38px; min-width: 0; flex: 1;">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-sm px-3 flex-grow-1 flex-sm-grow-0" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a; white-space: nowrap;"><i class="bi bi-search me-1"></i>Search</button>
+                                <button type="button" class="btn btn-sm px-3 flex-grow-1 flex-sm-grow-0" style="background-color: var(--aa-yellow); border-color: var(--aa-yellow); color: #3d0a0a; white-space: nowrap;" onclick="this.form.search.value=''; this.form.submit();"><i class="bi bi-x-circle me-1"></i>Clear</button>
+                            </div>
                         </form>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2 p-md-3">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle employee-table mb-0">
                                 <thead>
@@ -96,14 +98,14 @@
                                         <code class="text-muted">{{ $employee->rfid_code ?? 'Not set' }}</code>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editEmployee{{ $employee->employee_id }}">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editEmployee{{ $employee->employee_id }}" title="Edit Employee">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewAttendance{{ $employee->employee_id }}">
+                                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewAttendance{{ $employee->employee_id }}" title="View Attendance">
                                                 <i class="bi bi-clock"></i>
                                             </button>
-                                            <button class="btn btn-danger btn-sm" onclick="deleteEmployee({{ $employee->employee_id }})">
+                                            <button class="btn btn-danger btn-sm" onclick="deleteEmployee({{ $employee->employee_id }})" title="Delete Employee">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -126,7 +128,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3">
+            <div class="col-12 col-xl-3 order-1 order-xl-2">
                 <div class="aa-card h-100">
                     <div class="card-header header-maroon">
                         <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Employee Summary</h5>
@@ -146,21 +148,21 @@
                         <div class="fw-bold fs-5">{{ $selectedEmployee->full_name ?? 'Select an employee' }}</div>
                         <div class="text-muted small mb-3">{{ $selectedEmployee->department->department_name ?? '' }}</div>
                         <div class="row text-center g-2 mb-3">
-                            <div class="col-12">
+                            <div class="col-6 col-xl-12">
                                 <div class="small text-muted">Days Present</div>
-                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $employeeStats['daysPresent'] }}</div>
+                                <div class="display-1 fw-bold stat-number" style="color:var(--aa-maroon)">{{ $employeeStats['daysPresent'] }}</div>
                             </div>
-                            <div class="col-12">
+                            <div class="col-6 col-xl-12">
                                 <div class="small text-muted">Total Hours</div>
-                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ number_format($employeeStats['totalHours'], 1) }}</div>
+                                <div class="display-1 fw-bold stat-number" style="color:var(--aa-maroon)">{{ number_format($employeeStats['totalHours'], 1) }}</div>
                             </div>
-                            <div class="col-12">
+                            <div class="col-6 col-xl-12">
                                 <div class="small text-muted">Overtime</div>
-                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ number_format($employeeStats['overtimeHours'], 1) }}</div>
+                                <div class="display-1 fw-bold stat-number" style="color:var(--aa-maroon)">{{ number_format($employeeStats['overtimeHours'], 1) }}</div>
                             </div>
-                            <div class="col-12">
+                            <div class="col-6 col-xl-12">
                                 <div class="small text-muted">Attendance Rate</div>
-                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $employeeStats['attendanceRate'] }}%</div>
+                                <div class="display-1 fw-bold stat-number" style="color:var(--aa-maroon)">{{ $employeeStats['attendanceRate'] }}%</div>
                             </div>
                         </div>
                         <div class="text-muted small mb-2">Last Attendance</div>
@@ -185,10 +187,10 @@
                 <form action="{{ route('employees.update', $employee->employee_id) }}" method="POST" enctype="multipart/form-data" class="employee-edit-form">
                     @csrf
                     @method('PUT')
-                    <div class="modal-body p-4" style="background: #fafbfc;">
-                        <div class="row g-4">
+                    <div class="modal-body p-3 p-md-4" style="background: #fafbfc;">
+                        <div class="row g-3 g-md-4">
                             <!-- Employee ID/Code (Editable in modal) -->
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                     <i class="bi bi-person-badge me-2 fs-6"></i>Employee ID/Code
                                 </label>
@@ -200,7 +202,7 @@
                             </div>
 
                             <!-- Employment Type -->
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                     <i class="bi bi-briefcase me-2 fs-6"></i>Employment Type
                                 </label>
@@ -227,7 +229,7 @@
                             </div>
 
                             <!-- Office -->
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                     <i class="bi bi-building me-2 fs-6"></i>Office
                                 </label>
@@ -244,7 +246,7 @@
                             </div>
 
                             <!-- RFID Code (Read-only) -->
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                     <i class="bi bi-credit-card me-2 fs-6"></i>RFID Code
                                 </label>
@@ -286,16 +288,16 @@
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer border-0 p-4" style="background: white;">
+                    <div class="modal-footer border-0 p-3 p-md-4 flex-column flex-sm-row" style="background: white; gap: 0.5rem;">
                         <a href="{{ route('employees.fingerprints.edit', $employee->employee_id) }}" 
-                           class="btn btn-lg px-4 fw-semibold"
+                           class="btn btn-lg px-4 fw-semibold w-100 w-sm-auto"
                            target="_blank"
                            style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);"
                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(40, 167, 69, 0.4)'"
                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(40, 167, 69, 0.3)'">
                             <i class="bi bi-fingerprint me-2"></i>Edit Fingerprints
                         </a>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 w-100 w-sm-auto flex-column flex-sm-row">
                             <button type="button" class="btn btn-lg px-4" data-bs-dismiss="modal"
                                     style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
                                     onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
@@ -327,8 +329,8 @@
                 </div>
                 <div class="modal-body p-4" style="background: #fafbfc;">
                     <div class="mb-4">
-                        <div class="row g-3">
-                            <div class="col-md-4">
+                        <div class="row g-2 g-md-3">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="d-flex align-items-center p-3 rounded-3" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); border-left: 4px solid #2196f3;">
                                     <i class="bi bi-calendar-check fs-4 me-3" style="color: #1976d2;"></i>
                                     <div>
@@ -337,7 +339,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="d-flex align-items-center p-3 rounded-3" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7); border-left: 4px solid #9c27b0;">
                                     <i class="bi bi-clock fs-4 me-3" style="color: #7b1fa2;"></i>
                                     <div>
@@ -346,7 +348,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="d-flex align-items-center p-3 rounded-3" style="background: linear-gradient(135deg, #e8f5e8, #c8e6c9); border-left: 4px solid #4caf50;">
                                     <i class="bi bi-person-check fs-4 me-3" style="color: #388e3c;"></i>
                                     <div>
@@ -438,8 +440,8 @@
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4" style="background: white;">
-                    <button type="button" class="btn btn-lg px-4 fw-semibold" data-bs-dismiss="modal"
+                <div class="modal-footer border-0 p-3 p-md-4" style="background: white;">
+                    <button type="button" class="btn btn-lg px-4 fw-semibold w-100 w-sm-auto" data-bs-dismiss="modal"
                             style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white; border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
                             onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
@@ -466,10 +468,10 @@
                     <form action="{{ route('attendance.update', $log->log_id) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        <div class="modal-body p-4" style="background: #fafbfc;">
-                            <div class="row g-4">
+                        <div class="modal-body p-3 p-md-4" style="background: #fafbfc;">
+                            <div class="row g-3 g-md-4">
                                 <!-- Employee (Read-only) -->
-                                <div class="col-md-12">
+                                <div class="col-12">
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-person-circle me-2 fs-6"></i>Employee
                                     </label>
@@ -479,7 +481,7 @@
                                 </div>
 
                                 <!-- Date -->
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-calendar3 me-2 fs-6"></i>Date
                                     </label>
@@ -491,7 +493,7 @@
                                 </div>
 
                                 <!-- Method -->
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-gear me-2 fs-6"></i>Method
                                     </label>
@@ -505,7 +507,7 @@
                                 </div>
 
                                 <!-- Time In -->
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-arrow-right-circle me-2 fs-6"></i>Time In
                                     </label>
@@ -517,7 +519,7 @@
                                 </div>
 
                                 <!-- Time Out -->
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
                                         <i class="bi bi-arrow-left-circle me-2 fs-6"></i>Time Out
                                     </label>
@@ -533,14 +535,14 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer border-0 p-4" style="background: white;">
-                            <button type="button" class="btn btn-lg px-4 me-2" data-bs-dismiss="modal"
+                        <div class="modal-footer border-0 p-3 p-md-4 flex-column flex-sm-row" style="background: white; gap: 0.5rem;">
+                            <button type="button" class="btn btn-lg px-4 w-100 w-sm-auto" data-bs-dismiss="modal"
                                     style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
                                     onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
                                     onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </button>
-                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
+                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white w-100 w-sm-auto"
                                     style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
                                     onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
                                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
@@ -735,6 +737,18 @@
                 if (selectedRow) {
                     selectedRow.classList.add('table-active');
                 }
+            }
+            
+            // Handle table scroll indicator
+            const tableResponsive = document.querySelector('.table-responsive');
+            if (tableResponsive) {
+                tableResponsive.addEventListener('scroll', function() {
+                    if (this.scrollLeft > 10) {
+                        this.classList.add('scrolled');
+                    } else {
+                        this.classList.remove('scrolled');
+                    }
+                });
             }
         });
 
@@ -1383,39 +1397,41 @@
                     <form action="{{ route('attendance.update', $log->log_id) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        <div class="modal-body">
+                        <div class="modal-body p-3 p-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Employee</label>
                                 <input type="text" class="form-control" value="{{ $log->employee->full_name ?? 'N/A' }}" readonly>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Date</label>
-                                <input type="date" name="date" class="form-control" 
-                                       value="{{ \Carbon\Carbon::parse($log->time_in)->format('Y-m-d') }}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Time In</label>
-                                <input type="time" name="time_in" class="form-control" 
-                                       value="{{ \Carbon\Carbon::parse($log->time_in)->format('H:i') }}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Time Out</label>
-                                <input type="time" name="time_out" class="form-control" 
-                                       value="{{ $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('H:i') : '' }}">
-                                <div class="form-text">Leave empty if employee hasn't timed out yet</div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Method</label>
-                                <select name="method" class="form-select" required>
-                                    <option value="rfid" {{ $log->method === 'rfid' ? 'selected' : '' }}>RFID</option>
-                                    <option value="fingerprint" {{ $log->method === 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
-                                    <option value="manual" {{ $log->method === 'manual' ? 'selected' : '' }}>Manual</option>
-                                </select>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Date</label>
+                                    <input type="date" name="date" class="form-control" 
+                                           value="{{ \Carbon\Carbon::parse($log->time_in)->format('Y-m-d') }}" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Method</label>
+                                    <select name="method" class="form-select" required>
+                                        <option value="rfid" {{ $log->method === 'rfid' ? 'selected' : '' }}>RFID</option>
+                                        <option value="fingerprint" {{ $log->method === 'fingerprint' ? 'selected' : '' }}>Fingerprint</option>
+                                        <option value="manual" {{ $log->method === 'manual' ? 'selected' : '' }}>Manual</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Time In</label>
+                                    <input type="time" name="time_in" class="form-control" 
+                                           value="{{ \Carbon\Carbon::parse($log->time_in)->format('H:i') }}" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Time Out</label>
+                                    <input type="time" name="time_out" class="form-control" 
+                                           value="{{ $log->time_out ? \Carbon\Carbon::parse($log->time_out)->format('H:i') : '' }}">
+                                    <div class="form-text small">Leave empty if not yet timed out</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Update Record</button>
+                        <div class="modal-footer flex-column flex-sm-row" style="gap: 0.5rem;">
+                            <button type="button" class="btn btn-secondary w-100 w-sm-auto" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary w-100 w-sm-auto">Update Record</button>
                         </div>
                     </form>
                 </div>
@@ -1425,32 +1441,32 @@
     @endforeach
 
     <!-- Cool Toast Notifications -->
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-        <div id="successToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" style="min-width: 350px;">
+    <div class="toast-container position-fixed top-0 end-0 p-2 p-md-3" style="z-index: 9999;">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" style="min-width: 280px; max-width: 350px;">
             <div class="d-flex">
-                <div class="toast-body py-3 px-4">
-                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                    <strong id="successMessage" style="font-size: 1rem;"></strong>
+                <div class="toast-body py-2 py-md-3 px-3 px-md-4">
+                    <i class="bi bi-check-circle-fill me-2 fs-6 fs-md-5"></i>
+                    <strong id="successMessage" style="font-size: 0.875rem;"></strong>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
         
-        <div id="errorToast" class="toast align-items-center text-white bg-danger border-0 shadow-lg" role="alert" style="min-width: 350px;">
+        <div id="errorToast" class="toast align-items-center text-white bg-danger border-0 shadow-lg" role="alert" style="min-width: 280px; max-width: 350px;">
             <div class="d-flex">
-                <div class="toast-body py-3 px-4">
-                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                    <strong id="errorMessage" style="font-size: 1rem;"></strong>
+                <div class="toast-body py-2 py-md-3 px-3 px-md-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-6 fs-md-5"></i>
+                    <strong id="errorMessage" style="font-size: 0.875rem;"></strong>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
         
-        <div id="infoToast" class="toast align-items-center text-white bg-info border-0 shadow-lg" role="alert" style="min-width: 350px;">
+        <div id="infoToast" class="toast align-items-center text-white bg-info border-0 shadow-lg" role="alert" style="min-width: 280px; max-width: 350px;">
             <div class="d-flex">
-                <div class="toast-body py-3 px-4">
-                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-                    <strong id="infoMessage" style="font-size: 1rem;"></strong>
+                <div class="toast-body py-2 py-md-3 px-3 px-md-4">
+                    <i class="bi bi-info-circle-fill me-2 fs-6 fs-md-5"></i>
+                    <strong id="infoMessage" style="font-size: 0.875rem;"></strong>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
@@ -1459,7 +1475,7 @@
 
     <!-- Custom Delete Employee Modal -->
     <div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-labelledby="deleteEmployeeModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-bottom: none;">
                     <h5 class="modal-title" id="deleteEmployeeModalLabel">
@@ -1467,29 +1483,29 @@
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body text-center py-4">
-                    <div class="mb-4">
+                <div class="modal-body text-center py-3 py-md-4 px-3 px-md-4">
+                    <div class="mb-3 mb-md-4">
                         <div class="d-flex justify-content-center mb-3">
                             <div class="bg-danger bg-opacity-10 rounded-circle p-3">
-                                <i class="bi bi-person-x text-danger" style="font-size: 2.5rem;"></i>
+                                <i class="bi bi-person-x text-danger" style="font-size: 2rem;"></i>
                             </div>
                         </div>
-                        <h5 class="text-danger mb-3">Confirm Employee Deletion</h5>
-                        <p class="text-muted mb-0">
+                        <h5 class="text-danger mb-2 mb-md-3 fs-6 fs-md-5">Confirm Employee Deletion</h5>
+                        <p class="text-muted mb-0 small">
                             Are you sure you want to delete this employee record? 
                             <br><strong class="text-danger">This action cannot be undone.</strong>
                         </p>
                     </div>
-                    <div class="alert alert-warning d-flex align-items-center" role="alert">
-                        <i class="bi bi-info-circle me-2"></i>
+                    <div class="alert alert-warning d-flex align-items-start text-start p-2 p-md-3" role="alert">
+                        <i class="bi bi-info-circle me-2 mt-1"></i>
                         <small>This will permanently remove the employee and all associated data from the system.</small>
                     </div>
                 </div>
-                <div class="modal-footer border-top-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <div class="modal-footer border-top-0 flex-column flex-sm-row p-3" style="gap: 0.5rem;">
+                    <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Cancel
                     </button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteEmployeeBtn" onclick="confirmDeleteEmployee()">
+                    <button type="button" class="btn btn-danger w-100 w-sm-auto order-1 order-sm-2" id="confirmDeleteEmployeeBtn" onclick="confirmDeleteEmployee()">
                         <i class="bi bi-person-x me-1"></i>Delete Employee
                     </button>
                 </div>
@@ -1500,82 +1516,418 @@
 @endsection
 
     <style>
+        /* Prevent horizontal overflow */
+        body {
+            overflow-x: hidden;
+        }
+        
+        /* Base Table Styles */
         .employee-table-scroll {
             max-height: none;
             overflow: visible;
         }
-        /* Ensure proper layout that doesn't interfere with sidebar */
+        
         .employee-table thead th {
             background: #fff !important;
             color: var(--aa-maroon) !important;
             border-bottom: none !important;
             font-weight: 600;
-            padding: 0.75rem 1.25rem !important;
+            padding: 0.75rem 1rem !important;
             text-align: center;
             position: sticky;
             top: 0;
             z-index: 10;
+            font-size: 0.875rem;
         }
+        
         .employee-table thead th i {
             color: var(--aa-maroon) !important;
             margin-right: 0.5rem;
         }
+        
         .employee-table tbody {
             max-height: 520px;
             overflow-y: auto;
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        
         .employee-table tbody::-webkit-scrollbar {
             display: none;
         }
+        
         .employee-table td {
-            padding: 0.75rem 1rem !important;
+            padding: 0.75rem 0.5rem !important;
             text-align: center;
             vertical-align: middle;
             white-space: nowrap;
+            font-size: 0.875rem;
         }
+        
         .employee-table td:nth-child(4) {
             text-align: left;
             white-space: normal;
         }
-        /* Ensure table doesn't break layout */
-        .employee-table {
-            table-layout: fixed;
-            width: 100%;
-            min-width: 900px;
-        }
-        /* Column widths for better layout */
-        .employee-table th:nth-child(1),
-        .employee-table td:nth-child(1) { width: 60px; }
-        .employee-table th:nth-child(2),
-        .employee-table td:nth-child(2) { width: 80px; }
-        .employee-table th:nth-child(3),
-        .employee-table td:nth-child(3) { width: 120px; }
-        .employee-table th:nth-child(4),
-        .employee-table td:nth-child(4) { width: 200px; }
-        .employee-table th:nth-child(5),
-        .employee-table td:nth-child(5) { width: 120px; }
-        .employee-table th:nth-child(6),
-        .employee-table td:nth-child(6) { width: 120px; }
-        .employee-table th:nth-child(7),
-        .employee-table td:nth-child(7) { width: 120px; }
-        .employee-table th:nth-child(8),
-        .employee-table td:nth-child(8) { width: 140px; }
         
-        /* Responsive adjustments */
-        @media (max-width: 1200px) {
+        .employee-table {
+            table-layout: auto;
+            width: 100%;
+            min-width: 800px;
+        }
+        
+        /* Responsive Summary Panel */
+        .stat-number {
+            font-size: 2.5rem !important;
+        }
+        
+        @media (min-width: 1200px) {
+            .stat-number {
+                font-size: 3rem !important;
+            }
+        }
+        
+        /* Tablet Responsive (768px - 1199px) */
+        @media (max-width: 1199px) {
+            .employee-table {
+                min-width: 750px;
+            }
+            
+            .employee-table thead th {
+                padding: 0.6rem 0.5rem !important;
+                font-size: 0.8rem;
+            }
+            
+            .employee-table td {
+                padding: 0.6rem 0.4rem !important;
+                font-size: 0.8rem;
+            }
+            
+            .employee-table img {
+                width: 35px !important;
+                height: 35px !important;
+            }
+            
+            .btn-group-sm > .btn {
+                padding: 0.25rem 0.4rem;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Mobile Landscape (576px - 767px) */
+        @media (max-width: 767px) {
+            /* Header Responsive */
+            .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+            
+            .d-flex.justify-content-between.align-items-center.mb-3 h1 {
+                font-size: 1.5rem !important;
+            }
+            
+            /* Card Header */
+            .card-header h4, .card-header h5 {
+                font-size: 1rem !important;
+            }
+            
+            /* Table Responsive */
             .employee-table {
                 min-width: 700px;
             }
+            
+            .employee-table thead th {
+                padding: 0.5rem 0.3rem !important;
+                font-size: 0.75rem;
+            }
+            
+            .employee-table thead th i {
+                display: none;
+            }
+            
+            .employee-table td {
+                padding: 0.5rem 0.3rem !important;
+                font-size: 0.75rem;
+            }
+            
+            .employee-table img {
+                width: 30px !important;
+                height: 30px !important;
+            }
+            
+            .badge {
+                font-size: 0.7rem !important;
+                padding: 0.25rem 0.4rem !important;
+            }
+            
+            /* Summary Panel - Compact on mobile */
+            .stat-number {
+                font-size: 1.5rem !important;
+            }
+            
+            .col-12.col-xl-3 .rounded-circle {
+                width: 100px !important;
+                height: 100px !important;
+            }
+            
+            .col-12.col-xl-3 .fs-5 {
+                font-size: 1rem !important;
+            }
+            
+            /* Make stats grid 2 columns on tablet */
+            .col-12.col-xl-3 .row.g-2 {
+                margin-bottom: 1rem !important;
+            }
+            
+            .col-12.col-xl-3 .row.g-2 > div {
+                padding: 0.5rem !important;
+            }
+            
+            /* Modal Responsive */
+            .modal-dialog {
+                margin: 0.5rem !important;
+            }
+            
+            .modal-lg, .modal-xl {
+                max-width: 100% !important;
+            }
+            
+            .modal-body {
+                padding: 1rem !important;
+            }
+            
+            .modal-header h5 {
+                font-size: 1rem !important;
+            }
+            
+            .form-label {
+                font-size: 0.875rem !important;
+            }
+            
+            .form-control, .form-select {
+                font-size: 0.875rem !important;
+                padding: 0.5rem !important;
+            }
+            
+            .modal-footer .btn {
+                font-size: 0.875rem !important;
+                padding: 0.5rem 1rem !important;
+            }
         }
         
-        @media (max-width: 992px) {
+        /* Mobile Portrait (320px - 575px) */
+        @media (max-width: 575px) {
+            /* Container padding */
+            .container-fluid {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            
+            /* Card padding */
+            .card-body {
+                padding: 0.5rem !important;
+            }
+            
+            /* Header */
+            .d-flex.justify-content-between.align-items-center.mb-3 h1 {
+                font-size: 1.25rem !important;
+            }
+            
+            .d-flex.justify-content-between.align-items-center.mb-3 h1 i {
+                font-size: 1rem !important;
+            }
+            
+            /* Table */
             .employee-table {
-                min-width: 600px;
+                min-width: 650px;
+                font-size: 0.7rem;
             }
+            
+            .employee-table thead th {
+                padding: 0.4rem 0.25rem !important;
+                font-size: 0.7rem;
+            }
+            
             .employee-table td {
-                padding: 0.5rem 0.75rem !important;
+                padding: 0.4rem 0.25rem !important;
+                font-size: 0.7rem;
             }
+            
+            .employee-table img {
+                width: 25px !important;
+                height: 25px !important;
+            }
+            
+            .btn-group-sm > .btn {
+                padding: 0.2rem 0.3rem;
+                font-size: 0.7rem;
+            }
+            
+            .btn-group-sm > .btn i {
+                font-size: 0.8rem;
+            }
+            
+            /* Summary Panel */
+            .stat-number {
+                font-size: 1.25rem !important;
+            }
+            
+            .col-12.col-xl-3 .rounded-circle {
+                width: 80px !important;
+                height: 80px !important;
+            }
+            
+            .col-12.col-xl-3 .small {
+                font-size: 0.75rem !important;
+            }
+            
+            /* Pagination */
+            .pagination {
+                font-size: 0.8rem;
+            }
+            
+            .pagination .page-link {
+                padding: 0.375rem 0.5rem;
+            }
+            
+            /* Modal Full Width on Small Mobile */
+            .modal-dialog {
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            
+            .modal-content {
+                border-radius: 0 !important;
+                min-height: 100vh;
+            }
+            
+            .modal-footer {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .modal-footer .btn {
+                width: 100%;
+            }
+            
+            /* Photo upload section in modal */
+            .modal-body .d-flex.gap-4 {
+                flex-direction: column !important;
+                gap: 1rem !important;
+                align-items: center !important;
+            }
+            
+            .modal-body img {
+                margin: 0 auto;
+            }
+            
+            .modal-body .position-relative {
+                margin: 0 auto;
+            }
+            
+            /* Alert messages */
+            .alert {
+                font-size: 0.875rem !important;
+                padding: 0.75rem !important;
+            }
+            
+            /* Attendance modal table */
+            .modal .table-responsive table {
+                min-width: 500px;
+                font-size: 0.75rem;
+            }
+            
+            .modal .table td, .modal .table th {
+                padding: 0.5rem 0.25rem !important;
+            }
+            
+            .modal .badge {
+                font-size: 0.65rem !important;
+                padding: 0.25rem 0.35rem !important;
+            }
+            
+            /* Attendance summary cards in modal */
+            .modal-body .col-md-4 {
+                margin-bottom: 0.5rem;
+            }
+            
+            .modal-body .d-flex.align-items-center.p-3 {
+                padding: 0.75rem !important;
+                font-size: 0.875rem;
+            }
+            
+            .modal-body .d-flex.align-items-center.p-3 i {
+                font-size: 1.5rem !important;
+            }
+            
+            .modal-body .d-flex.align-items-center.p-3 .fs-5,
+            .modal-body .d-flex.align-items-center.p-3 .fs-6 {
+                font-size: 0.875rem !important;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .btn-group-sm > .btn {
+                min-height: 38px;
+                min-width: 38px;
+            }
+            
+            .form-control, .form-select {
+                min-height: 44px;
+            }
+        }
+        
+        /* Horizontal scroll indicator for table on mobile */
+        @media (max-width: 991px) {
+            .table-responsive {
+                position: relative;
+            }
+            
+            .table-responsive::after {
+                content: '← Scroll for more →';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 0.25rem 0.75rem;
+                border-radius: 1rem;
+                font-size: 0.7rem;
+                pointer-events: none;
+                z-index: 5;
+                opacity: 0;
+                animation: fadeInOut 3s ease-in-out 1s;
+            }
+            
+            @keyframes fadeInOut {
+                0%, 100% { opacity: 0; }
+                50% { opacity: 1; }
+            }
+        }
+        
+        /* Hide scroll indicator when scrolled */
+        .table-responsive.scrolled::after {
+            display: none;
+        }
+        
+        /* Improve row highlighting on mobile */
+        .emp-row {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .emp-row:hover, .emp-row:active {
+            background-color: rgba(0, 0, 0, 0.075) !important;
+        }
+        
+        .table-active {
+            background-color: rgba(var(--aa-maroon-rgb, 86, 0, 0), 0.1) !important;
         }
     </style>
