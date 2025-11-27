@@ -146,21 +146,17 @@
                         <div class="fw-bold fs-5">{{ $selectedEmployee->full_name ?? 'Select an employee' }}</div>
                         <div class="text-muted small mb-3">{{ $selectedEmployee->department->department_name ?? '' }}</div>
                         <div class="row text-center g-2 mb-3">
-                            <div class="col-6">
+                            <div class="col-12">
                                 <div class="small text-muted">Days Present</div>
-                                <div class="display-6 fw-bold" style="color:var(--aa-maroon)">{{ $employeeStats['daysPresent'] }}</div>
+                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ $employeeStats['daysPresent'] }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="small text-muted">Late Arrivals</div>
-                                <div class="display-6 fw-bold" style="color:var(--aa-maroon)">{{ $employeeStats['lateArrivals'] }}</div>
-                            </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <div class="small text-muted">Total Hours</div>
-                                <div class="display-6 fw-bold" style="color:var(--aa-maroon)">{{ number_format($employeeStats['totalHours'], 1) }}</div>
+                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ number_format($employeeStats['totalHours'], 1) }}</div>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <div class="small text-muted">Overtime</div>
-                                <div class="display-6 fw-bold" style="color:var(--aa-maroon)">{{ number_format($employeeStats['overtimeHours'], 1) }}</div>
+                                <div class="display-1 fw-bold" style="color:var(--aa-maroon)">{{ number_format($employeeStats['overtimeHours'], 1) }}</div>
                             </div>
                             <div class="col-12">
                                 <div class="small text-muted">Attendance Rate</div>
@@ -697,14 +693,13 @@
                 console.log('Updated office to:', data.department);
             }
 
-            // Update statistics - these are in col-6 elements with display-6 fw-bold
-            const statsElements = summaryCard.querySelectorAll('.col-6 .display-6.fw-bold');
+            // Update statistics - these are in col-12 elements with fs-3 fw-bold
+            const statsElements = summaryCard.querySelectorAll('.col-12 .fs-3.fw-bold');
             console.log('Found', statsElements.length, 'stats elements');
-            if (statsElements.length >= 4) {
+            if (statsElements.length >= 3) {
                 statsElements[0].textContent = data.daysPresent; // Days Present
-                statsElements[1].textContent = data.lateArrivals; // Late Arrivals
-                statsElements[2].textContent = data.totalHours; // Total Hours
-                statsElements[3].textContent = data.overtimeHours; // Overtime
+                statsElements[1].textContent = data.totalHours; // Total Hours
+                statsElements[2].textContent = data.overtimeHours; // Overtime
                 console.log('Updated stats');
             }
 
