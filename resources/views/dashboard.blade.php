@@ -69,8 +69,24 @@
     }
 
     /* Compact Pagination */
+    .pagination-compact {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .pagination-compact nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        width: 100%;
+    }
     .pagination-compact .pagination {
         margin-bottom: 0;
+        flex-wrap: wrap;
     }
     .pagination-compact .page-link {
         padding: 0.375rem 0.625rem;
@@ -86,8 +102,10 @@
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
-    .pagination-compact small {
+    .pagination-compact p {
         font-size: 0.8125rem;
+        margin: 0;
+        color: #6c757d;
     }
     
     @media (max-width: 1366px) {
@@ -96,7 +114,7 @@
             font-size: 0.75rem;
             min-width: 30px;
         }
-        .pagination-compact small {
+        .pagination-compact p {
             font-size: 0.75rem;
         }
     }
@@ -425,13 +443,8 @@
                 </div>
                 @if($recentLogs->hasPages())
                 <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                    <div class="pagination-compact d-flex flex-column flex-xl-row justify-content-xl-between justify-content-center align-items-center gap-2">
-                        <small class="text-muted mb-0 order-xl-1">
-                            Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
-                        </small>
-                        <div class="order-xl-2">
-                            {{ $recentLogs->links('pagination::bootstrap-5') }}
-                        </div>
+                    <div class="pagination-compact d-flex justify-content-center align-items-center">
+                        {{ $recentLogs->links('pagination::bootstrap-5') }}
                     </div>
                 </div>
                 @endif
