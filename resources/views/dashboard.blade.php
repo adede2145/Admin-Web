@@ -18,12 +18,21 @@
 
     /* Responsive Card Heights */
     .card-summary { min-height: 200px; }
-    .card-chart { min-height: 360px; }
+    .card-chart { 
+        min-height: 540px;
+        display: flex;
+        flex-direction: column;
+    }
+    .card-chart .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
     .card-activity { min-height: 720px; }
 
     /* Pie Chart Responsive Sizing */
     .card-chart-body {
-        min-height: 500px;
+        min-height: 480px;
         width: 100%;
         display: flex;
         justify-content: center;
@@ -52,7 +61,8 @@
     @media (max-width: 767px) {
         .card-summary { min-height: auto; }
         .card-chart { min-height: auto; }
-        .card-chart-body { min-height: 300px; }
+        .card-chart .card-body { min-height: auto; }
+        .card-chart-body { min-height: 350px; }
         .card-activity { min-height: auto; }
         .display-3 { font-size: 2.5rem; } /* Fallback if clamp isn't enough */
         #pieChartContainer { max-width: 350px; }
@@ -317,14 +327,14 @@
                         @endif
                     </h4>
                 </div>
-                <div class="card-body position-relative">
-                    <div class="position-absolute" style="top:.5rem; right:.75rem;">
+                <div class="card-body position-relative d-flex flex-column" style="padding: 0;">
+                    <div class="position-absolute" style="top:.5rem; right:.75rem; z-index: 10;">
                         <div class="small text-muted">
                             <span class="me-3"><i class="bi bi-square-fill" style="color:#c21807"></i> RFID</span>
                             <span><i class="bi bi-square-fill" style="color:#f7c948"></i> Fingerprint</span>
                         </div>
                     </div>
-                    <div class="card-chart-body d-flex justify-content-center align-items-center" style="padding: 1rem; position: relative;">
+                    <div class="card-chart-body d-flex justify-content-center align-items-center" style="padding: 2rem 1rem; position: relative; flex: 1;">
                         <div id="pieChartContainer">
                             <canvas id="loginPie" style="display: block; width: 100%; height: 100%;"></canvas>
                         </div>
@@ -391,8 +401,10 @@
                 </div>
                 @if($recentLogs->hasPages())
                 <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                    <div class="d-flex justify-content-center m-0 pagination-compact">
-                        {{ $recentLogs->links('pagination::bootstrap-5') }}w
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 pagination-compact">
+                        <small class="text-muted mb-0">
+                            Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
+                        </small>
                     </div>
                 </div>
                 @endif
