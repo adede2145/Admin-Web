@@ -978,14 +978,7 @@
     </div>
 </div>
 
-<!-- DTR History Modal -->
-<div class="modal fade" id="dtrHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        </div>
-    </div>
-</div>
-
-<!-- Generate DTR Modal -->
+<!-- Generate DTR Modal (Second Instance - For Compatibility) -->
 <div class="modal fade" id="generateDTRModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
@@ -1713,13 +1706,16 @@
 
     document.getElementById('openDTRHistoryModal').addEventListener('click', function() {
         var modal = new bootstrap.Modal(document.getElementById('dtrHistoryModal'));
-        document.getElementById('dtrHistoryModalBody').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-maroon" role="status"></div><div class="mt-3">Loading DTR history...</div></div>';
+        const modalBody = document.getElementById('dtrHistoryModalBody');
+        modalBody.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-maroon" role="status"></div><div class="mt-3">Loading DTR history...</div></div>';
         fetch("{{ route('dtr.history.modal') }}")
             .then(response => response.text())
             .then(html => {
-                document.getElementById('dtrHistoryModalBody').innerHTML = html;
+                modalBody.innerHTML = html;
                 // Re-initialize delete button handlers after content is loaded
-                initializeDTRDeleteButtons();
+                if (typeof initializeDTRDeleteButtons === 'function') {
+                    initializeDTRDeleteButtons();
+                }
                 // Convert pagination links for AJAX handling
                 const paginationContainer = document.getElementById('dtrPaginationContainer');
                 if (paginationContainer) {
@@ -1868,7 +1864,9 @@
         testDeleteButtons();
         
         // Initialize DTR delete buttons (for when modal is loaded)
-        initializeDTRDeleteButtons();
+        if (typeof window.initializeDTRDeleteButtons === 'function') {
+            window.initializeDTRDeleteButtons();
+        }
     });
     
     // Test function to verify delete buttons are working
@@ -1901,8 +1899,8 @@
         }
     }
     
-    // DTR Delete Functions
-    function initializeDTRDeleteButtons() {
+    // DTR Delete Functions (Make them globally available)
+    window.initializeDTRDeleteButtons = function() {
         // Remove any existing event listeners to prevent duplicates
         document.querySelectorAll('.delete-dtr-report-btn').forEach(btn => {
             btn.removeEventListener('click', handleDTRDeleteClick);
@@ -1914,7 +1912,7 @@
         });
         
         console.log('Initialized DTR delete buttons:', document.querySelectorAll('.delete-dtr-report-btn').length);
-    }
+    };
     
     function handleDTRDeleteClick(e) {
         e.preventDefault();
@@ -1926,7 +1924,7 @@
         deleteDTRReport(reportId, reportType, generatedOn);
     }
     
-    function deleteDTRReport(reportId, reportType, generatedOn) {
+    window.deleteDTRReport = function(reportId, reportType, generatedOn) {
         console.log('deleteDTRReport called:', { reportId, reportType, generatedOn });
         
         // Store the reportId for later use
@@ -1942,9 +1940,9 @@
         // Show the custom delete modal
         const modal = new bootstrap.Modal(document.getElementById('deleteDTRReportModal'));
         modal.show();
-    }
+    };
     
-    function confirmDeleteDTRReport() {
+    window.confirmDeleteDTRReport = function() {
         const reportId = document.getElementById('confirmDeleteDTRReportBtn').dataset.reportId;
         console.log('confirmDeleteDTRReport called with reportId:', reportId);
         
@@ -1982,7 +1980,7 @@
             console.error('Error deleting DTR report:', error);
             alert('An error occurred while trying to delete the DTR report. Please try again.');
         }
-    }
+    };
 
     // Photo viewing functions with RFID verification
     function showAttendancePhoto(logId, employeeName, dateTime) {
