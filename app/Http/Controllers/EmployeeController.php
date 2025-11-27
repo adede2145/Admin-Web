@@ -174,7 +174,12 @@ class EmployeeController extends Controller
             ->whereBetween('time_in', [$start->startOfDay(), $end->endOfDay()])
             ->get();
 
-        $daysPresent = $logs->groupBy(function ($log) {
+        // Only count days where BOTH time_in and time_out exist (complete records)
+        $completeLogs = $logs->filter(function ($log) {
+            return $log->time_in && $log->time_out;
+        });
+
+        $daysPresent = $completeLogs->groupBy(function ($log) {
             return \Carbon\Carbon::parse($log->time_in)->format('Y-m-d');
         })->count();
 
@@ -183,16 +188,36 @@ class EmployeeController extends Controller
         $totalHours = 0;
         $overtimeHours = 0;
 
-        foreach ($logs as $log) {
+        foreach ($completeLogs as $log) {
             $timeIn = \Carbon\Carbon::parse($log->time_in);
-            $timeOut = $log->time_out ? \Carbon\Carbon::parse($log->time_out) : null;
+            $timeOut = \Carbon\Carbon::parse($log->time_out);
 
-            if ($timeOut) {
-                $hours = $timeIn->diffInMinutes($timeOut) / 60;
-                $totalHours += $hours;
-                if ($hours > 8) {
-                    $overtimeHours += ($hours - 8);
-                }
+            // Skip if time_out is before time_in (invalid data)
+            if ($timeOut->lessThan($timeIn)) {
+                \Log::warning('Invalid attendance log: time_out before time_in', [
+                    'log_id' => $log->log_id,
+                    'employee_id' => $log->employee_id,
+                    'time_in' => $timeIn->toDateTimeString(),
+                    'time_out' => $timeOut->toDateTimeString()
+                ]);
+                continue;
+            }
+
+            $hours = $timeIn->diffInMinutes($timeOut) / 60;
+            
+            // Skip unrealistic hour values (more than 24 hours in a single log)
+            if ($hours > 24) {
+                \Log::warning('Unrealistic hours in attendance log', [
+                    'log_id' => $log->log_id,
+                    'employee_id' => $log->employee_id,
+                    'hours' => $hours
+                ]);
+                continue;
+            }
+            
+            $totalHours += $hours;
+            if ($hours > 8) {
+                $overtimeHours += ($hours - 8);
             }
         }
 

@@ -102,12 +102,27 @@ class AttendanceController extends Controller
             'method' => 'required|in:rfid,fingerprint,manual',
         ]);
 
-        // Simple validation - just check if time_out is provided and valid
+        // Validate time_out if provided
         if ($request->filled('time_out')) {
             try {
-                // Just validate that the time format is correct
+                // Validate that the time format is correct
                 $timeOut = Carbon::createFromFormat('H:i', $request->time_out);
                 Log::info('Time out validation passed', ['time_out' => $timeOut->format('H:i:s')]);
+                
+                // Validate that time_out is after time_in
+                $timeIn = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->time_in);
+                $timeOutFull = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->time_out);
+                
+                if ($timeOutFull->lessThan($timeIn)) {
+                    return back()->withErrors(['time_out' => 'Time Out cannot be before Time In. If the employee worked past midnight, please create a separate attendance record for the next day.'])->withInput();
+                }
+                
+                // Validate that the time difference is reasonable (max 24 hours in a single log)
+                $hoursDiff = $timeIn->diffInHours($timeOutFull);
+                if ($hoursDiff > 24) {
+                    return back()->withErrors(['time_out' => 'Time difference exceeds 24 hours. Please verify the times or create separate records.'])->withInput();
+                }
+                
             } catch (\Exception $e) {
                 Log::error('Time out validation error', [
                     'error' => $e->getMessage(),
@@ -1426,6 +1441,15 @@ class AttendanceController extends Controller
             return $result;
         }
         
+        // Filter out logs with invalid time_out (time_out before time_in)
+        $logs = $logs->filter(function($log) {
+            if ($log->time_in && $log->time_out) {
+                return $log->time_out->greaterThanOrEqualTo($log->time_in);
+            }
+            // Keep logs with only time_in (incomplete) for display purposes
+            return true;
+        });
+        
         // Initialize AM/PM log arrays
         $amLogs = [];
         $pmLogs = [];
@@ -1548,8 +1572,9 @@ class AttendanceController extends Controller
         }
         
         // Only calculate undertime if there's at least one time-in recorded
-        // If no time-in exists at all, leave undertime blank
-        if ($hasTimeIn) {
+        // AND the log has a corresponding time-out
+        // Incomplete logs (only time_in, no time_out) should NOT show undertime
+        if ($hasTimeIn && $totalWorkedMinutes > 0) {
             // Expected work time: 8 hours = 480 minutes
             $expectedMinutes = 480;
             $undertimeMinutes = max(0, $expectedMinutes - $totalWorkedMinutes);
@@ -1558,6 +1583,10 @@ class AttendanceController extends Controller
                 $result['undertime_hours'] = floor($undertimeMinutes / 60);
                 $result['undertime_minutes'] = str_pad($undertimeMinutes % 60, 2, '0', STR_PAD_LEFT);
             }
+        } else if ($hasTimeIn && $totalWorkedMinutes == 0) {
+            // Has time_in but no time_out (incomplete record)
+            // Don't calculate undertime - leave blank to indicate incomplete
+            // This prevents showing 8 hours undertime for incomplete records
         }
         
         return $result;
