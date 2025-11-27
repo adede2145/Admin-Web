@@ -100,7 +100,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ $log->action == 'create' ? 'success' : ($log->action == 'edit' ? 'warning' : ($log->action == 'delete' ? 'danger' : 'secondary')) }}">
+                                    <span class="badge bg-{{ $log->action == 'create' ? 'success' : ($log->action == 'edit' ? 'warning' : ($log->action == 'delete' ? 'danger' : ($log->action == 'verify' ? 'success' : ($log->action == 'reject' ? 'danger' : 'secondary')))) }}">
                                         {{ ucfirst($log->action) }}
                                     </span>
                                 </td>
@@ -137,6 +137,28 @@
                                             </div>
                                         @else
                                             <span class="text-danger">Record deleted</span>
+                                        @endif
+                                    @elseif($log->action == 'verify')
+                                        @if($log->context_info)
+                                            <div class="text-success">
+                                                <strong>{{ $log->context_info }}</strong>
+                                                @if($log->summary)
+                                                    <br><small class="text-muted">{{ $log->summary }}</small>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-success">RFID attendance verified</span>
+                                        @endif
+                                    @elseif($log->action == 'reject')
+                                        @if($log->context_info)
+                                            <div class="text-danger">
+                                                <strong>{{ $log->context_info }}</strong>
+                                                @if($log->summary)
+                                                    <br><small class="text-muted">{{ $log->summary }}</small>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-danger">RFID attendance rejected</span>
                                         @endif
                                     @else
                                         <span class="text-muted">Unknown action: {{ $log->action }}</span>

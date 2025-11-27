@@ -1429,10 +1429,11 @@ class AttendanceController extends Controller
             return $result; // No attendance = blank, not 8 hours undertime
         }
         
-        // Get all attendance logs for this day to split AM/PM
+        // Get all attendance logs for this day to split AM/PM (excluding rejected RFID records)
         $logs = \App\Models\AttendanceLog::where('employee_id', $detail->employee_id)
             ->whereDate('time_in', $detail->date)
             ->where('time_in', '>=', '1900-01-01 00:00:00')
+            ->verifiedOrNotRfid() // Exclude rejected RFID records
             ->orderBy('time_in')
             ->get();
         
@@ -1626,6 +1627,7 @@ class AttendanceController extends Controller
                 $logs = \App\Models\AttendanceLog::where('employee_id', $employeeId)
                     ->whereDate('time_in', $dateKey)
                     ->where('time_in', '>=', '1900-01-01 00:00:00')
+                    ->verifiedOrNotRfid() // Exclude rejected RFID records
                     ->orderBy('time_in')
                     ->first();
                 
@@ -1920,7 +1922,7 @@ class AttendanceController extends Controller
     public function rejectRfid(Request $request, $id)
     {
         $request->validate([
-            'rejection_reason' => 'required|string|max:500'
+            'rejection_reason' => 'nullable|string|max:500'
         ]);
 
         $attendanceLog = AttendanceLog::findOrFail($id);
@@ -1948,7 +1950,7 @@ class AttendanceController extends Controller
             'verification_status' => 'rejected',
             'verified_by' => auth()->user()->admin_id,
             'verified_at' => now('Asia/Manila'),
-            'verification_notes' => $request->rejection_reason
+            'verification_notes' => $request->rejection_reason ?: 'Rejected by admin'
         ]);
 
         // Create audit log

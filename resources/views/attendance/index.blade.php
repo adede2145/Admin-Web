@@ -1370,10 +1370,6 @@
         // Store the logId for later use
         document.getElementById('confirmRejectionBtn').dataset.logId = logId;
 
-        // Clear any previous reason text
-        document.getElementById('rejectionReason').value = '';
-        document.getElementById('rejectionReason').classList.remove('is-invalid');
-
         // Show the rejection modal
         const modal = new bootstrap.Modal(document.getElementById('rfidRejectionModal'));
         modal.show();
@@ -1805,15 +1801,6 @@
         // Rejection modal confirmation handler
         document.getElementById('confirmRejectionBtn').addEventListener('click', function() {
             const logId = this.dataset.logId;
-            const reasonTextarea = document.getElementById('rejectionReason');
-            const reason = reasonTextarea.value.trim();
-
-            // Validate that reason is provided
-            if (!reason) {
-                reasonTextarea.classList.add('is-invalid');
-                reasonTextarea.focus();
-                return;
-            }
 
             const modal = bootstrap.Modal.getInstance(document.getElementById('rfidRejectionModal'));
             modal.hide();
@@ -1828,20 +1815,9 @@
             csrfToken.name = '_token';
             csrfToken.value = '{{ csrf_token() }}';
 
-            const reasonField = document.createElement('input');
-            reasonField.type = 'hidden';
-            reasonField.name = 'rejection_reason';
-            reasonField.value = reason;
-
             form.appendChild(csrfToken);
-            form.appendChild(reasonField);
             document.body.appendChild(form);
             form.submit();
-        });
-
-        // Remove validation styling when user starts typing
-        document.getElementById('rejectionReason').addEventListener('input', function() {
-            this.classList.remove('is-invalid');
         });
 
         // Photo button click handler - moved outside of nested DOMContentLoaded
@@ -2048,35 +2024,25 @@
 <div class="modal fade" id="rfidRejectionModal" tabindex="-1" aria-labelledby="rfidRejectionModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="rfidRejectionModalLabel">
-                    <i class="fas fa-times-circle text-danger me-2"></i>Reject RFID Attendance
+                    <i class="fas fa-times-circle me-2"></i>Reject RFID Attendance
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body text-center py-4">
                 <div class="mb-3">
-                    <div class="text-center mb-3">
-                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
-                    </div>
-                    <h6 class="text-center mb-3">Reject RFID Attendance Record</h6>
-                    <p class="text-muted text-center mb-3">Please provide a reason for rejecting this RFID attendance record:</p>
+                    <i class="fas fa-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
                 </div>
-                <form id="rfidRejectionForm">
-                    <div class="form-group">
-                        <label for="rejectionReason" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="3"
-                            placeholder="Please explain why this attendance record is being rejected..." required></textarea>
-                        <div class="invalid-feedback">
-                            Please provide a reason for rejection.
-                        </div>
-                    </div>
-                </form>
+                <h5 class="mb-3">Are you sure you want to reject this RFID attendance record?</h5>
+                <p class="text-muted">This action will mark the attendance as rejected and it will not be counted in reports.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
                 <button type="button" class="btn btn-danger" id="confirmRejectionBtn">
-                    <i class="fas fa-times me-1"></i>Reject
+                    <i class="fas fa-check me-2"></i>Yes, Reject
                 </button>
             </div>
         </div>

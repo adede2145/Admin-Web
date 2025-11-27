@@ -172,6 +172,7 @@ class EmployeeController extends Controller
 
         $logs = $employee->attendanceLogs()
             ->whereBetween('time_in', [$start->startOfDay(), $end->endOfDay()])
+            ->verifiedOrNotRfid() // Exclude rejected RFID records
             ->get();
 
         // Only count days where BOTH time_in and time_out exist (complete records)

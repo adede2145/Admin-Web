@@ -383,6 +383,7 @@ class ReportController extends Controller
             $actualWorkdays = AttendanceLog::where('employee_id', $employee->employee_id)
                 ->whereBetween('time_in', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
                 ->whereNotNull('time_in')
+                ->verifiedOrNotRfid() // Exclude rejected RFID records
                 ->selectRaw('DATE(time_in) as d')
                 ->groupBy('d')
                 ->get()

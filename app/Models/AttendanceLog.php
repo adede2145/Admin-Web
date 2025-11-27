@@ -79,6 +79,27 @@ class AttendanceLog extends Model
         return $query->whereBetween('time_in', [$startDate, $endDate]);
     }
 
+    // Scope to exclude rejected RFID records
+    public function scopeVerifiedOrNotRfid($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('method', '!=', 'rfid')
+              ->orWhere(function ($q2) {
+                  $q2->where('method', 'rfid')
+                     ->where('verification_status', '!=', 'rejected');
+              });
+        });
+    }
+
+    // Scope to only get verified attendance (not rejected)
+    public function scopeNotRejected($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('verification_status')
+              ->orWhere('verification_status', '!=', 'rejected');
+        });
+    }
+
     // Audit-related helper methods
     public function getRelatedModelForAudit()
     {

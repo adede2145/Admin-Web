@@ -33,8 +33,8 @@
                     <dd class="col-sm-8">{{ $log->admin ? $log->admin->username : 'Unknown Admin' }}</dd>
                     <dt class="col-sm-4">Action</dt>
                     <dd class="col-sm-8">
-                        <span class="badge px-3 py-2 fs-6 fw-semibold bg-{{ $log->action == 'create' ? 'success' : ($log->action == 'edit' ? 'warning text-dark' : 'danger') }}">
-                            <i class="bi bi-{{ $log->action == 'create' ? 'plus-circle' : ($log->action == 'edit' ? 'pencil-square' : 'trash') }} me-1"></i>{{ ucfirst($log->action) }}
+                        <span class="badge px-3 py-2 fs-6 fw-semibold bg-{{ $log->action == 'create' ? 'success' : ($log->action == 'edit' ? 'warning text-dark' : ($log->action == 'verify' ? 'success' : ($log->action == 'reject' ? 'danger' : ($log->action == 'delete' ? 'danger' : 'secondary')))) }}">
+                            <i class="bi bi-{{ $log->action == 'create' ? 'plus-circle' : ($log->action == 'edit' ? 'pencil-square' : ($log->action == 'verify' ? 'check-circle' : ($log->action == 'reject' ? 'x-circle' : 'trash'))) }} me-1"></i>{{ ucfirst($log->action) }}
                         </span>
                     </dd>
                     <dt class="col-sm-4">Module</dt>

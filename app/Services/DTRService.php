@@ -184,10 +184,11 @@ class DTRService
             ];
         }
 
-        // Get attendance logs for this day
+        // Get attendance logs for this day (excluding rejected RFID records)
         $logs = AttendanceLog::where('employee_id', $employee->employee_id)
             ->whereDate('time_in', $date)
             ->where('time_in', '>=', '1900-01-01 00:00:00')
+            ->verifiedOrNotRfid() // Exclude rejected RFID records
             ->orderBy('time_in')
             ->get();
 
