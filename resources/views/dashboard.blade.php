@@ -19,10 +19,17 @@
     /* Responsive Card Heights */
     .card-summary { min-height: 200px; }
     .card-chart { min-height: 360px; }
-    .card-chart-body { min-height: 400px; }
     .card-activity { min-height: 720px; }
 
     /* Pie Chart Responsive Sizing */
+    .card-chart-body {
+        min-height: 500px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
     #pieChartContainer {
         width: 100%;
         max-width: 480px;
@@ -317,7 +324,7 @@
                             <span><i class="bi bi-square-fill" style="color:#f7c948"></i> Fingerprint</span>
                         </div>
                     </div>
-                    <div class="text-center d-flex justify-content-center align-items-center card-chart-body" style="padding: 1rem; position: relative;">
+                    <div class="card-chart-body d-flex justify-content-center align-items-center" style="padding: 1rem; position: relative;">
                         <div id="pieChartContainer">
                             <canvas id="loginPie" style="display: block; width: 100%; height: 100%;"></canvas>
                         </div>
@@ -384,13 +391,8 @@
                 </div>
                 @if($recentLogs->hasPages())
                 <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 pagination-compact">
-                        <small class="text-muted mb-0">
-                            Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
-                        </small>
-                        <div>
-                            {{ $recentLogs->links('pagination::bootstrap-5') }}
-                        </div>
+                    <div class="d-flex justify-content-center m-0 pagination-compact">
+                        {{ $recentLogs->links('pagination::bootstrap-5') }}w
                     </div>
                 </div>
                 @endif
