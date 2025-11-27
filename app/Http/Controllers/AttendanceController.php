@@ -544,7 +544,19 @@ class AttendanceController extends Controller
                     return $o->employee_id . '|' . $o->date->toDateString();
                 });
 
-            $filename = 'DTR_Report_' . $report->report_id . '_' . $report->start_date . '_to_' . $report->end_date;
+            // Format dates properly (Y-m-d format only, no timestamps)
+            $startDate = \Carbon\Carbon::parse($report->start_date)->format('Y-m-d');
+            $endDate = \Carbon\Carbon::parse($report->end_date)->format('Y-m-d');
+
+            // Generate appropriate filename based on employee count
+            if ($report->summaries->count() === 1) {
+                // Single employee - use employee name
+                $employee = $report->summaries->first()->employee;
+                $filename = 'DTR_' . $this->sanitizeFilename($employee->full_name) . '_' . $startDate . '_to_' . $endDate;
+            } else {
+                // Multiple employees - use report ID
+                $filename = 'DTR_Report_' . $report->report_id . '_' . $startDate . '_to_' . $endDate;
+            }
 
             Log::info('DTR download processing', ['filename' => $filename, 'format' => $format]);
 
