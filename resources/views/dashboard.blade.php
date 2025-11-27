@@ -86,12 +86,18 @@
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
+    .pagination-compact small {
+        font-size: 0.8125rem;
+    }
     
     @media (max-width: 1366px) {
         .pagination-compact .page-link {
             padding: 0.3rem 0.5rem;
             font-size: 0.75rem;
-            min-width: 32px;
+            min-width: 30px;
+        }
+        .pagination-compact small {
+            font-size: 0.75rem;
         }
     }
 </style>
@@ -419,8 +425,13 @@
                 </div>
                 @if($recentLogs->hasPages())
                 <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                    <div class="pagination-compact d-flex justify-content-center align-items-center">
-                        {{ $recentLogs->links('pagination::bootstrap-5') }}
+                    <div class="pagination-compact d-flex flex-column flex-xl-row justify-content-xl-between justify-content-center align-items-center gap-2">
+                        <small class="text-muted mb-0 order-xl-1">
+                            Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
+                        </small>
+                        <div class="order-xl-2">
+                            {{ $recentLogs->links('pagination::bootstrap-5') }}
+                        </div>
                     </div>
                 </div>
                 @endif
