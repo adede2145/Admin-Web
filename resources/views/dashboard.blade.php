@@ -401,10 +401,15 @@
                 </div>
                 @if($recentLogs->hasPages())
                 <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 pagination-compact">
-                        <small class="text-muted mb-0">
-                            Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
-                        </small>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pagination-compact">
+                        <div class="flex-grow-1 flex-shrink-1 mb-1 order-2 order-sm-1 text-center text-sm-start">
+                            <small class="text-muted mb-0 d-block">
+                                Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
+                            </small>
+                        </div>
+                        <div class="order-1 order-sm-2 w-100 w-sm-auto d-flex justify-content-center justify-content-sm-end mb-1">
+                            {{ $recentLogs->links('pagination::bootstrap-5') }}
+                        </div>
                     </div>
                 </div>
                 @endif
