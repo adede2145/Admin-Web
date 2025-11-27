@@ -39,13 +39,27 @@
             background-attachment: fixed;
             min-height: 100vh;
         }
-        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-card { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25), 0 1.5rem 3rem rgba(0,0,0,0.12); border-radius: 1.5rem; overflow: visible; max-width: 1100px; width: 100%; background: none; min-height: 600px; animation: fadeInUp 0.8s ease-out; }
+        .login-container { 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 15px;
+        }
+        .login-card { 
+            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25), 0 1.5rem 3rem rgba(0,0,0,0.12); 
+            border-radius: 1.5rem; 
+            overflow: hidden; 
+            max-width: 1100px; 
+            width: 100%; 
+            background: none; 
+            min-height: 600px; 
+            animation: fadeInUp 0.8s ease-out; 
+        }
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .login-right { background: #fff; display: flex; align-items: center; justify-content: center; padding: 3.5rem 2.5rem; border-radius: 0 1.5rem 1.5rem 0; }
         .login-left {
             background: linear-gradient(0deg,#560000 0%,#ff2d2d 100%);
             display: flex;
@@ -55,33 +69,66 @@
             min-height: 600px;
             padding: 0;
             overflow: hidden;
-            border-radius: 1.5rem 0 0 1.5rem;
         }
         .login-left img {
-            max-width: 150%;
-            max-height: 150%;
-            width: 150%;
+            width: 140%;
             height: auto;
             object-fit: contain;
             position: absolute;
-            left: -25%;
-            top: 65%;
-            transform: translateY(-50%);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             z-index: 2;
             background: transparent !important;
         }
-        .login-right { background: #fff; display: flex; align-items: center; justify-content: center; padding: 3.5rem 2.5rem; }
+        .login-right { 
+            background: #fff; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 3.5rem 2.5rem; 
+            min-height: 600px;
+        }
         .login-form-wrap { width: 100%; max-width: 400px; }
         .login-form .input-group-text { background: #fff; border-right: 0; border-radius: 0.5rem 0 0 0.5rem; }
-        .login-form .form-control { border-left: 0; border-radius: 0 0.5rem 0.5rem 0; }
+        .login-form .form-control { border-left: 0; border-radius: 0 0.5rem 0.5rem 0; padding: 0.75rem 1rem; }
         .login-form .form-control:focus { box-shadow: none; border-color: #d90000; }
-        .login-form .btn-login { background: linear-gradient(90deg,#d90000,#560000); color: #fff; font-weight: 600; font-size: 1.1rem; border-radius: .5rem; box-shadow: 0 2px 8px rgba(220,0,0,0.08); padding: .7rem 0; }
-        .login-form .btn-login:hover { background: linear-gradient(90deg,#a80000,#560000); }
+        .login-form .btn-login { 
+            background: linear-gradient(90deg,#d90000,#560000); 
+            color: #fff; 
+            font-weight: 600; 
+            font-size: 1.1rem; 
+            border-radius: .5rem; 
+            box-shadow: 0 2px 8px rgba(220,0,0,0.08); 
+            padding: .75rem 0; 
+            transition: all 0.3s ease;
+        }
+        .login-form .btn-login:hover { 
+            background: linear-gradient(90deg,#a80000,#560000); 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220,0,0,0.15);
+        }
         .login-form .form-check-label { font-size: .97rem; }
         .login-form .text-danger { color: #d90000 !important; }
+
+        /* Responsive Typography */
+        h2.fw-bold { font-size: clamp(1.5rem, 4vw, 2.1rem) !important; }
+        .text-muted { font-size: clamp(0.9rem, 2vw, 1.05rem) !important; }
+
+        @media (max-width: 991px) {
+            .login-right { padding: 2rem; }
+        }
+
         @media (max-width: 767px) {
+            .login-card { 
+                max-width: 500px; 
+                min-height: auto; 
+            }
+            .login-right { 
+                padding: 2rem 1.5rem; 
+                min-height: auto;
+            }
             .login-left { display: none; }
-            .login-card { max-width: 100%; border-radius: 0; }
         }
     </style>
 </head>
@@ -95,8 +142,8 @@
         <!-- Right: Login Form -->
         <div class="col-md-6 login-right">
             <div class="login-form-wrap">
-                <h2 class="fw-bold mb-1" style="font-size:2.1rem;">Welcome Back!</h2>
-                <div class="mb-4 text-muted" style="font-size:1.05rem;">Please enter your details below</div>
+                <h2 class="fw-bold mb-1">Welcome Back!</h2>
+                <div class="mb-4 text-muted">Please enter your details below</div>
                 @if(session('status'))
                     <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
                         <i class="bi bi-check-circle me-2"></i>{{ session('status') }}

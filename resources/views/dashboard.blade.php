@@ -8,9 +8,6 @@
     .scroll-hide {
         max-height: 520px;
         overflow-y: auto;
-    }
-
-    .scroll-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
@@ -18,10 +15,28 @@
     .scroll-hide::-webkit-scrollbar {
         display: none;
     }
+
+    /* Responsive Card Heights */
+    .card-summary { min-height: 200px; }
+    .card-chart { min-height: 360px; }
+    .card-chart-body { min-height: 400px; }
+    .card-activity { min-height: 720px; }
+
+    @media (max-width: 991px) {
+        .card-activity { min-height: 500px; }
+    }
+
+    @media (max-width: 767px) {
+        .card-summary { min-height: auto; }
+        .card-chart { min-height: auto; }
+        .card-chart-body { min-height: 300px; }
+        .card-activity { min-height: auto; }
+        .display-3 { font-size: 2.5rem; } /* Fallback if clamp isn't enough */
+    }
 </style>
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-house text-muted fs-4"></i>
             <span class="fw-bold fs-2">Home Dashboard</span>
@@ -33,7 +48,7 @@
             </div>
             @endif
         </div>
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     @if(auth()->user()->role->role_name === 'super_admin')
@@ -198,7 +213,7 @@
     @endphp
     <div class="row mb-4">
         <div class="col-12">
-            <div class="aa-card" style="min-height: 200px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
+            <div class="aa-card card-summary" style="box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-header header-yellow">
                     <h4 class="card-title mb-0">
                         <i class="bi bi-graph-up me-2"></i>
@@ -218,11 +233,11 @@
                 <div class="card-body p-4">
                     <div class="row text-center align-items-center justify-content-center g-4">
                         <!-- Key Statistics -->
-                        <div class="col-3 d-flex flex-column align-items-center justify-content-center">
-                            <div class="display-3 fw-bold text-success mb-2">
+                        <div class="col-6 col-md-3 d-flex flex-column align-items-center justify-content-center">
+                            <div class="display-3 fw-bold text-success mb-2" style="font-size: clamp(2rem, 4vw, 4.5rem);">
                                 <i class="bi bi-people-fill me-2"></i>{{ $totalEmployees }}
                             </div>
-                            <div class="fs-4 text-muted">
+                            <div class="fs-4 text-muted" style="font-size: clamp(1rem, 2vw, 1.5rem) !important;">
                                 @if($isSuper)
                                 Total Employees
                                 @else
@@ -230,11 +245,11 @@
                                 @endif
                             </div>
                         </div>
-                        <div class="col-3 d-flex flex-column align-items-center justify-content-center">
-                            <div class="display-3 fw-bold text-info mb-2">
+                        <div class="col-6 col-md-3 d-flex flex-column align-items-center justify-content-center">
+                            <div class="display-3 fw-bold text-info mb-2" style="font-size: clamp(2rem, 4vw, 4.5rem);">
                                 <i class="bi bi-building me-2"></i>{{ $totalDepartments }}
                             </div>
-                            <div class="fs-4 text-muted">
+                            <div class="fs-4 text-muted" style="font-size: clamp(1rem, 2vw, 1.5rem) !important;">
                                 @if($isSuper)
                                 Departments
                                 @else
@@ -242,17 +257,17 @@
                                 @endif
                             </div>
                         </div>
-                        <div class="col-3 d-flex flex-column align-items-center justify-content-center">
-                            <div class="display-3 fw-bold text-warning mb-2">
+                        <div class="col-6 col-md-3 d-flex flex-column align-items-center justify-content-center">
+                            <div class="display-3 fw-bold text-warning mb-2" style="font-size: clamp(2rem, 4vw, 4.5rem);">
                                 <i class="bi bi-graph-up-arrow me-2"></i>{{ $attendanceRate }}%
                             </div>
-                            <div class="fs-4 text-muted">Present Rate</div>
+                            <div class="fs-4 text-muted" style="font-size: clamp(1rem, 2vw, 1.5rem) !important;">Present Rate</div>
                         </div>
-                        <div class="col-3 d-flex flex-column align-items-center justify-content-center">
-                            <div class="display-3 fw-bold text-primary mb-2">
+                        <div class="col-6 col-md-3 d-flex flex-column align-items-center justify-content-center">
+                            <div class="display-3 fw-bold text-primary mb-2" style="font-size: clamp(2rem, 4vw, 4.5rem);">
                                 <i class="bi bi-pc-display-horizontal me-2"></i>{{ $onlineKiosks }}
                             </div>
-                            <div class="fs-4 text-muted">Online Kiosks</div>
+                            <div class="fs-4 text-muted" style="font-size: clamp(1rem, 2vw, 1.5rem) !important;">Online Kiosks</div>
                             <div class="small text-muted">{{ $totalKiosks }} Total</div>
                         </div>
                     </div>
@@ -263,7 +278,7 @@
     <!-- Chart + Recent Activity Row -->
     <div class="row g-4">
         <div class="col-lg-6">
-            <div class="aa-card h-100" style="min-height: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
+            <div class="aa-card card-chart h-100" style="box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-header header-maroon">
                     <h4 class="mb-0">
                         <i class="bi bi-pie-chart me-2"></i>
@@ -281,12 +296,12 @@
                             <span><i class="bi bi-square-fill" style="color:#f7c948"></i> Fingerprint</span>
                         </div>
                     </div>
-                    <div class="text-center d-flex justify-content-center align-items-center" style="min-height: 400px;">
+                    <div class="text-center d-flex justify-content-center align-items-center card-chart-body" style="padding: 1rem;">
                         @if(($rfidCount + $fpCount) > 0)
                         <div
-                            style="width: 550px; height: 550px; display: flex; align-items: center; justify-content: center; margin: 0 auto; margin-top: 50px; margin-bottom: 0px;"
+                            style="width: 100%; max-width: 500px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
                             id="pieChartContainer">
-                            <canvas id="loginPie" width="650" height="650" style="display: block; margin: 0 auto;"></canvas>
+                            <canvas id="loginPie" style="display: block; width: 100%; height: 100%;"></canvas>
                         </div>
                         @else
                         <div class="text-muted d-flex align-items-center justify-content-center w-100" style="min-height: 350px;">
@@ -299,7 +314,7 @@
         </div>
         <div class="col-lg-6">
             <!-- Recent Activity -->
-            <div class="aa-card h-100" style="min-height: 720px; position: relative; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
+            <div class="aa-card card-activity h-100" style="position: relative; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
                 <div class="card-header header-maroon">
                     <h1 class="card-title mb-0">
                         <i class="bi bi-clock-history me-2"></i>
