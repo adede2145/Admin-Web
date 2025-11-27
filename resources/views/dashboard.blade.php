@@ -22,8 +22,24 @@
     .card-chart-body { min-height: 400px; }
     .card-activity { min-height: 720px; }
 
+    /* Pie Chart Responsive Sizing */
+    #pieChartContainer {
+        width: 100%;
+        max-width: 480px;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 1199px) {
+        #pieChartContainer { max-width: 380px; }
+    }
+
     @media (max-width: 991px) {
         .card-activity { min-height: 500px; }
+        #pieChartContainer { max-width: 450px; }
     }
 
     @media (max-width: 767px) {
@@ -32,6 +48,16 @@
         .card-chart-body { min-height: 300px; }
         .card-activity { min-height: auto; }
         .display-3 { font-size: 2.5rem; } /* Fallback if clamp isn't enough */
+        #pieChartContainer { max-width: 350px; }
+    }
+
+    /* Compact Pagination */
+    .pagination-compact .page-link {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .pagination-compact .page-item {
+        margin: 0 2px;
     }
 </style>
 <div class="container-fluid">
@@ -292,9 +318,7 @@
                         </div>
                     </div>
                     <div class="text-center d-flex justify-content-center align-items-center card-chart-body" style="padding: 1rem; position: relative;">
-                        <div
-                            style="width: 100%; max-width: 400px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
-                            id="pieChartContainer">
+                        <div id="pieChartContainer">
                             <canvas id="loginPie" style="display: block; width: 100%; height: 100%;"></canvas>
                         </div>
                         <div id="noDataMessage" class="text-muted position-absolute w-100 h-100 d-none align-items-center justify-content-center" style="top: 0; left: 0;">
@@ -359,9 +383,14 @@
                     </div>
                 </div>
                 @if($recentLogs->hasPages())
-                <div class="card-footer bg-white border-0 p-3 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                    <div class="d-flex justify-content-center m-0">
-                        {{ $recentLogs->links('pagination::bootstrap-5') }}
+                <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 pagination-compact">
+                        <small class="text-muted mb-0">
+                            Showing {{ $recentLogs->firstItem() }} to {{ $recentLogs->lastItem() }} of {{ $recentLogs->total() }} results
+                        </small>
+                        <div>
+                            {{ $recentLogs->links('pagination::bootstrap-5') }}
+                        </div>
                     </div>
                 </div>
                 @endif
