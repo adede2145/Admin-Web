@@ -57,6 +57,43 @@
         color: #495057;
     }
 
+    /* Employee Search Dropdown Styling */
+    #employeeSearchDropdown {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    #employeeSearchDropdown .list-group-item {
+        border-left: none;
+        border-right: none;
+        transition: all 0.2s ease;
+    }
+    
+    #employeeSearchDropdown .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    #employeeSearchDropdown .list-group-item:last-child {
+        border-bottom: none;
+    }
+    
+    #employeeSearchDropdown .list-group-item:hover {
+        background-color: #f8f9fa;
+        border-left-color: var(--aa-maroon);
+        border-left-width: 3px;
+        padding-left: calc(1rem - 2px);
+    }
+    
+    #clearEmployeeBtn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+    }
+    
+    #clearEmployeeBtn:hover i {
+        color: var(--aa-maroon) !important;
+    }
+
     /* Inline Filters Layout */
     .filters-inline {
         display: flex;
@@ -541,7 +578,6 @@
                         class="form-control"
                         value="{{ request('start_date', now()->subDays(7)->format('Y-m-d')) }}"
                         max="{{ date('Y-m-d') }}">
-                    <div class="form-text small">Default: 7 days ago</div>
                 </div>
 
                 <div class="filter-item">
@@ -553,7 +589,6 @@
                         class="form-control"
                         value="{{ request('end_date', date('Y-m-d')) }}"
                         max="{{ date('Y-m-d') }}">
-                    <div class="form-text small">Default: Today</div>
                 </div>
 
                 <!-- Employee Filter -->
@@ -567,32 +602,39 @@
                     $empQuery->where('department_id', auth()->user()->department_id);
                     }
                     $empOptions = $empQuery->orderBy('full_name')->get();
+                    $selectedEmployee = request('employee_id') ? $empOptions->firstWhere('employee_id', request('employee_id')) : null;
                     @endphp
-                    <select name="employee_id" class="form-select">
-                        <option value="">
-                            @if(auth()->user()->role->role_name === 'super_admin')
-                            All Employees ({{ $empOptions->count() }})
-                            @else
-                            All in {{ auth()->user()->department->department_name ?? 'Office' }} ({{ $empOptions->count() }})
-                            @endif
-                        </option>
-                        @foreach($empOptions as $emp)
-                        <option value="{{ $emp->employee_id }}"
-                            {{ (string)request('employee_id') === (string)$emp->employee_id ? 'selected' : '' }}>
-                            {{ $emp->full_name }}
-                            @if(auth()->user()->role->role_name === 'super_admin')
-                            <span class="text-muted">({{ $emp->department->department_name ?? 'No Office' }})</span>
-                            @endif
-                        </option>
-                        @endforeach
-                    </select>
-                    <div class="form-text small">
-                        @if($empOptions->count() === 0)
-                        <span class="text-warning">No employees found</span>
-                        @else
-                        {{ $empOptions->count() }} employee(s) available
+                    <div class="position-relative">
+                        <input type="text" 
+                            id="employeeSearchInput" 
+                            class="form-control" 
+                            placeholder="Search employee by name..."
+                            value="{{ $selectedEmployee ? $selectedEmployee->full_name : '' }}"
+                            autocomplete="off">
+                        <input type="hidden" name="employee_id" id="employeeIdInput" value="{{ request('employee_id') }}">
+                        <div id="employeeSearchDropdown" class="position-absolute w-100 bg-white border rounded shadow-sm" style="display: none; max-height: 300px; overflow-y: auto; z-index: 1000; top: 100%; margin-top: 2px;">
+                            <div class="list-group list-group-flush" id="employeeSearchResults">
+                                <!-- Results will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        @if(request('employee_id'))
+                        <button type="button" class="btn btn-sm btn-link position-absolute" id="clearEmployeeBtn" style="right: 8px; top: 50%; transform: translateY(-50%); padding: 0; z-index: 10;">
+                            <i class="bi bi-x-circle text-muted"></i>
+                        </button>
                         @endif
                     </div>
+                    <!-- Hidden data for JavaScript -->
+                    <script id="employeeData" 
+                            type="application/json"
+                            data-is-super-admin="{{ auth()->user()->role->role_name === 'super_admin' ? '1' : '0' }}">
+                        {!! json_encode($empOptions->map(function($emp) {
+                            return [
+                                'id' => $emp->employee_id,
+                                'name' => $emp->full_name,
+                                'department' => $emp->department->department_name ?? 'No Office'
+                            ];
+                        })->values()) !!}
+                    </script>
                 </div>
 
                 <!-- Office Filter (Super Admin Only) -->
@@ -610,7 +652,6 @@
                         </option>
                         @endforeach
                     </select>
-                    <div class="form-text small">System-wide access</div>
                 </div>
                 @endif
 
@@ -631,7 +672,6 @@
                             Manual
                         </option>
                     </select>
-                    <div class="form-text small" style="height: 16px; visibility: hidden;">placeholder</div>
                 </div>
 
                 <!-- RFID Status Filter -->
@@ -651,7 +691,6 @@
                             Rejected
                         </option>
                     </select>
-                    <div class="form-text small" style="height: 16px; visibility: hidden;">placeholder</div>
                 </div>
 
                 <!-- Centered Quick Filters + Actions Toolbar Row -->
@@ -1304,6 +1343,9 @@
         const lastUpdatedSpan = document.getElementById('lastUpdated');
         const refreshStatus = document.getElementById('refreshStatus');
 
+        // Initialize employee search
+        initializeEmployeeSearch();
+
         // Initialize enhanced filters
         initializeFilters();
 
@@ -1428,6 +1470,133 @@
         attachPaginationHandlers();
     });
 
+    // Employee Search Functionality
+    function initializeEmployeeSearch() {
+        const searchInput = document.getElementById('employeeSearchInput');
+        const hiddenInput = document.getElementById('employeeIdInput');
+        const dropdown = document.getElementById('employeeSearchDropdown');
+        const resultsContainer = document.getElementById('employeeSearchResults');
+        const clearBtn = document.getElementById('clearEmployeeBtn');
+        
+        // Get employee data from the hidden script tag
+        const employeeDataScript = document.getElementById('employeeData');
+        const employees = employeeDataScript ? JSON.parse(employeeDataScript.textContent) : [];
+        
+        // Check if user is super admin (set once)
+        const isSuperAdmin = employeeDataScript ? employeeDataScript.dataset.isSuperAdmin === '1' : false;
+        
+        if (!searchInput || employees.length === 0) return;
+        
+        // Show all employees when input is focused and empty
+        searchInput.addEventListener('focus', function() {
+            if (this.value === '' || !hiddenInput.value) {
+                showAllEmployees();
+            }
+        });
+        
+        // Filter employees as user types
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            
+            // Clear hidden input when user starts typing
+            if (hiddenInput.value && this.value !== this.dataset.selectedName) {
+                hiddenInput.value = '';
+            }
+            
+            if (searchTerm === '') {
+                showAllEmployees();
+            } else {
+                filterEmployees(searchTerm);
+            }
+        });
+        
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+        
+        // Clear button functionality
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                searchInput.value = '';
+                hiddenInput.value = '';
+                searchInput.dataset.selectedName = '';
+                this.style.display = 'none';
+                dropdown.style.display = 'none';
+            });
+        }
+        
+        function showAllEmployees() {
+            resultsContainer.innerHTML = '';
+            
+            if (employees.length === 0) {
+                resultsContainer.innerHTML = '<div class="list-group-item text-muted text-center">No employees found</div>';
+            } else {
+                employees.forEach(emp => {
+                    resultsContainer.appendChild(createEmployeeItem(emp));
+                });
+            }
+            
+            dropdown.style.display = 'block';
+        }
+        
+        function filterEmployees(searchTerm) {
+            const filtered = employees.filter(emp => 
+                emp.name.toLowerCase().includes(searchTerm) || 
+                emp.department.toLowerCase().includes(searchTerm)
+            );
+            
+            resultsContainer.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                resultsContainer.innerHTML = '<div class="list-group-item text-muted text-center">No matching employees found</div>';
+            } else {
+                filtered.forEach(emp => {
+                    resultsContainer.appendChild(createEmployeeItem(emp));
+                });
+            }
+            
+            dropdown.style.display = 'block';
+        }
+        
+        function createEmployeeItem(emp) {
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action';
+            item.style.cursor = 'pointer';
+            
+            item.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="me-2">
+                        <i class="bi bi-person-circle text-primary"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">${emp.name}</div>
+                        ${isSuperAdmin ? `<small class="text-muted">${emp.department}</small>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                searchInput.value = emp.name;
+                searchInput.dataset.selectedName = emp.name;
+                hiddenInput.value = emp.id;
+                dropdown.style.display = 'none';
+                
+                // Show clear button
+                if (clearBtn) {
+                    clearBtn.style.display = 'block';
+                }
+            });
+            
+            return item;
+        }
+    }
+
     // Enhanced Filter Functions
     function initializeFilters() {
         // Quick date filter functionality
@@ -1503,35 +1672,27 @@
             });
         }
 
-        // Department filter for employee options (Super Admin only)
+        // Department filter for employee search (Super Admin only)
         const departmentFilter = document.getElementById('departmentFilter');
-        const employeeSelect = document.querySelector('select[name="employee_id"]');
+        const employeeSearchInput = document.getElementById('employeeSearchInput');
+        const employeeIdInput = document.getElementById('employeeIdInput');
 
-        if (departmentFilter && employeeSelect) {
+        if (departmentFilter && employeeSearchInput) {
             departmentFilter.addEventListener('change', function() {
-                const selectedDept = this.value;
-                const options = employeeSelect.querySelectorAll('option');
-
-                options.forEach(option => {
-                    if (option.value === '') {
-                        // Keep "All Employees" option
-                        option.style.display = '';
-                        return;
-                    }
-
-                    if (!selectedDept) {
-                        // Show all employees when no department selected
-                        option.style.display = '';
-                    } else {
-                        // Show/hide based on department match in option text
-                        const optionText = option.textContent;
-                        const deptName = this.options[this.selectedIndex].textContent;
-                        option.style.display = optionText.includes(deptName) ? '' : 'none';
-                    }
-                });
-
-                // Reset employee selection when department changes
-                employeeSelect.value = '';
+                // Reset employee search when department changes
+                employeeSearchInput.value = '';
+                employeeIdInput.value = '';
+                employeeSearchInput.dataset.selectedName = '';
+                
+                // Hide clear button if exists
+                const clearBtn = document.getElementById('clearEmployeeBtn');
+                if (clearBtn) {
+                    clearBtn.style.display = 'none';
+                }
+                
+                // Note: The employee data is loaded from PHP based on department access
+                // When department filter is applied and form is submitted, 
+                // the employee list will be filtered on the server side
             });
         }
 
