@@ -69,12 +69,30 @@
     }
 
     /* Compact Pagination */
+    .pagination-compact .pagination {
+        margin-bottom: 0;
+    }
     .pagination-compact .page-link {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
+        padding: 0.375rem 0.625rem;
+        font-size: 0.8125rem;
+        min-width: 35px;
+        text-align: center;
     }
     .pagination-compact .page-item {
-        margin: 0 2px;
+        margin: 0 1px;
+    }
+    .pagination-compact .page-item:first-child .page-link,
+    .pagination-compact .page-item:last-child .page-link {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    @media (max-width: 1366px) {
+        .pagination-compact .page-link {
+            padding: 0.3rem 0.5rem;
+            font-size: 0.75rem;
+            min-width: 32px;
+        }
     }
 </style>
 <div class="container-fluid">
@@ -401,9 +419,8 @@
                 </div>
                 @if($recentLogs->hasPages())
                 <div class="card-footer bg-white border-0 p-2 position-absolute w-100" style="left:0; bottom:0; z-index:2;">
-                        <div class="order-1 order-sm-2 w-100 w-sm-auto d-flex justify-content-center justify-content-sm-end mb-1">
-                            {{ $recentLogs->links('pagination::bootstrap-5') }}
-                        </div>
+                    <div class="pagination-compact d-flex justify-content-center align-items-center">
+                        {{ $recentLogs->links('pagination::bootstrap-5') }}
                     </div>
                 </div>
                 @endif
