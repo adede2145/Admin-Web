@@ -11,7 +11,7 @@
                 {{ class_basename($log->model_type) }} - {{ ucfirst($log->action) }}
             </p>
         </div>
-        <div class="w-100 w-md-auto">
+        <div class="w-md-auto">
             <a href="{{ route('audit.index') }}" class="btn btn-secondary w-100 w-md-auto">
                 <i class="bi bi-arrow-left me-2"></i>Back to Audit Logs
             </a>
