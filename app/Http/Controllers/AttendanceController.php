@@ -776,12 +776,14 @@ class AttendanceController extends Controller
                 $ovKey = $employee->employee_id . '|' . $dateKey;
                 $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
                 
-                // Check if weekend
-                $isWeekend = $currentDate->isWeekend();
-                $dayName = $isWeekend ? strtoupper($currentDate->format('l')) : '';
-                
                 // Calculate AM/PM times and undertime
                 $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+
+                // Check if weekend (only mark as weekend for display if no attendance data)
+                $isWeekend = $currentDate->isWeekend();
+                $hasAttendance = !empty($amData['am_arrival']) || !empty($amData['pm_arrival']);
+                $showWeekendLabel = $isWeekend && !$hasAttendance;
+                $dayName = $isWeekend ? strtoupper($currentDate->format('l')) : '';
                 
                 $daysData[] = [
                     'day' => $currentDate->format('j'),
@@ -791,7 +793,7 @@ class AttendanceController extends Controller
                     'pm_departure' => $amData['pm_departure'] ?: '',
                     'undertime_hours' => $amData['undertime_hours'] !== '' ? $amData['undertime_hours'] : '',
                     'undertime_minutes' => $amData['undertime_minutes'] !== '' ? $amData['undertime_minutes'] : '',
-                    'is_weekend' => $isWeekend,
+                    'is_weekend' => $showWeekendLabel,
                     'day_name' => $dayName,
                     'is_leave' => $ov !== null,
                     'leave_text' => $ov ? strtoupper($ov->remarks ?: 'LEAVE') : '',
@@ -1323,8 +1325,8 @@ class AttendanceController extends Controller
                         $leaveText = strtoupper($ov->remarks ?: 'LEAVE');
                         $html .= '<td colspan="6" style="font-weight: bold; padding: 6px 1px;">' . htmlspecialchars($leaveText) . '</td>';
                     }
-                    // If weekend, display day name spanning remaining columns
-                    elseif ($isWeekend) {
+                    // If weekend (and no attendance), display day name spanning remaining columns
+                    elseif ($isWeekend && empty($amData['am_arrival']) && empty($amData['pm_arrival'])) {
                         $html .= '<td colspan="6" style="font-weight: bold; padding: 6px 1px;">' . $dayName . '</td>';
                     } else {
                         $html .= '<td>' . $amData['am_arrival'] . '</td>';
@@ -1448,10 +1450,10 @@ class AttendanceController extends Controller
             return $result; // Leave days show blank
         }
         
-        // Check if weekend
-        if ($currentDate->isWeekend()) {
-            return $result; // Weekends show blank
-        }
+        // Check if weekend - REMOVED to allow weekend attendance
+        // if ($currentDate->isWeekend()) {
+        //    return $result; // Weekends show blank
+        // }
         
         // If no detail or absent - don't calculate undertime, just leave blank
         if (!$detail || $detail->status === 'absent') {

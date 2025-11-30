@@ -170,20 +170,6 @@ class DTRService
 
     private function processDayAttendance($employee, $date)
     {
-        // Check if it's weekend
-        if ($date->isWeekend()) {
-            return [
-                'employee_id' => $employee->employee_id,
-                'date' => $date->toDateString(),
-                'time_in' => null,
-                'time_out' => null,
-                'total_hours' => 0,
-                'overtime_hours' => 0,
-                'status' => 'weekend',
-                'remarks' => 'Weekend'
-            ];
-        }
-
         // Get attendance logs for this day (excluding rejected RFID records)
         $logs = AttendanceLog::where('employee_id', $employee->employee_id)
             ->whereDate('time_in', $date)
@@ -196,6 +182,20 @@ class DTRService
         \Log::info("Processing attendance for employee {$employee->employee_id} on {$date->toDateString()}, found {$logs->count()} logs");
 
         if ($logs->isEmpty()) {
+            // Check if it's weekend
+            if ($date->isWeekend()) {
+                return [
+                    'employee_id' => $employee->employee_id,
+                    'date' => $date->toDateString(),
+                    'time_in' => null,
+                    'time_out' => null,
+                    'total_hours' => 0,
+                    'overtime_hours' => 0,
+                    'status' => 'weekend',
+                    'remarks' => 'Weekend'
+                ];
+            }
+
             return [
                 'employee_id' => $employee->employee_id,
                 'date' => $date->toDateString(),
