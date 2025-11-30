@@ -1020,7 +1020,7 @@
                         <div class="bg-white p-2 border rounded-top border-bottom-0">
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control border-start-0 ps-0" id="employeeSearch" placeholder="Search employee...">
+                                <input type="text" class="form-control border-start-0 ps-0" id="employeeSearch" placeholder="Search employee..." autocomplete="off">
                             </div>
                         </div>
 
