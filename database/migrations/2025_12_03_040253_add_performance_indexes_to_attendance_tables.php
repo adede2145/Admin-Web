@@ -27,7 +27,7 @@ return new class extends Migration
             $table->index(['kiosk_id', 'time_in'], 'idx_attendance_kiosk_date');
             
             // Index 4: RFID reason for filtering RFID scans
-            $table->index('rfid_reason', 'idx_attendance_rfid_reason');
+            DB::statement('CREATE INDEX idx_attendance_rfid_reason ON attendance_logs (rfid_reason(100))'); // ✅ Works
         });
 
         // ============================================================================
