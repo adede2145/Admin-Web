@@ -108,6 +108,23 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(220,0,0,0.15);
         }
+        .btn-back {
+            background: transparent;
+            color: #560000;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 2px solid #d90000;
+            border-radius: .5rem;
+            padding: .75rem 0;
+            transition: all 0.3s ease;
+        }
+        .btn-back:hover {
+            background: #d90000;
+            color: #fff;
+            border-color: #d90000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220,0,0,0.15);
+        }
         .login-form .form-check-label { font-size: .97rem; }
         .login-form .text-danger { color: #d90000 !important; }
 
@@ -174,6 +191,11 @@
                     </div>
                     <button type="submit" class="btn btn-login w-100">Sign in</button>
                 </form>
+                <div class="mt-3">
+                    <a href="{{ route('welcome') }}" class="btn btn-back w-100">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Home
+                    </a>
+                </div>
             </div>
         </div>
     </div>
