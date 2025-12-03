@@ -29,8 +29,10 @@ class StoreEmployeeRequest extends FormRequest
             'emp_name' => 'required|string|max:100',
             'emp_id' => 'required|string|max:50|unique:employees,employee_code',
             'department_id' => 'required|exists:departments,department_id',
+            'employment_type' => 'required|string|in:full_time,cos,admin,faculty with designation',
+            // RFID is optional but must be unique when provided
             // Be permissive on content; length mainly to protect DB index sizes
-            'rfid_uid' => 'required|string|max:191|unique:employees,rfid_code',
+            'rfid_uid' => 'nullable|string|max:191|unique:employees,rfid_code',
             'primary_template' => 'required|string',
             'backup_template' => 'nullable|string',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
@@ -50,7 +52,8 @@ class StoreEmployeeRequest extends FormRequest
             'emp_id.unique' => 'This Employee ID is already in use.',
             'department_id.required' => 'Please select a department.',
             'department_id.exists' => 'Selected department does not exist.',
-            'rfid_uid.required' => 'RFID card scan is required.',
+            'employment_type.required' => 'Please select an employment type.',
+            'employment_type.in' => 'The selected employment type is invalid.',
             'rfid_uid.unique' => 'This RFID card is already registered.',
             'rfid_uid.max' => 'RFID value is too long.',
             'primary_template.required' => 'Primary fingerprint template is required.',
@@ -92,6 +95,9 @@ class StoreEmployeeRequest extends FormRequest
         $rfid = preg_replace('/[^\x20-\x7E]/', '', $rfid ?? '');
         // Collapse internal whitespace to single spaces and trim
         $rfid = trim(preg_replace('/\s+/', ' ', $rfid));
+
+        // Convert empty string to null so nullable validation works properly
+        $rfid = $rfid === '' ? null : $rfid;
 
         $this->merge([
             'rfid_uid' => $rfid,

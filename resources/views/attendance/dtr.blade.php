@@ -188,7 +188,7 @@
                             <strong>ID:</strong> {{ $employee->employee_id }}
                         </div>
                         <div class="col-md-3">
-                            <strong>Type:</strong> {{ ucfirst($employee->employment_type) }}
+                            <strong>Type:</strong> {{ $employee->employment_type === 'faculty with designation' ? 'Faculty' : ucfirst($employee->employment_type) }}
                         </div>
                     </div>
                 </div>

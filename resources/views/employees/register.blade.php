@@ -135,8 +135,10 @@
                             <label class="form-label">Employment Type</label>
                             <select id="employmentType" name="employment_type" class="form-select" {{ (isset($editFp) && $editFp) ? 'disabled' : 'required' }}>
                                 <option value="">Select employment type</option>
-                                <option value="full_time" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='full_time' ? 'selected' : '' }}>Full Time</option>
-                                <option value="part_time" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='part_time' ? 'selected' : '' }}>Part Time</option>
+                                <option value="full_time" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='full_time' ? 'selected' : '' }}>Full-time</option>
+                                <option value="cos" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='cos' ? 'selected' : '' }}>COS</option>
+                                <option value="admin" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='admin' ? 'selected' : '' }}>Admin</option>
+                                <option value="faculty with designation" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='faculty with designation' ? 'selected' : '' }}>Faculty</option>
                             </select>
                         </div>
 
@@ -311,9 +313,8 @@
     function updateRegisterEnabled() {
         const empName = document.getElementById('empName').value.trim();
         const empId = document.getElementById('empId').value.trim();
-        const rfid = (rfidInput?.value || '').trim();
         const deptId = (document.getElementById('departmentId')?.value || '').trim();
-        const empType = (document.getElementById('employmentType')?.value || '').trim();
+        const empType = (employmentTypeSelect?.value || '').trim();
         const hasPrimaryFp = !!primaryTemplate.value;
 
         // In edit mode: allow submission when at least one selected replacement has data
@@ -324,7 +325,7 @@
             const hasAny = (replacePrimary && !!primaryTemplate.value) || (replaceBackup && !!backupTemplate.value);
             ok = hasAny;
         } else {
-            ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
+            ok = empName && empId && deptId && empType && hasPrimaryFp;
         }
         registerBtn.disabled = !ok;
 
@@ -334,8 +335,8 @@
         } else if (!hasPrimaryFp) {
             registerHint.textContent = editFpMode ? 'Toggle and capture at least one fingerprint.' : 'Primary fingerprint is required.';
             registerHint.className = 'ms-2 text-muted';
-        } else if (!rfid) {
-            registerHint.textContent = editFpMode ? '' : 'RFID scan is required.';
+        } else if (!empType) {
+            registerHint.textContent = 'Please select an employment type.';
             registerHint.className = 'ms-2 text-muted';
         } else {
             registerHint.textContent = 'Please fill all required fields.';
