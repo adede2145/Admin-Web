@@ -20,11 +20,26 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
+            $admin = auth()->user(); // Admin model
+
             $query = Employee::with(['department', 'attendanceLogs']);
 
-            //w Department restriction for non-super admins
-            if (auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id) {
-                $query->where('department_id', auth()->user()->department_id);
+            // RBAC: scope employees by admin's employment type access / department
+            if (!$admin->isSuperAdmin()) {
+                // HR / Office HR admin with employment_type_access: ignore department, use employment type only
+                if (
+                    $admin->department &&
+                    in_array(mb_strtolower($admin->department->department_name), ['hr', 'office hr'], true) &&
+                    is_array($admin->employment_type_access) &&
+                    count($admin->employment_type_access) > 0
+                ) {
+                    $query->whereIn('employment_type', $admin->employment_type_access);
+                } else {
+                    // Fallback: original department-based restriction
+                    if ($admin->department_id) {
+                        $query->where('department_id', $admin->department_id);
+                    }
+                }
             }
 
             // Search filter
@@ -91,8 +106,8 @@ class EmployeeController extends Controller
             // Verify user has access to the selected employee
             if (
                 $selectedEmployee &&
-                auth()->user()->role->role_name !== 'super_admin' &&
-                auth()->user()->department_id !== $selectedEmployee->department_id
+                !$admin->isSuperAdmin() &&
+                !$admin->canManageEmployee($selectedEmployee)
             ) {
                 $selectedEmployee = null;
                 $selectedEmployeeId = null;
@@ -114,12 +129,10 @@ class EmployeeController extends Controller
     {
         try {
             $employee = Employee::with('department')->findOrFail($id);
+            $admin = auth()->user();
 
             // Check if user has access to this employee
-            if (
-                auth()->user()->role->role_name !== 'super_admin' &&
-                auth()->user()->department_id !== $employee->department_id
-            ) {
+            if (!$admin->canManageEmployee($employee)) {
                 return response()->json(['error' => 'Access denied'], 403);
             }
 

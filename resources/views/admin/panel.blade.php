@@ -51,16 +51,22 @@
                             <label for="filter_department" class="form-label">
                                 <span class="d-flex align-items-center">
                                     <i class="bi bi-funnel me-2 text-muted"></i>
-                                    Filter by Office
+                                    Filter by Office (HR Only)
                                 </span>
                             </label>
-                            <select id="filter_department" class="form-select" required>
-                                <option value="">Select Office</option>
-                                @foreach($departments as $dept)
-                                <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
-                                @endforeach
+                            @php
+                                $defaultDept = $departments->first();
+                            @endphp
+                            <select id="filter_department" class="form-select" disabled>
+                                @if($defaultDept)
+                                    <option value="{{ $defaultDept->department_id }}" selected>
+                                        {{ $defaultDept->department_name }}
+                                    </option>
+                                @else
+                                    <option value="" selected>No HR office configured</option>
+                                @endif
                             </select>
-                            <div class="form-text">Filter employees by office</div>
+                            <div class="form-text">Only employees under HR / Office HR can be promoted to admin.</div>
                         </div>
 
                         <!-- Employee Selection -->
@@ -84,6 +90,37 @@
                             </div>
                             <div class="form-text">
                                 <span id="available_count">0</span> employees available (not already admins)
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <span class="d-flex align-items-center">
+                                    <i class="bi bi-list-check me-2 text-muted"></i>
+                                    Employment types this admin can manage
+                                </span>
+                            </label>
+                            <div class="small text-muted mb-2">
+                                The admin will only see and manage employees whose employment type is checked here,
+                                across Dashboard, Attendance Log, Reports, and Manage Employees.
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="employment_type_access[]" value="full_time" id="empTypeFullTime" required>
+                                <label class="form-check-label" for="empTypeFullTime">
+                                    Full Time
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="employment_type_access[]" value="part_time" id="empTypePartTime">
+                                <label class="form-check-label" for="empTypePartTime">
+                                    Part Time
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="employment_type_access[]" value="cos" id="empTypeCos">
+                                <label class="form-check-label" for="empTypeCos">
+                                    COS
+                                </label>
                             </div>
                         </div>
 
@@ -558,29 +595,19 @@
 
         if (!searchInput || !searchResults || !employeeDataElement) return;
 
-        const allEmployees = JSON.parse(employeeDataElement.textContent);
-        let filteredEmployees = []; // Start with empty array since no department is selected
+        const allEmployees = JSON.parse(employeeDataElement.textContent) || [];
+        // All employees in this JSON are already HR / Office HR from the backend
+        let filteredEmployees = allEmployees.slice();
         let selectedEmployee = null;
 
-        // Office filter change handler
-        departmentFilter.addEventListener('change', function() {
-            const deptId = this.value;
-            if (deptId === '') {
-                // No office selected - show no employees
-                filteredEmployees = [];
-            } else {
-                filteredEmployees = allEmployees.filter(emp => emp.department_id == deptId);
-            }
-
-            // Update available count
+        if (availableCountSpan) {
             availableCountSpan.textContent = filteredEmployees.length;
+        }
+        if (departmentFilter) {
+            departmentFilter.disabled = true;
+        }
 
-            // Clear search and selection
-            searchInput.value = '';
-            hiddenEmployeeId.value = '';
-            selectedEmployee = null;
-            searchResults.style.display = 'none';
-        });
+        // Office filter is locked to HR; no change handler needed
 
         // Search functionality
         searchInput.addEventListener('input', function() {

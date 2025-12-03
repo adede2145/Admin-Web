@@ -25,12 +25,23 @@ class ReportController extends Controller
     // Show reporting dashboard
     public function index()
     {
+        $admin = auth()->user();
+
         $departments = Department::all();
         // Employees list for DTR modal (scoped by role/department similar to attendance)
         $employeesForDTR = Employee::when(
-            auth()->user()->role->role_name !== 'super_admin',
-            function ($q) {
-                $q->where('department_id', auth()->user()->department_id);
+            !$admin->isSuperAdmin(),
+            function ($q) use ($admin) {
+                if (
+                    $admin->department &&
+                    in_array(mb_strtolower($admin->department->department_name), ['hr', 'office hr'], true) &&
+                    is_array($admin->employment_type_access) &&
+                    count($admin->employment_type_access) > 0
+                ) {
+                    $q->whereIn('employment_type', $admin->employment_type_access);
+                } elseif ($admin->department_id) {
+                    $q->where('department_id', $admin->department_id);
+                }
             }
         )
         ->orderBy('full_name')
@@ -88,6 +99,8 @@ class ReportController extends Controller
     // Generate report data based on type
     private function generateReportData($request)
     {
+        $admin = auth()->user();
+
         $startDate = Carbon::parse($request->start_date);
         $endDate = Carbon::parse($request->end_date);
         $departmentId = $request->department_id;
@@ -99,6 +112,22 @@ class ReportController extends Controller
         if ($departmentId) {
             $baseQuery->whereHas('employee', function ($q) use ($departmentId) {
                 $q->where('department_id', $departmentId);
+            });
+        }
+
+        // Additional RBAC: limit by employment_type_access for non‑super admins
+        if (!$admin->isSuperAdmin()) {
+            $baseQuery->whereHas('employee', function ($q) use ($admin) {
+                if (
+                    $admin->department &&
+                    in_array(mb_strtolower($admin->department->department_name), ['hr', 'office hr'], true) &&
+                    is_array($admin->employment_type_access) &&
+                    count($admin->employment_type_access) > 0
+                ) {
+                    $q->whereIn('employment_type', $admin->employment_type_access);
+                } elseif ($admin->department_id) {
+                    $q->where('department_id', $admin->department_id);
+                }
             });
         }
 

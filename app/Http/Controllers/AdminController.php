@@ -18,14 +18,15 @@ class AdminController extends Controller
         // Fetch all admins with employee and role relationships
         $admins = Admin::with(['role', 'employee.department'])->get();
 
-        // Fetch all roles for the dropdown
+        // Fetch all roles for the dropdown (kept for stats / future use)
         $roles = Role::all();
 
-        // Fetch all departments for the dropdown
-        $departments = Department::all();
+        // Restrict departments to HR / Office HR for admin creation (case-insensitive)
+        $departments = Department::whereRaw('LOWER(department_name) IN (?, ?)', ['hr', 'office hr'])->get();
 
-        // Get available employees (not already admins)
+        // Get available employees (not already admins) under HR / Office HR only
         $availableEmployees = Employee::whereDoesntHave('admin')
+            ->whereIn('department_id', $departments->pluck('department_id'))
             ->with('department')
             ->orderBy('full_name')
             ->get();
@@ -67,11 +68,14 @@ class AdminController extends Controller
             'username' => 'required|unique:admins,username',
             // Password: min 8, starts with capital letter, includes at least one symbol
             'password' => ['required','min:8','regex:/^[A-Z].*$/','regex:/[^A-Za-z0-9]/'],
-            'employee_id' => 'required|exists:employees,employee_id|unique:admins,employee_id'
+            'employee_id' => 'required|exists:employees,employee_id|unique:admins,employee_id',
+            'employment_type_access' => 'required|array|min:1',
+            'employment_type_access.*' => 'in:full_time,part_time,cos',
         ], [
             'password.min' => 'Password must be at least 8 characters.',
             'password.regex' => 'Password must start with a capital letter and include at least one symbol.',
             'employee_id.unique' => 'This employee is already an admin.',
+            'employment_type_access.required' => 'Select at least one employment type for this admin.',
         ]);
 
         try {
@@ -85,14 +89,23 @@ class AdminController extends Controller
             }
 
             // Get employee to inherit department
-            $employee = Employee::find($request->employee_id);
+            $employee = Employee::with('department')->find($request->employee_id);
+
+            // Only HR / Office HR employees can be created as admins (case-insensitive)
+            $deptName = $employee->department ? $employee->department->department_name : null;
+            $normalizedDept = $deptName ? mb_strtolower($deptName) : null;
+            if (!in_array($normalizedDept, ['hr', 'office hr'], true)) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Only employees under HR / Office HR can be added as admins.');
+            }
 
             Admin::create([
                 'username' => $request->username,
                 'password_hash' => DB::raw("SHA2('" . $request->password . "', 256)"),
                 'role_id' => $adminRole->role_id,
                 'department_id' => $employee->department_id, // Inherit from employee
-                'employee_id' => $request->employee_id
+                'employee_id' => $request->employee_id,
+                'employment_type_access' => $request->employment_type_access,
             ]);
 
             DB::commit();

@@ -27,6 +27,8 @@ class AttendanceController extends Controller
     // Show attendance management page
     public function index(Request $request)
     {
+        $admin = auth()->user();
+
         $query = AttendanceLog::with(['employee.department']);
 
         // Apply filters
@@ -62,31 +64,53 @@ class AttendanceController extends Controller
             $query->where('method', 'rfid')->where('verification_status', $request->rfid_status);
         }
 
-        // Department restriction for non-super admins
-        if (auth()->user()->role->role_name !== 'super_admin' && auth()->user()->department_id) {
-            $query->whereHas('employee', function ($q) {
-                $q->where('department_id', auth()->user()->department_id);
+        // RBAC: scope records by admin's employment type access / department
+        if (!$admin->isSuperAdmin()) {
+            $query->whereHas('employee', function ($q) use ($admin) {
+                // HR / Office HR with employment_type_access: use employment type only
+                if (
+                    $admin->department &&
+                    in_array(mb_strtolower($admin->department->department_name), ['hr', 'office hr'], true) &&
+                    is_array($admin->employment_type_access) &&
+                    count($admin->employment_type_access) > 0
+                ) {
+                    $q->whereIn('employment_type', $admin->employment_type_access);
+                } else {
+                    // Fallback: original department-based restriction
+                    if ($admin->department_id) {
+                        $q->where('department_id', $admin->department_id);
+                    }
+                }
             });
         }
 
         $attendanceLogs = $query->latest('time_in')->paginate(20);
 
         // RBAC: Only show departments that the user has access to
-        if (auth()->user()->role->role_name === 'super_admin') {
+        if ($admin->role->role_name === 'super_admin') {
             $departments = Department::all();
         } else {
-            $departments = Department::where('department_id', auth()->user()->department_id)->get();
+            $departments = Department::where('department_id', $admin->department_id)->get();
         }
 
         // Employees list for DTR modal (scoped by role/department)
         $employeesForDTR = Employee::when(
-            auth()->user()->role->role_name !== 'super_admin',
-            function ($q) {
-                $q->where('department_id', auth()->user()->department_id);
+            !$admin->isSuperAdmin(),
+            function ($q) use ($admin) {
+                if (
+                    $admin->department &&
+                    in_array(mb_strtolower($admin->department->department_name), ['hr', 'office hr'], true) &&
+                    is_array($admin->employment_type_access) &&
+                    count($admin->employment_type_access) > 0
+                ) {
+                    $q->whereIn('employment_type', $admin->employment_type_access);
+                } elseif ($admin->department_id) {
+                    $q->where('department_id', $admin->department_id);
+                }
             }
         )
-            ->orderBy('full_name')
-            ->get();
+        ->orderBy('full_name')
+        ->get();
 
         return view('attendance.index', compact('attendanceLogs', 'departments', 'employeesForDTR'));
     }
