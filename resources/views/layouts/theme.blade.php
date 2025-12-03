@@ -318,8 +318,35 @@
 
                     if (data.success && data.token) {
                         const backendUrl = window.location.origin;
-                        const registrationUrl = `http://127.0.0.1:18426/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
-                        registrationWindow = window.open(registrationUrl, '_blank');
+                        // Try multiple ports for Device Bridge
+                        const ports = [18426, 18427, 18428, 18429, 18430];
+                        
+                        // Try each port until one works
+                        let registrationOpened = false;
+                        for (const port of ports) {
+                            try {
+                                const registrationUrl = `http://127.0.0.1:${port}/register.html?token=${encodeURIComponent(data.token)}&backend=${encodeURIComponent(backendUrl)}`;
+                                
+                                // Try to check if the port is accessible
+                                const checkResponse = await fetch(`http://127.0.0.1:${port}/register.html`, {
+                                    method: 'HEAD',
+                                    mode: 'no-cors'
+                                }).catch(() => null);
+                                
+                                // Open the registration window
+                                registrationWindow = window.open(registrationUrl, '_blank');
+                                registrationOpened = true;
+                                console.log(`Opened registration on port ${port}`);
+                                break;
+                            } catch (e) {
+                                console.log(`Port ${port} not available, trying next...`);
+                                continue;
+                            }
+                        }
+                        
+                        if (!registrationOpened) {
+                            alert('Could not connect to Device Bridge on any port. Please ensure the Device Bridge is running.');
+                        }
                         
                         // If popup was blocked or failed to open, show a message
                         if (!registrationWindow || registrationWindow.closed || typeof registrationWindow.closed === 'undefined') {
