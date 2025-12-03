@@ -22,11 +22,20 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::redirect('/', '/login');
+Route::get('/', function () {
+    return view('welcome');
+})->name('welcome');
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
+// Leave form download route (accessible without auth)
+Route::get('/download/leave-form', function () {
+    $filePath = base_path('Leave/LEAVE-FORM-FORM-6.xls');
+    
+    if (!file_exists($filePath)) {
+        abort(404, 'Leave form file not found');
+    }
+    
+    return response()->download($filePath, 'LEAVE-FORM-FORM-6.xls');
+})->name('leave.form.download');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
