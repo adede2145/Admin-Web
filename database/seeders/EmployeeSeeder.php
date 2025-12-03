@@ -9,51 +9,43 @@ class EmployeeSeeder extends Seeder
 {
     public function run()
     {
+        $employmentTypes = ['full_time', 'part_time', 'cos', 'admin', 'faculty with designation'];
+        
         $employees = [
             [
-                'first_name' => 'John',
-                'last_name' => 'Doe',
-                'email' => 'john.doe@example.com',
-                'department_id' => 1,
-                'position' => 'Software Engineer',
-                'employment_status' => 'Regular',
-                'date_hired' => '2023-01-15',
+                'employee_code' => 'EMP201',
+                'full_name' => 'Alexander Rodriguez',
+                'employment_type' => $employmentTypes[array_rand($employmentTypes)],
+                'department_id' => 1, // IT Office
+                'rfid_code' => 'RFID201',
             ],
             [
-                'first_name' => 'Jane',
-                'last_name' => 'Smith',
-                'email' => 'jane.smith@example.com',
-                'department_id' => 2,
-                'position' => 'HR Manager',
-                'employment_status' => 'Regular',
-                'date_hired' => '2023-02-01',
+                'employee_code' => 'EMP202',
+                'full_name' => 'Emma Thompson',
+                'employment_type' => $employmentTypes[array_rand($employmentTypes)],
+                'department_id' => 1, // IT Office
+                'rfid_code' => 'RFID202',
             ],
             [
-                'first_name' => 'Mike',
-                'last_name' => 'Johnson',
-                'email' => 'mike.johnson@example.com',
-                'department_id' => 1,
-                'position' => 'Senior Developer',
-                'employment_status' => 'Regular',
-                'date_hired' => '2023-01-10',
+                'employee_code' => 'EMP203',
+                'full_name' => 'Michael Nguyen',
+                'employment_type' => $employmentTypes[array_rand($employmentTypes)],
+                'department_id' => 1, // IT Office
+                'rfid_code' => 'RFID203',
             ],
             [
-                'first_name' => 'Sarah',
-                'last_name' => 'Williams',
-                'email' => 'sarah.williams@example.com',
-                'department_id' => 3,
-                'position' => 'Accountant',
-                'employment_status' => 'Regular',
-                'date_hired' => '2023-03-01',
+                'employee_code' => 'EMP204',
+                'full_name' => 'Sophia Kumar',
+                'employment_type' => $employmentTypes[array_rand($employmentTypes)],
+                'department_id' => 1, // IT Office
+                'rfid_code' => 'RFID204',
             ],
             [
-                'first_name' => 'Robert',
-                'last_name' => 'Brown',
-                'email' => 'robert.brown@example.com',
-                'department_id' => 2,
-                'position' => 'HR Assistant',
-                'employment_status' => 'Probationary',
-                'date_hired' => '2023-07-01',
+                'employee_code' => 'EMP205',
+                'full_name' => 'Daniel Park',
+                'employment_type' => $employmentTypes[array_rand($employmentTypes)],
+                'department_id' => 1, // IT Office
+                'rfid_code' => 'RFID205',
             ],
         ];
 

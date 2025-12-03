@@ -25,7 +25,7 @@
                     </h4>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('admin.users.store') }}" method="POST">
+                    <form id="createAdminForm" action="{{ route('admin.users.store') }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label for="username" class="form-label">
@@ -105,22 +105,37 @@
                                 across Dashboard, Attendance Log, Reports, and Manage Employees.
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="employment_type_access[]" value="full_time" id="empTypeFullTime" required>
+                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="full_time" id="empTypeFullTime">
                                 <label class="form-check-label" for="empTypeFullTime">
                                     Full Time
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="employment_type_access[]" value="part_time" id="empTypePartTime">
+                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="part_time" id="empTypePartTime">
                                 <label class="form-check-label" for="empTypePartTime">
                                     Part Time
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="employment_type_access[]" value="cos" id="empTypeCos">
+                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="cos" id="empTypeCos">
                                 <label class="form-check-label" for="empTypeCos">
                                     COS
                                 </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="admin" id="empTypeAdmin">
+                                <label class="form-check-label" for="empTypeAdmin">
+                                    Admin
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="faculty with designation" id="empTypeFaculty">
+                                <label class="form-check-label" for="empTypeFaculty">
+                                    Faculty with Designation
+                                </label>
+                            </div>
+                            <div id="employment-type-error" class="text-danger small mt-2" style="display: none;">
+                                Please select at least one employment type.
                             </div>
                         </div>
 
@@ -484,19 +499,18 @@
 
 <!-- Employee data for JavaScript -->
 <script type="application/json" id="employeeData">
-    @if(isset($availableEmployees) && $availableEmployees->count() > 0)[
-        @foreach($availableEmployees as $index => $emp) {
-            "employee_id": {{ $emp->employee_id }},
-            "full_name": "{{ addslashes($emp->full_name) }}",
-            "department": "{{ addslashes($emp->department->department_name ?? 'No Department') }}",
-            "department_id": {{ $emp->department_id ?? 'null' }},
-            "employment_type": "{{ addslashes($emp->employment_type === 'faculty with designation' ? 'Faculty' : ucfirst(str_replace('_', ' ', $emp->employment_type))) }}"
-        }@if($index < $availableEmployees->count() - 1),@endif
-        @endforeach
-    ]
-    @else
-        []
-    @endif
+<?php
+$employeeData = $availableEmployees->map(function($emp) {
+    return [
+        'employee_id' => $emp->employee_id,
+        'full_name' => $emp->full_name,
+        'department' => $emp->department->department_name ?? 'No Department',
+        'department_id' => $emp->department_id,
+        'employment_type' => $emp->employment_type === 'faculty with designation' ? 'Faculty' : ucfirst(str_replace('_', ' ', $emp->employment_type))
+    ];
+});
+echo json_encode($employeeData);
+?>
 </script>
 
 <style>
@@ -534,7 +548,40 @@
     document.addEventListener('DOMContentLoaded', function() {
         initializeEmployeeSearch();
         initializeDeleteAdminModal();
+        initializeFormValidation();
     });
+
+    // Add form validation for employment type checkboxes
+    function initializeFormValidation() {
+        const createAdminForm = document.getElementById('createAdminForm');
+        const employmentTypeCheckboxes = document.querySelectorAll('.employment-type-checkbox');
+        const errorDiv = document.getElementById('employment-type-error');
+
+        if (!createAdminForm || !employmentTypeCheckboxes.length) return;
+
+        createAdminForm.addEventListener('submit', function(e) {
+            const checkedBoxes = Array.from(employmentTypeCheckboxes).filter(cb => cb.checked);
+            
+            if (checkedBoxes.length === 0) {
+                e.preventDefault();
+                errorDiv.style.display = 'block';
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            } else {
+                errorDiv.style.display = 'none';
+            }
+        });
+
+        // Hide error when user checks a box
+        employmentTypeCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const checkedBoxes = Array.from(employmentTypeCheckboxes).filter(cb => cb.checked);
+                if (checkedBoxes.length > 0) {
+                    errorDiv.style.display = 'none';
+                }
+            });
+        });
+    }
 
     // Add event listener for delete admin buttons
     function initializeDeleteAdminModal() {

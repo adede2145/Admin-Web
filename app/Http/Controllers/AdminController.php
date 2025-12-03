@@ -70,7 +70,7 @@ class AdminController extends Controller
             'password' => ['required','min:8','regex:/^[A-Z].*$/','regex:/[^A-Za-z0-9]/'],
             'employee_id' => 'required|exists:employees,employee_id|unique:admins,employee_id',
             'employment_type_access' => 'required|array|min:1',
-            'employment_type_access.*' => 'in:full_time,part_time,cos',
+            'employment_type_access.*' => 'in:full_time,part_time,cos,admin,faculty with designation',
         ], [
             'password.min' => 'Password must be at least 8 characters.',
             'password.regex' => 'Password must start with a capital letter and include at least one symbol.',
