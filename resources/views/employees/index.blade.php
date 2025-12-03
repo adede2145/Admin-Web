@@ -86,7 +86,11 @@
                                     </td>
                                     <td>
                                         <span class="badge badge-aa small fs-6">
-                                            {{ ucfirst(str_replace('_', ' ', $employee->employment_type)) }}
+                                            @if($employee->employment_type === 'faculty with designation')
+                                                Faculty
+                                            @else
+                                                {{ ucfirst(str_replace('_', ' ', $employee->employment_type)) }}
+                                            @endif
                                         </span>
                                     </td>
                                     <td>
@@ -211,8 +215,9 @@
                                         onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
                                         onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
                                     <option value="full_time" {{ $employee->employment_type === 'full_time' ? 'selected' : '' }}>Full Time</option>
-                                    <option value="part_time" {{ $employee->employment_type === 'part_time' ? 'selected' : '' }}>Part Time</option>
                                     <option value="cos" {{ $employee->employment_type === 'cos' ? 'selected' : '' }}>COS</option>
+                                    <option value="admin" {{ $employee->employment_type === 'admin' ? 'selected' : '' }}>Admin</option>
+                                    <option value="faculty with designation" {{ $employee->employment_type === 'faculty with designation' ? 'selected' : '' }}>Faculty</option>
                                 </select>
                             </div>
 

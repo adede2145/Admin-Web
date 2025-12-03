@@ -490,7 +490,7 @@
             "full_name": "{{ addslashes($emp->full_name) }}",
             "department": "{{ addslashes($emp->department->department_name ?? 'No Department') }}",
             "department_id": {{ $emp->department_id ?? 'null' }},
-            "employment_type": "{{ addslashes(ucfirst(str_replace('_', ' ', $emp->employment_type))) }}"
+            "employment_type": "{{ addslashes($emp->employment_type === 'faculty with designation' ? 'Faculty' : ucfirst(str_replace('_', ' ', $emp->employment_type))) }}"
         }@if($index < $availableEmployees->count() - 1),@endif
         @endforeach
     ]

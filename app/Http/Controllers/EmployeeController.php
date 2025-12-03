@@ -259,8 +259,8 @@ class EmployeeController extends Controller
             $employeeData = [
                 'employee_code' => $request->emp_id, // Custom employee ID/code
                 'full_name' => $request->emp_name,
-                'employment_type' => 'full_time', // Default, can be made configurable
-                'rfid_code' => $request->rfid_uid,
+                'employment_type' => $request->employment_type,
+                'rfid_code' => $request->rfid_uid ?: null, // Convert empty string to null
                 'department_id' => $request->department_id,
             ];
 
@@ -367,7 +367,7 @@ class EmployeeController extends Controller
             $request->validate([
                 'full_name' => 'required|string|max:100',
                 'employee_code' => 'required|string|max:50|unique:employees,employee_code,' . $id . ',employee_id',
-                'employment_type' => 'required|in:full_time,part_time,cos',
+                'employment_type' => 'required|in:full_time,part_time,cos,admin,faculty with designation',
                 'department_id' => 'required|exists:departments,department_id',
                 'photo' => 'nullable|image|max:5120',
             ]);

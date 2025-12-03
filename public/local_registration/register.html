@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register Employee</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
+
     <style>
         :root {
             --aa-maroon: #560000;
@@ -19,19 +20,22 @@
         body {
             background: #d1d5db url('../login-bg.jpg') center/cover no-repeat fixed;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            padding: 20px;
+            padding: 15px;
+            min-height: 100vh;
         }
 
         .container-wrapper {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 10px;
         }
 
         .aa-card {
-            background: #fff;
+            background: rgba(255, 255, 255, 0.97);
             border: 1px solid #e5e7eb;
             border-radius: 0.5rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         .aa-card .card-body {
@@ -76,6 +80,7 @@
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -91,6 +96,7 @@
                 opacity: 0;
                 transform: translateX(100%);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -114,8 +120,128 @@
             border-color: #b6d4fe;
             color: #084298;
         }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .aa-card .card-body {
+                padding: 1.25rem;
+            }
+            
+            .col-md-4, .col-md-6 {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container-wrapper {
+                padding: 0 5px;
+            }
+            
+            .aa-card .card-body {
+                padding: 1rem;
+            }
+            
+            .header-maroon {
+                padding: 0.75rem 1rem;
+                min-height: 48px;
+            }
+            
+            .card-title {
+                font-size: 1rem;
+            }
+            
+            .form-label {
+                font-size: 0.9rem;
+            }
+            
+            .device-status {
+                font-size: 0.85rem;
+                padding: 6px 10px;
+            }
+            
+            .border.rounded.p-3 {
+                padding: 0.75rem !important;
+            }
+            
+            .border.rounded.p-3 h6 {
+                font-size: 0.9rem;
+            }
+            
+            .btn-sm {
+                padding: 0.35rem 0.65rem;
+                font-size: 0.8rem;
+            }
+            
+            #registerBtn, #cancelBtn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            #registerHint {
+                display: block;
+                margin-top: 0.5rem;
+                margin-left: 0 !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            body {
+                padding: 8px;
+            }
+            
+            .aa-card .card-body {
+                padding: 0.75rem;
+            }
+            
+            .header-maroon {
+                padding: 0.6rem 0.85rem;
+            }
+            
+            .card-title {
+                font-size: 0.95rem;
+            }
+            
+            .card-title i {
+                font-size: 1.1rem;
+            }
+            
+            .form-control, .form-select {
+                font-size: 0.9rem;
+            }
+            
+            .input-group .btn {
+                font-size: 0.85rem;
+            }
+            
+            .form-text {
+                font-size: 0.75rem;
+            }
+            
+            .notification {
+                max-width: calc(100vw - 40px) !important;
+                right: 10px !important;
+                left: 10px !important;
+            }
+            
+            #profilePreview {
+                max-width: 120px !important;
+            }
+        }
+
+        /* Optional field styling */
+        .optional-badge {
+            font-size: 0.7rem;
+            font-weight: normal;
+            color: #6c757d;
+            margin-left: 4px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container-wrapper">
         <div class="row">
@@ -138,18 +264,22 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Profile Image</label>
-                                    <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/*">
+                                    <input type="file" class="form-control" id="profileImage" name="profile_image"
+                                        accept="image/*">
                                     <div class="mt-2">
-                                        <img id="profilePreview" src="" alt="Preview" class="img-thumbnail d-none" style="max-width: 180px;">
+                                        <img id="profilePreview" src="" alt="Preview" class="img-thumbnail d-none"
+                                            style="max-width: 180px;">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Employee Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="empName" name="emp_name" placeholder="Full name" required>
+                                    <input type="text" class="form-control" id="empName" name="emp_name"
+                                        placeholder="Full name" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Employee ID <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="empId" name="emp_id" placeholder="ID/Code" required>
+                                    <input type="text" class="form-control" id="empId" name="emp_id"
+                                        placeholder="ID/Code" required>
                                 </div>
 
                                 <div class="col-md-4">
@@ -164,17 +294,23 @@
                                     <select id="employmentType" name="employment_type" class="form-select" required>
                                         <option value="">Select employment type</option>
                                         <option value="full_time">Full Time</option>
-                                        <option value="part_time">Part Time</option>
+                                        <option value="cos">COS</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="faculty with designation">Faculty</option>
                                     </select>
                                 </div>
 
                                 <div class="col-md-4">
-                                    <label class="form-label">RFID (fallback) <span class="text-danger">*</span> <span id="rfidStatus" class="ms-2 small text-muted"></span></label>
+                                    <label class="form-label">RFID (fallback) <span class="optional-badge">(optional)</span> <span
+                                            id="rfidStatus" class="ms-2 small text-muted"></span></label>
                                     <div class="input-group">
-                                        <input type="text" class="form-control" id="rfidUid" name="rfid_uid" placeholder="Tap card or type UID" autocomplete="off">
-                                        <button class="btn btn-outline-primary" type="button" id="clearRfidBtn">Clear</button>
+                                        <input type="text" class="form-control" id="rfidUid" name="rfid_uid"
+                                            placeholder="Tap card or type UID" autocomplete="off">
+                                        <button class="btn btn-outline-primary" type="button"
+                                            id="clearRfidBtn">Clear</button>
                                     </div>
-                                    <div class="form-text">If your reader is keyboard-wedge, focus here and tap a card.</div>
+                                    <div class="form-text">If you have an ID card, focus here and tap a card. Leave empty if not available.
+                                    </div> 
                                 </div>
 
                                 <div class="col-md-6">
@@ -183,31 +319,40 @@
                                     <!-- Primary Fingerprint Section -->
                                     <div class="border rounded p-3 mb-3 bg-light">
                                         <h6 class="text-primary mb-2">
-                                            <i class="bi bi-1-circle me-1"></i> Primary Fingerprint (Index Finger) <span class="text-danger" id="primaryRequired">*</span>
+                                            <i class="bi bi-1-circle me-1"></i> Primary Fingerprint (Index Finger) <span
+                                                class="text-danger" id="primaryRequired">*</span>
                                         </h6>
                                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                             <!-- Toggle for edit mode -->
-                                            <div class="form-check form-switch me-2 d-none" id="replacePrimaryToggleContainer">
-                                                <input class="form-check-input" type="checkbox" id="replacePrimaryToggle">
-                                                <label class="form-check-label" for="replacePrimaryToggle">Replace primary template</label>
+                                            <div class="form-check form-switch me-2 d-none"
+                                                id="replacePrimaryToggleContainer">
+                                                <input class="form-check-input" type="checkbox"
+                                                    id="replacePrimaryToggle">
+                                                <label class="form-check-label" for="replacePrimaryToggle">Replace
+                                                    primary template</label>
                                             </div>
-                                            <button type="button" id="capturePrimaryBtn" class="btn btn-outline-primary btn-sm" disabled>
+                                            <button type="button" id="capturePrimaryBtn"
+                                                class="btn btn-outline-primary btn-sm" disabled>
                                                 <i class="bi bi-fingerprint me-1"></i> Scan Primary
                                             </button>
-                                            <span id="primaryStatus" class="text-muted">Waiting for Device Bridge...</span>
+                                            <span id="primaryStatus" class="text-muted">Waiting for Device
+                                                Bridge...</span>
                                         </div>
                                         <!-- Scanning Progress for Primary -->
                                         <div id="primaryProgress" class="d-none progress-wrapper">
                                             <div class="d-flex align-items-center gap-2 mb-2">
-                                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                <div class="spinner-border spinner-border-sm text-primary"
+                                                    role="status"></div>
                                                 <span class="small text-primary">Scanning in progress...</span>
                                             </div>
                                             <div class="progress mb-2" style="height: 6px;">
-                                                <div id="primaryProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                                <div id="primaryProgressBar"
+                                                    class="progress-bar progress-bar-striped progress-bar-animated"
                                                     role="progressbar" style="width: 0%"></div>
                                             </div>
                                             <div class="small text-muted">
-                                                <span id="primaryInstruction">Place your index finger on the scanner...</span>
+                                                <span id="primaryInstruction">Place your index finger on the
+                                                    scanner...</span>
                                             </div>
                                         </div>
                                         <input type="hidden" id="primaryTemplate" name="primary_template" value="">
@@ -220,23 +365,30 @@
                                         </h6>
                                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                             <!-- Toggle for edit mode -->
-                                            <div class="form-check form-switch me-2 d-none" id="replaceBackupToggleContainer">
-                                                <input class="form-check-input" type="checkbox" id="replaceBackupToggle">
-                                                <label class="form-check-label" for="replaceBackupToggle">Replace backup template</label>
+                                            <div class="form-check form-switch me-2 d-none"
+                                                id="replaceBackupToggleContainer">
+                                                <input class="form-check-input" type="checkbox"
+                                                    id="replaceBackupToggle">
+                                                <label class="form-check-label" for="replaceBackupToggle">Replace backup
+                                                    template</label>
                                             </div>
-                                            <button type="button" id="captureBackupBtn" class="btn btn-outline-secondary btn-sm" disabled>
+                                            <button type="button" id="captureBackupBtn"
+                                                class="btn btn-outline-secondary btn-sm" disabled>
                                                 <i class="bi bi-fingerprint me-1"></i> Scan Backup
                                             </button>
-                                            <span id="backupStatus" class="text-muted">Complete primary fingerprint first</span>
+                                            <span id="backupStatus" class="text-muted">Complete primary fingerprint
+                                                first</span>
                                         </div>
                                         <!-- Scanning Progress for Backup -->
                                         <div id="backupProgress" class="d-none progress-wrapper">
                                             <div class="d-flex align-items-center gap-2 mb-2">
-                                                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                                <div class="spinner-border spinner-border-sm text-secondary"
+                                                    role="status"></div>
                                                 <span class="small text-secondary">Scanning in progress...</span>
                                             </div>
                                             <div class="progress mb-2" style="height: 6px;">
-                                                <div id="backupProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-secondary"
+                                                <div id="backupProgressBar"
+                                                    class="progress-bar progress-bar-striped progress-bar-animated bg-secondary"
                                                     role="progressbar" style="width: 0%"></div>
                                             </div>
                                             <div class="small text-muted">
@@ -253,13 +405,21 @@
                                 </div>
 
                                 <div class="col-12">
-                                    <button id="registerBtn" type="submit" class="btn btn-primary" disabled>
-                                        <i class="bi bi-check2-circle me-1"></i> Register Employee
-                                    </button>
-                                    <button id="cancelBtn" type="button" class="btn btn-outline-secondary">
-                                        <i class="bi bi-x-circle me-1"></i> Cancel
-                                    </button>
-                                    <span id="registerHint" class="ms-2 text-muted"></span>
+                                    <div class="compliance-notice"
+                                        style="border: 1px solid #dc3545; background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; font-size: 11px; border-radius: 4px;">
+                                        <strong>⚠ COMPLIANCE REQUIRED:</strong><br>
+                                        Verify that the <a href="#" target="_blank" style="color: #721c24;"><u>EVSU User Acknowledgement & Consent Form</u></a> is signed by the
+                                        employee before creating this digital record.
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                                        <button id="registerBtn" type="submit" class="btn btn-primary" disabled>
+                                            <i class="bi bi-check2-circle me-1"></i> Register Employee
+                                        </button>
+                                        <button id="cancelBtn" type="button" class="btn btn-outline-secondary">
+                                            <i class="bi bi-x-circle me-1"></i> Cancel
+                                        </button>
+                                        <span id="registerHint" class="text-muted"></span>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -273,7 +433,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-       
+
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode'); // 'edit' or null (for new registration)
@@ -301,7 +461,7 @@
                         'Accept': 'application/json'
                     }
                 });
-                
+
                 const employee = await response.json();
                 // Populate form with existing data
                 // ...
@@ -314,7 +474,7 @@
         // CONFIGURATION: Backend URL and Authentication Token
         // ============================================================
         let bridgeBase = 'http://127.0.0.1:18420';
-        
+
         /**
          * Extract token from URL query parameter
          */
@@ -355,19 +515,19 @@
         function getBackendUrl() {
             const urlParams = new URLSearchParams(window.location.search);
             const backendFromUrl = urlParams.get('backend');
-            
+
             if (backendFromUrl) {
                 // Use the backend URL passed from the web app
                 localStorage.setItem('backendUrl', backendFromUrl);
                 return backendFromUrl;
             }
-            
+
             // Try localStorage
             const storedBackend = localStorage.getItem('backendUrl');
             if (storedBackend) {
                 return storedBackend;
             }
-            
+
             // Fallback to default (update this for your production backend)
             return 'http://localhost/Admin-Web/public';
         }
@@ -384,10 +544,10 @@
                 saveAuthToken(urlToken);
                 return urlToken;
             }
-            
+
             // Try localStorage
             const token = localStorage.getItem('adminToken') || '';
-            
+
             return token;
         }
 
@@ -410,7 +570,7 @@
         // ============================================================
         // OFFICE DATA MANAGEMENT: Dynamic loading from backend
         // ============================================================
-        
+
         /**
          * Validate token with backend API
          * Returns admin details if token is valid
@@ -432,7 +592,7 @@
             try {
                 const requestBody = { token: token };
                 console.log('Sending validation request...');
-                
+
                 const response = await fetch(`${backendUrl}/api/validate-token`, {
                     method: 'POST',
                     headers: {
@@ -454,14 +614,14 @@
                 } else {
                     console.error('❌ Token validation failed:', data.message || 'Unknown error');
                 }
-                
+
                 return null;
             } catch (error) {
                 console.error('❌ Token validation error:', error);
                 return null;
             }
         }
-        
+
         /**
          * Fetch offices/departments from the hosted Laravel backend
          * Respects RBAC: Super Admin sees all offices, Admin sees only their office(s)
@@ -485,7 +645,7 @@
 
             // First, validate the token
             const adminDetails = await validateTokenWithBackend();
-            
+
             if (!adminDetails) {
                 clearAuthToken();
                 officeSelect.innerHTML = '<option value="">Session expired</option>';
@@ -578,7 +738,7 @@
 
             } catch (error) {
                 console.error('Failed to load offices:', error);
-                
+
                 officeSelect.innerHTML = '<option value="">Connection failed</option>';
                 officeSelect.disabled = true;
 
@@ -626,58 +786,58 @@
 
                 if (data.success && data.employee) {
                     const emp = data.employee;
-                    
+
                     // Populate form fields (read-only)
                     document.getElementById('empName').value = emp.full_name;
                     document.getElementById('empName').readOnly = true;
-                    
+
                     document.getElementById('empId').value = emp.employee_code || emp.employee_id;
                     document.getElementById('empId').readOnly = true;
-                    
+
                     document.getElementById('rfidUid').value = emp.rfid_code;
                     document.getElementById('rfidUid').readOnly = true;
-                    
+
                     document.getElementById('employmentType').value = emp.employment_type;
                     document.getElementById('employmentType').disabled = true;
-                    
+
                     // Load offices first, then set department
                     await loadOfficesFromBackend();
                     document.getElementById('departmentId').value = emp.department_id;
                     document.getElementById('departmentId').disabled = true;
-                    
+
                     // Update profile image preview
                     if (emp.photo_url) {
                         document.getElementById('profilePreview').src = emp.photo_url;
                         document.getElementById('profilePreview').classList.remove('d-none');
                     }
-                    
+
                     // Hide profile image upload in edit mode
                     document.getElementById('profileImage').disabled = true;
                     document.getElementById('profileImage').style.display = 'none';
-                    
+
                     // Update UI for edit mode
                     document.querySelector('.card-title').innerHTML = `<i class="bi bi-fingerprint me-2"></i>Edit Employee Fingerprints - ${emp.full_name}`;
                     document.getElementById('registerBtn').textContent = 'Update Fingerprints';
                     document.getElementById('registerBtn').innerHTML = '<i class="bi bi-fingerprint me-2"></i>Update Fingerprints';
-                    
+
                     // Show toggle checkboxes in edit mode
                     document.getElementById('replacePrimaryToggleContainer').classList.remove('d-none');
                     document.getElementById('replaceBackupToggleContainer').classList.remove('d-none');
-                    
+
                     // Remove required indicator from primary fingerprint in edit mode
                     document.getElementById('primaryRequired').classList.add('d-none');
-                    
+
                     // Hide finger type labels (Index Finger) and (Thumb) in edit mode
                     const primaryHeading = document.querySelector('.text-primary.mb-2');
                     if (primaryHeading) {
                         primaryHeading.innerHTML = '<i class="bi bi-1-circle me-1"></i> Primary Fingerprint';
                     }
-                    
+
                     const backupHeading = document.querySelector('.text-secondary.mb-2');
                     if (backupHeading) {
                         backupHeading.innerHTML = '<i class="bi bi-2-circle me-1"></i> Backup Fingerprint';
                     }
-                    
+
                     // Update fingerprint status and DISABLE buttons by default
                     if (emp.has_primary_fingerprint) {
                         document.getElementById('capturePrimaryBtn').textContent = 'Replace Primary';
@@ -685,7 +845,7 @@
                         document.getElementById('primaryStatus').textContent = 'Existing fingerprint (toggle to replace)';
                         document.getElementById('primaryStatus').className = 'text-success';
                     }
-                    
+
                     if (emp.has_backup_fingerprint) {
                         document.getElementById('captureBackupBtn').textContent = 'Replace Backup';
                         document.getElementById('captureBackupBtn').disabled = true; // Disabled by default
@@ -699,14 +859,14 @@
                         document.getElementById('backupStatus').textContent = 'No backup fingerprint (toggle to add)';
                         document.getElementById('backupStatus').className = 'text-muted';
                     }
-                    
+
                     // Show notification
                     showNotification(
                         'Edit Mode',
                         `Editing fingerprints for ${emp.full_name}. Capture new fingerprints to replace existing ones.`,
                         'info'
                     );
-                    
+
                     console.log('Employee data loaded successfully');
                 } else {
                     console.error('Failed to load employee:', data.message);
@@ -784,21 +944,21 @@
 
         function updateRegisterEnabled() {
             const editMode = isEditMode();
-            
+
             if (editMode) {
                 // In edit mode, check if any toggle is checked and has corresponding fingerprint captured
                 const replacePrimaryChecked = document.getElementById('replacePrimaryToggle')?.checked;
                 const replaceBackupChecked = document.getElementById('replaceBackupToggle')?.checked;
                 const hasPrimaryFp = !!primaryTemplate.value;
                 const hasBackupFp = !!backupTemplate.value;
-                
+
                 // At least one toggle must be checked AND have a captured fingerprint
                 const primaryReady = replacePrimaryChecked && hasPrimaryFp;
                 const backupReady = replaceBackupChecked && hasBackupFp;
                 const hasAnyReplacement = primaryReady || backupReady;
-                
+
                 registerBtn.disabled = !hasAnyReplacement;
-                
+
                 if (hasAnyReplacement) {
                     registerHint.textContent = 'Ready to update fingerprints. Click Update button to proceed.';
                     registerHint.className = 'ms-2 text-success';
@@ -810,15 +970,15 @@
                     registerHint.className = 'ms-2 text-muted';
                 }
             } else {
-                // Register mode: require all fields
+                // Register mode: require all fields except RFID (optional)
                 const empName = document.getElementById('empName').value.trim();
                 const empId = document.getElementById('empId').value.trim();
-                const rfid = (rfidInput?.value || '').trim();
                 const deptId = (document.getElementById('departmentId')?.value || '').trim();
                 const empType = (document.getElementById('employmentType')?.value || '').trim();
                 const hasPrimaryFp = !!primaryTemplate.value;
 
-                const ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
+                // RFID is optional
+                const ok = empName && empId && deptId && empType && hasPrimaryFp;
                 registerBtn.disabled = !ok;
 
                 if (ok) {
@@ -827,8 +987,8 @@
                 } else if (!hasPrimaryFp) {
                     registerHint.textContent = 'Primary fingerprint is required.';
                     registerHint.className = 'ms-2 text-muted';
-                } else if (!rfid) {
-                    registerHint.textContent = 'RFID scan is required.';
+                } else if (!empType) {
+                    registerHint.textContent = 'Please select an employment type.';
                     registerHint.className = 'ms-2 text-muted';
                 } else {
                     registerHint.textContent = 'Please fill all required fields.';
@@ -872,7 +1032,7 @@
 
                     // Primary button: only enable if toggle is checked
                     capturePrimaryBtn.disabled = !replacePrimaryChecked;
-                    
+
                     // Backup button: only enable if toggle is checked
                     captureBackupBtn.disabled = !replaceBackupChecked;
 
@@ -920,7 +1080,7 @@
 
                 backupStatus.textContent = 'Device not available';
                 backupStatus.className = 'text-danger';
-                
+
                 if (!editMode) {
                     backupSection.style.opacity = '0.5';
                 }
@@ -1015,7 +1175,7 @@
             const progressBarElement = isPrimary ? primaryProgressBar : backupProgressBar;
             const instructionElement = isPrimary ? primaryInstruction : backupInstruction;
             const templateElement = isPrimary ? primaryTemplate : backupTemplate;
-            
+
             // Determine labels based on mode
             const editMode = isEditMode();
             const fingerprintLabel = isPrimary ? 'primary fingerprint' : 'backup fingerprint';
@@ -1097,7 +1257,7 @@
                             // Update progress based on actual data from bridge
                             const currentProgress = Math.max(0, Math.min(100, Number(pollData.progress) || 0));
                             const scansLeft = typeof pollData.scansLeft === 'number' ? pollData.scansLeft : null;
-                            
+
                             // Calculate progress based on scans if available
                             if (scansLeft !== null) {
                                 const scansCompleted = 4 - scansLeft;
@@ -1106,7 +1266,7 @@
                                     lastProgress = accurateProgress;
                                     progressBarElement.style.width = `${accurateProgress}%`;
                                 }
-                                
+
                                 if (scansCompleted > scanCount) {
                                     scanCount = scansCompleted;
                                     console.log(`Scan ${scanCount} of 4 completed`);
@@ -1118,7 +1278,7 @@
 
                             // Update status message
                             statusElement.textContent = pollData.message || (pollData.phase === 'processing' ? 'Processing...' : 'Scanning...');
-                            
+
                             // Update instruction text
                             if (scansLeft !== null && scansLeft > 0) {
                                 const scansCompleted = 4 - scansLeft;
@@ -1160,7 +1320,7 @@
                             if (pollData.done) {
                                 clearInterval(pollTimer);
                                 pollTimer = null;
-                                
+
                                 // Call finish endpoint to get the final template
                                 try {
                                     const finishResp = await fetch(`${bridgeBase}/api/fingerprint/enroll/finish/${sessionId}`, {
@@ -1170,24 +1330,24 @@
                                         },
                                         signal: AbortSignal.timeout(4000)
                                     });
-                                    
+
                                     if (!finishResp.ok) {
                                         throw new Error('Failed to finalize enrollment');
                                     }
-                                    
+
                                     const finishData = await finishResp.json();
                                     console.log('Finish data:', finishData);
-                                    
+
                                     if (!finishData.template) {
                                         throw new Error('No template returned');
                                     }
-                                    
+
                                     templateElement.value = finishData.template;
                                     progressBarElement.style.width = '100%';
                                     statusElement.textContent = `${isPrimary ? 'Primary' : 'Backup'} fingerprint captured successfully!`;
                                     statusElement.className = 'text-success fw-bold';
                                     enrollmentSuccessful = true;
-                                    
+
                                     return resolve();
                                 } catch (finishError) {
                                     console.error('Finish enrollment error:', finishError);
@@ -1207,10 +1367,10 @@
                     // Show context-aware notification based on mode
                     const editMode = isEditMode();
                     const notificationTitle = editMode ? 'Fingerprint Updated' : 'Fingerprint Captured';
-                    const notificationMessage = isPrimary 
+                    const notificationMessage = isPrimary
                         ? (editMode ? 'Primary fingerprint captured successfully!' : 'Index finger enrolled successfully!')
                         : (editMode ? 'Backup fingerprint captured successfully!' : 'Thumb enrolled successfully!');
-                    
+
                     showNotification(
                         notificationTitle,
                         notificationMessage,
@@ -1222,16 +1382,16 @@
                 progressBarElement.style.width = '0%';
                 statusElement.textContent = `Failed: ${error.message}`;
                 statusElement.className = 'text-danger';
-                
+
                 // Show context-aware error message
                 const editMode = isEditMode();
                 const fingerprintLabel = isPrimary ? 'Primary fingerprint' : 'Backup fingerprint';
                 const fingerTypeLabel = editMode ? fingerprintLabel.toLowerCase() : fingerType;
-                
+
                 instructionElement.textContent = `Failed to capture ${fingerprintLabel.toLowerCase()}. Please try again.`;
                 showNotification(
-                    'Fingerprint Capture Failed', 
-                    `Could not capture ${fingerprintLabel.toLowerCase()}: ${error.message}`, 
+                    'Fingerprint Capture Failed',
+                    `Could not capture ${fingerprintLabel.toLowerCase()}: ${error.message}`,
                     'error'
                 );
             } finally {
@@ -1261,17 +1421,17 @@
             notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
 
             notification.innerHTML = `
-                <div class="d-flex align-items-start">
-                    <div class="me-2">
-                        <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} fs-4"></i>
+                    <div class="d-flex align-items-start">
+                        <div class="me-2">
+                            <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>${title}</strong><br>
+                            <span>${message}</span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    <div class="flex-grow-1">
-                        <strong>${title}</strong><br>
-                        <span>${message}</span>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
+                `;
 
             document.body.appendChild(notification);
 
@@ -1290,7 +1450,7 @@
         document.getElementById('replacePrimaryToggle')?.addEventListener('change', (e) => {
             const isChecked = e.target.checked;
             const btn = document.getElementById('capturePrimaryBtn');
-            
+
             if (isChecked) {
                 btn.disabled = !deviceConnected;
                 document.getElementById('primaryStatus').textContent = 'Ready to scan replacement';
@@ -1308,7 +1468,7 @@
         document.getElementById('replaceBackupToggle')?.addEventListener('change', (e) => {
             const isChecked = e.target.checked;
             const btn = document.getElementById('captureBackupBtn');
-            
+
             if (isChecked) {
                 btn.disabled = !deviceConnected;
                 document.getElementById('backupStatus').textContent = 'Ready to scan replacement';
@@ -1423,17 +1583,17 @@
             try {
                 const backendUrl = getBackendUrl();
                 const editMode = isEditMode();
-                
+
                 if (editMode) {
                     // Edit mode: update fingerprints only
                     const employeeId = getEmployeeIdFromUrl();
-                    
+
                     // Check toggle states
                     const replacePrimaryChecked = document.getElementById('replacePrimaryToggle')?.checked;
                     const replaceBackupChecked = document.getElementById('replaceBackupToggle')?.checked;
                     const hasPrimary = !!primaryTemplate.value;
                     const hasBackup = !!backupTemplate.value;
-                    
+
                     // Validate that if a toggle is checked, the corresponding template must exist
                     if (replacePrimaryChecked && !hasPrimary) {
                         showNotification('Error', 'Please capture the primary fingerprint.', 'error');
@@ -1441,21 +1601,21 @@
                         registerBtn.disabled = false;
                         return;
                     }
-                    
+
                     if (replaceBackupChecked && !hasBackup) {
                         showNotification('Error', 'Please capture the backup fingerprint.', 'error');
                         registerBtn.innerHTML = originalText;
                         registerBtn.disabled = false;
                         return;
                     }
-                    
+
                     if (!replacePrimaryChecked && !replaceBackupChecked) {
                         showNotification('Error', 'Please toggle at least one fingerprint to replace.', 'error');
                         registerBtn.innerHTML = originalText;
                         registerBtn.disabled = false;
                         return;
                     }
-                    
+
                     const payload = {
                         token: token,
                         employee_id: employeeId,
@@ -1464,10 +1624,10 @@
                         primary_template: replacePrimaryChecked && hasPrimary ? primaryTemplate.value : null,
                         backup_template: replaceBackupChecked && hasBackup ? backupTemplate.value : null,
                     };
-                    
+
                     console.log('Updating fingerprints for employee:', employeeId);
                     console.log('Replace primary:', replacePrimaryChecked, 'Replace backup:', replaceBackupChecked);
-                    
+
                     const response = await fetch(`${backendUrl}/api/update-fingerprints`, {
                         method: 'POST',
                         headers: {
@@ -1476,14 +1636,14 @@
                         },
                         body: JSON.stringify(payload)
                     });
-                    
+
                     const result = await response.json();
-                    
+
                     if (response.ok && result.success) {
                         // Determine what was updated for the notification message
                         let updateMessage = '';
                         const employeeName = result.employee?.name || result.employee?.full_name || 'Employee';
-                        
+
                         if (replacePrimaryChecked && replaceBackupChecked) {
                             updateMessage = `Both fingerprints updated successfully for ${employeeName}!`;
                         } else if (replacePrimaryChecked) {
@@ -1493,7 +1653,7 @@
                         } else {
                             updateMessage = `Fingerprints updated successfully for ${employeeName}!`;
                         }
-                        
+
                         // Notify parent window of successful update
                         if (window.opener) {
                             window.opener.postMessage({
@@ -1503,11 +1663,11 @@
                                 message: updateMessage
                             }, '*');
                         }
-                        
+
                         // Close the window immediately (no notification needed here)
                         setTimeout(() => {
                             window.close();
-                            
+
                             // If window.close() doesn't work (some browsers block it), show a message
                             setTimeout(() => {
                                 // If we're still here, window.close() didn't work
@@ -1522,7 +1682,7 @@
                         const errorMessage = result.message || 'Update failed. Please try again.';
                         showNotification('Update Failed', errorMessage, 'error');
                     }
-                    
+
                 } else {
                     // Register mode: create new employee
                     const rfidValue = sanitize(rfidInput?.value || '');
@@ -1539,7 +1699,7 @@
                             console.log(`${key}: [${value.length} bytes]`);
                         }
                     }
-                    
+
                     // Submit to backend API with token authentication (no CSRF needed)
                     const response = await fetch(`${backendUrl}/api/register-employee`, {
                         method: 'POST',
@@ -1579,7 +1739,7 @@
                         // Close the window immediately (no notification needed here)
                         setTimeout(() => {
                             window.close();
-                            
+
                             // If window.close() doesn't work (some browsers block it), show a message
                             setTimeout(() => {
                                 // If we're still here, window.close() didn't work
@@ -1588,7 +1748,7 @@
                                     'You can now close this window manually. The employee list has been updated.',
                                     'info'
                                 );
-                                
+
                                 // Optionally reset the form for another registration
                                 document.getElementById('registerForm').reset();
                                 primaryTemplate.value = '';
@@ -1599,13 +1759,13 @@
                                 primaryStatus.textContent = 'Ready to scan';
                                 backupStatus.textContent = 'Complete primary fingerprint first';
                                 backupSection.style.opacity = '0.5';
-                                
+
                                 // Reset office dropdown to "Select office"
                                 const officeSelect = document.getElementById('departmentId');
                                 if (officeSelect && officeSelect.options.length > 0) {
                                     officeSelect.selectedIndex = 0;
                                 }
-                                
+
                                 updateRegisterEnabled();
                                 updateUIBasedOnDeviceStatus();
                                 rfidInput.focus();
@@ -1677,10 +1837,10 @@
             const urlToken = getTokenFromUrl();
             const editMode = isEditMode();
             const employeeId = getEmployeeIdFromUrl();
-            
+
             if (urlToken) {
                 console.log('Token found in URL');
-                
+
                 if (editMode && employeeId) {
                     // Edit mode: load employee data
                     console.log('Edit mode detected, loading employee:', employeeId);
@@ -1693,15 +1853,15 @@
             } else {
                 // No token in URL - disable functionality
                 console.log('No token in URL. User needs to open from admin panel.');
-                
+
                 // Clear any old tokens
                 clearAuthToken();
-                
+
                 const officeSelect = document.getElementById('departmentId');
                 officeSelect.innerHTML = '<option value="">Open from admin panel first</option>';
                 officeSelect.disabled = true;
             }
-            
+
             checkBridge();
             updateUIBasedOnDeviceStatus();
         }, 100);
@@ -1709,4 +1869,5 @@
         bridgeCheckTimer = setTimeout(checkBridge, bridgeCheckInterval);
     </script>
 </body>
+
 </html>

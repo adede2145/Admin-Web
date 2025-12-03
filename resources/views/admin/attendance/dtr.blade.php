@@ -31,7 +31,7 @@
                 
                 <div class="employee-section mb-5">
                     <h5>Employee: {{ $employee->full_name }}</h5>
-                    <p>Type: {{ ucfirst($employee->employment_type) }}</p>
+                    <p>Type: {{ $employee->employment_type === 'faculty with designation' ? 'Faculty' : ucfirst($employee->employment_type) }}</p>
 
                     <div class="table-responsive">
                         <table class="table table-bordered">

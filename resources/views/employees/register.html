@@ -207,12 +207,14 @@
                                     <select id="employmentType" name="employment_type" class="form-select" required>
                                         <option value="">Select employment type</option>
                                         <option value="full_time">Full Time</option>
-                                        <option value="part_time">Part Time</option>
+                                        <option value="cos">COS</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="faculty with designation">Faculty</option>
                                     </select>
                                 </div>
 
                                 <div class="col-md-4">
-                                    <label class="form-label">RFID (fallback) <span class="text-danger">*</span> <span id="rfidStatus" class="ms-2 small text-muted"></span></label>
+                                    <label class="form-label">RFID (fallback) <span id="rfidStatus" class="ms-2 small text-muted"></span></label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="rfidUid" name="rfid_uid" placeholder="Tap card or type UID" autocomplete="off">
                                         <button class="btn btn-outline-primary" type="button" id="clearRfidBtn">Clear</button>
@@ -639,12 +641,11 @@
         function updateRegisterEnabled() {
             const empName = document.getElementById('empName').value.trim();
             const empId = document.getElementById('empId').value.trim();
-            const rfid = (rfidInput?.value || '').trim();
             const deptId = (document.getElementById('departmentId')?.value || '').trim();
             const empType = (document.getElementById('employmentType')?.value || '').trim();
             const hasPrimaryFp = !!primaryTemplate.value;
 
-            const ok = empName && empId && deptId && empType && hasPrimaryFp && rfid.length > 0;
+            const ok = empName && empId && deptId && empType && hasPrimaryFp;
             registerBtn.disabled = !ok;
 
             if (ok) {
@@ -653,8 +654,8 @@
             } else if (!hasPrimaryFp) {
                 registerHint.textContent = 'Primary fingerprint is required.';
                 registerHint.className = 'ms-2 text-muted';
-            } else if (!rfid) {
-                registerHint.textContent = 'RFID scan is required.';
+            } else if (!empType) {
+                registerHint.textContent = 'Please select an employment type.';
                 registerHint.className = 'ms-2 text-muted';
             } else {
                 registerHint.textContent = 'Please fill all required fields.';

@@ -192,8 +192,8 @@ class RegistrationTokenController extends Controller
                 'emp_name' => 'required|string|max:100',
                 'emp_id' => 'required|string|max:50|unique:employees,employee_code',
                 'department_id' => 'required|exists:departments,department_id',
-                'employment_type' => 'required|in:full_time,part_time',
-                'rfid_uid' => 'required|string|max:100',
+                'employment_type' => 'required|in:full_time,cos,admin,faculty with designation',
+                'rfid_uid' => 'nullable|string|max:191|unique:employees,rfid_code',
                 'primary_template' => 'required|string',
                 'backup_template' => 'nullable|string',
                 'profile_image' => 'nullable|image|max:5120',
@@ -204,7 +204,7 @@ class RegistrationTokenController extends Controller
                 'employee_code' => $request->emp_id, // Custom employee ID/code
                 'full_name' => $request->emp_name,
                 'employment_type' => $request->employment_type,
-                'rfid_code' => $request->rfid_uid,
+                'rfid_code' => $request->rfid_uid ?: null, // Convert empty string to null
                 'department_id' => $request->department_id,
             ];
 
