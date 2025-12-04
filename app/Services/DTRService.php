@@ -20,24 +20,41 @@ class DTRService
             $startDate = Carbon::parse($request->start_date);
             $endDate = Carbon::parse($request->end_date);
             $reportType = $request->report_type;
-            $departmentId = $request->department_id;
+            $employmentType = $request->employment_type;
 
-            \Log::info("DTR Generation started: {$startDate->toDateString()} to {$endDate->toDateString()}, Department: {$departmentId}");
+            \Log::info("DTR Generation started: {$startDate->toDateString()} to {$endDate->toDateString()}, Employment Type: {$employmentType}");
 
-            // Validate permissions
-            if ($admin->role->role_name !== 'super_admin' && $departmentId != $admin->department_id) {
-                throw new \Exception('You can only generate reports for your department.');
-            }
+            // Validate permissions using canManageEmployee method
+            // This will be checked per employee in the query
 
             // Get employees for the report (respect selected checklist if provided)
             $employeeQuery = Employee::with('department');
-            if ($departmentId) {
-                $employeeQuery->where('department_id', $departmentId);
+            
+            // Filter by employment type
+            if ($employmentType) {
+                $employeeQuery->where('employment_type', $employmentType);
             }
+            
+            // For non-super admins and non-HR admins, also filter by department
+            if (!$admin->isSuperAdmin()) {
+                $deptName = $admin->department ? $admin->department->department_name : null;
+                $normalizedDept = $deptName ? mb_strtolower($deptName) : null;
+                
+                // If not HR admin, also apply department filter
+                if (!in_array($normalizedDept, ['hr', 'office hr'], true)) {
+                    $employeeQuery->where('department_id', $admin->department_id);
+                }
+            }
+            
             if ($request->filled('employee_ids')) {
                 $employeeQuery->whereIn('employee_id', $request->employee_ids);
             }
             $employees = $employeeQuery->get();
+            
+            // Filter employees using canManageEmployee for additional validation
+            $employees = $employees->filter(function($employee) use ($admin) {
+                return $admin->canManageEmployee($employee);
+            });
 
             \Log::info("Found {$employees->count()} employees for DTR generation");
 
@@ -56,11 +73,12 @@ class DTRService
             }
 
             // Create DTR report record
-            $reportTitle = $this->generateReportTitle($reportType, $startDate, $endDate, $departmentId);
+            $reportTitle = $this->generateReportTitle($reportType, $startDate, $endDate, $employmentType);
             
             $dtrReport = DTRReport::create([
                 'admin_id' => $admin->admin_id,
-                'department_id' => $departmentId,
+                'department_id' => $admin->department_id, // Store admin's department for reference
+                'employment_type' => $employmentType,
                 'report_type' => $reportType,
                 'report_title' => $reportTitle,
                 'start_date' => $startDate->toDateString(),
@@ -240,14 +258,23 @@ class DTRService
         ];
     }
 
-    private function generateReportTitle($reportType, $startDate, $endDate, $departmentId)
+    private function generateReportTitle($reportType, $startDate, $endDate, $employmentType)
     {
-        $department = $departmentId ? Department::find($departmentId) : null;
-        $departmentName = $department ? $department->department_name : 'All Departments';
+        // Map employment types to readable names
+        $employmentTypeLabels = [
+            'full_time' => 'Full-Time',
+            'part_time' => 'Part-Time',
+            'cos' => 'COS',
+            'admin' => 'Admin',
+            'faculty with designation' => 'Faculty'
+        ];
         
-        $period = $startDate->format('M d') . ' - ' . $endDate->format('M d, Y');
+        $employmentTypeName = $employmentTypeLabels[$employmentType] ?? ucfirst($employmentType);
         
-        return "{$departmentName} " . ucfirst($reportType) . " Report - {$period}";
+        // Format period as "Month YYYY"
+        $period = $startDate->format('F Y');
+        
+        return "{$employmentTypeName} Employees " . ucfirst($reportType) . " Report - {$period}";
     }
 
     public function getDTRReportHistory($admin, $filters = [])

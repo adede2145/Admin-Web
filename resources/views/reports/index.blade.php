@@ -266,6 +266,54 @@
             .aa-fab-btn:hover { animation-play-state: paused; }
             @media (prefers-reduced-motion: reduce) { .aa-attention-wiggle, .aa-attention-glow { animation: none; } }
             @media (max-width: 768px){ .aa-fab-container { right: 16px; bottom: 16px; gap: 8px; } .aa-fab-btn { padding: .7rem .95rem; font-weight: 600; } .aa-fab-btn span { display:none; } }
+
+            /* DTR modal styling (match attendance page) */
+            #generateDTRModal .form-check {
+                padding-left: 0;
+            }
+            #generateDTRModal .form-check-input {
+                border: 2px solid #000 !important;
+                border-radius: 3px !important;
+                width: 18px !important;
+                height: 18px !important;
+                transform: scale(1.1);
+                margin-left: 0 !important;
+                position: static !important;
+            }
+            #generateDTRModal .modal-dialog {
+                max-width: 540px;
+            }
+            #generateDTRModal .modal-content {
+                min-height: 460px;
+                display: flex;
+                flex-direction: column;
+            }
+            #generateDTRModal .modal-body {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            @media (max-width: 768px) {
+                #generateDTRModal .modal-dialog {
+                    max-width: 100%;
+                    width: 100%;
+                    margin: 0.5rem;
+                }
+                #generateDTRModal .modal-content {
+                    height: calc(100vh - 1rem);
+                    min-height: calc(100vh - 1rem);
+                }
+                #generateDTRModal .modal-body {
+                    padding: 1rem 1.25rem;
+                    max-height: none;
+                }
+                #generateDTRModal .modal-footer {
+                    position: sticky;
+                    bottom: 0;
+                    background: white;
+                    z-index: 5;
+                }
+            }
         </style>
 
         <!-- DTR quick actions (floating) -->
@@ -278,110 +326,173 @@
             </button>
         </div>
 
-        <!-- Generate DTR Modal (Enhanced) -->
+        <!-- Generate DTR Modal (Attendance-style) -->
         <div class="modal fade" id="generateDTRModal" tabindex="-1" aria-labelledby="generateDTRModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
                     <div class="modal-header border-0" style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); color: white;">
                         <h5 class="modal-title fw-bold d-flex align-items-center mb-0" id="generateDTRModalLabel">
-                            <i class="bi bi-file-earmark-text me-2 fs-5"></i>Generate DTR Report
+                            <i class="bi bi-file-earmark-text me-2 fs-5"></i>Generate Monthly DTR Report
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
                     </div>
-                    <form action="{{ route('attendance.dtr') }}" method="POST" id="dtrForm">
+                    <form action="{{ route('attendance.dtr') }}" method="POST" id="dtrForm" data-dtr-form="true">
                         @csrf
                         <div class="modal-body p-4" style="background-color: #f8f9fa;">
                             
+                            @php
+                                $admin = auth()->user();
+                                $allEmploymentTypes = ['full_time', 'part_time', 'cos', 'admin', 'faculty with designation'];
+                                
+                                if ($admin->isSuperAdmin()) {
+                                    $accessibleTypes = $allEmploymentTypes;
+                                } else {
+                                    $accessibleTypes = $admin->employment_type_access ?? [];
+                                }
+                                
+                                $showEmploymentTypeFilter = count($accessibleTypes) > 1;
+                                
+                                // Map employment types to readable labels
+                                $employmentTypeLabels = [
+                                    'full_time' => 'Full-Time',
+                                    'part_time' => 'Part-Time',
+                                    'cos' => 'COS',
+                                    'admin' => 'Admin',
+                                    'faculty with designation' => 'Faculty'
+                                ];
+                            @endphp
+                            
                             <div class="row g-3 mb-3">
+                                @if($showEmploymentTypeFilter)
                                 <div class="col-md-6">
-                                    <label for="report_type" class="form-label fw-bold" style="color: #800000;">
-                                        <i class="bi bi-gear me-1"></i>Report Type
+                                    <label for="dtr_employment_type" class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-people me-2 fs-6"></i>Employment Type
                                     </label>
-                                    <select class="form-select" id="report_type" name="report_type" required>
-                                        <option value="weekly">Weekly Report</option>
-                                        <option value="monthly" selected>Monthly Report</option>
-                                        <option value="custom">Custom Period</option>
+                                    <select class="form-select form-select-lg border-2" id="dtr_employment_type" name="employment_type" required
+                                            style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
+                                            onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                        <option value="">Select Employment Type</option>
+                                        @foreach($accessibleTypes as $type)
+                                            <option value="{{ $type }}">{{ $employmentTypeLabels[$type] ?? ucfirst($type) }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
+                                @else
+                                    @php
+                                        $singleType = !empty($accessibleTypes) ? $accessibleTypes[0] : null;
+                                    @endphp
+                                    @if($singleType)
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                                <i class="bi bi-people me-2 fs-6"></i>Employment Type
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg border-2" value="{{ $employmentTypeLabels[$singleType] ?? ucfirst($singleType) }}" readonly
+                                                   style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; background-color: #f8f9fa; color: #6c757d;">
+                                            <input type="hidden" name="employment_type" value="{{ $singleType }}">
+                                        </div>
+                                    @endif
+                                @endif
+                                
                                 <div class="col-md-6">
-                                    <label for="department_id" class="form-label fw-bold" style="color: #800000;">
-                                        <i class="bi bi-building me-1"></i>Office
+                                    <label for="dtr_month_picker" class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                        <i class="bi bi-calendar me-2 fs-6"></i>Select Month
                                     </label>
-                                    <select class="form-select" id="department_id" name="department_id">
-                                        <option value="">All Offices</option>
-                                        {{-- Assuming departments might be passed, if not, this is a placeholder --}}
-                                        @if(isset($departments))
-                                            @foreach($departments as $dept)
-                                                <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
-                                            @endforeach
-                                        @endif
-                                    </select>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control form-control-lg border-2" id="dtr_month_picker" placeholder="Click to select month" required readonly
+                                               style="border-color: #e5e7eb; border-radius: 8px 0 0 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease; background-color: white; cursor: pointer;"
+                                               onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
+                                               onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                                        <span class="input-group-text" style="background: var(--aa-maroon); color: white; border-color: var(--aa-maroon); cursor: pointer;" id="dtr_month_picker_btn">
+                                            <i class="bi bi-calendar3"></i>
+                                        </span>
+                                    </div>
+                                    <input type="hidden" name="start_date" id="dtr_start_date" required>
+                                    <input type="hidden" name="end_date" id="dtr_end_date" required>
+                                    <div class="form-text"><i class="bi bi-info-circle me-1"></i>Select the month for the DTR report</div>
                                 </div>
                             </div>
 
+                            <!-- Global employee search (filters list below) -->
                             <div class="mb-3">
-                                <label class="form-label fw-bold" style="color: #800000;">
-                                    <i class="bi bi-people me-1"></i>Employees to include
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control border-start-0 ps-0"
+                                           id="employeeSearch"
+                                           placeholder="Search employee..."
+                                           autocomplete="off">
+                                </div>
+                            </div>
+                            
+                            <input type="hidden" name="report_type" value="monthly">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold d-flex align-items-center" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-people me-2 fs-6"></i>Employees to Include
                                 </label>
                                 
-                                <!-- Search Container (No Select All) -->
+                                <!-- Select All + list container -->
                                 <div class="bg-white p-2 border rounded-top border-bottom-0">
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                                        <input type="text" class="form-control border-start-0 ps-0" id="employeeSearch" placeholder="Search employee..." autocomplete="off">
+                                    <div class="form-check d-flex align-items-center mb-2 p-2" style="background: #f8f9fa; border-radius: 6px;">
+                                        <input class="form-check-input" type="checkbox" id="empSelectAll">
+                                        <label class="form-check-label fw-semibold ms-2" for="empSelectAll" style="color: var(--aa-maroon);">
+                                            <i class="bi bi-check-all me-2"></i>Select All Employees
+                                        </label>
                                     </div>
                                 </div>
 
                                 <div class="card rounded-top-0">
-                                    <div class="card-body p-0" style="height: 200px; overflow-y: auto;">
+                                    <div class="card-body p-0" style="max-height: 250px; min-height: 200px; overflow-y: auto;">
                                         <ul class="list-group list-group-flush" id="employeeList">
                                             @foreach(($employeesForDTR ?? []) as $employee)
-                                                <li class="list-group-item">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input employee-checkbox" type="checkbox" name="employee_ids[]" value="{{ $employee->id ?? $employee->employee_id }}" id="emp_{{ $employee->id ?? $employee->employee_id }}">
-                                                        <label class="form-check-label w-100" for="emp_{{ $employee->id ?? $employee->employee_id }}">
-                                                            <span class="fw-bold">{{ $employee->full_name }}</span>
+                                                <li class="list-group-item"
+                                                    data-employment-type="{{ $employee->employment_type ?? '' }}">
+                                                    <div class="form-check d-flex align-items-center">
+                                                        <input class="form-check-input emp-item" type="checkbox" name="employee_ids[]" value="{{ $employee->id ?? $employee->employee_id }}" id="emp_dtr_{{ $employee->id ?? $employee->employee_id }}">
+                                                        <label class="form-check-label w-100 ms-2" for="emp_dtr_{{ $employee->id ?? $employee->employee_id }}" style="font-size: 0.95rem;">
+                                                            <strong>{{ $employee->full_name }}</strong>
                                                             @if($employee->department)
-                                                                <small class="text-muted ms-1">({{ $employee->department->department_name ?? 'N/A' }})</small>
+                                                                <small class="text-muted ms-1">
+                                                                    ({{ $employee->department->department_name ?? 'N/A' }})
+                                                                    @if(!empty($employee->employment_type))
+                                                                        · {{ ucwords(str_replace('_', ' ', $employee->employment_type)) }}
+                                                                    @endif
+                                                                </small>
                                                             @endif
                                                         </label>
                                                     </div>
                                                 </li>
                                             @endforeach
+                                            @if(($employeesForDTR ?? [])->isEmpty())
+                                            <li class="list-group-item text-center text-muted">
+                                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                                No employees found for DTR generation.
+                                            </li>
+                                            @endif
                                         </ul>
                                     </div>
-                                </div>
-                                <div class="form-text">Leave empty to include all employees in the selected office.</div>
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="start_date" class="form-label fw-bold" style="color: #800000;">
-                                        <i class="bi bi-calendar-event me-1"></i>Start Date
-                                    </label>
-                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
-                                    <div class="form-text" id="startDateHelp">First day of current month</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="end_date" class="form-label fw-bold" style="color: #800000;">
-                                        <i class="bi bi-calendar-check me-1"></i>End Date
-                                    </label>
-                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
-                                    <div class="form-text" id="endDateHelp">Last day of current month</div>
                                 </div>
                             </div>
 
                         </div>
-                        <div class="modal-footer border-0 p-4" style="background: white;">
-                            <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">
-                                <i class="bi bi-x-circle me-2"></i>Cancel
-                            </button>
-                            <button type="submit" class="btn btn-lg px-4 fw-bold text-white"
-                                    style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
-                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
-                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
-                                <i class="bi bi-file-earmark-text me-2"></i>Generate Report
-                            </button>
+                        <div class="modal-footer border-0 p-3 p-md-4" style="background: white;">
+                            <div class="d-flex gap-2 flex-column flex-sm-row w-100">
+                                <button type="button" class="btn btn-lg px-4 flex-fill" data-bs-dismiss="modal"
+                                        style="background: #f8f9fa; color: #6c757d; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;"
+                                        onmouseover="this.style.background='#e9ecef'; this.style.borderColor='#dee2e6'"
+                                        onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e5e7eb'">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-lg px-4 fw-bold text-white flex-fill"
+                                        style="background: linear-gradient(135deg, var(--aa-maroon), var(--aa-maroon-dark)); border: none; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(86, 0, 0, 0.3);"
+                                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(86, 0, 0, 0.4)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(86, 0, 0, 0.3)'">
+                                    <i class="bi bi-file-earmark-text me-2"></i><span class="d-none d-sm-inline">Generate Report</span><span class="d-sm-none">Generate</span>
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -639,100 +750,230 @@
             window.location.search = params.toString();
         });
 
-        // DTR Report Type Date Adjustment Script & Search Logic
-        document.addEventListener('DOMContentLoaded', function() {
-            const dtrReportType = document.getElementById('report_type');
-            const dtrStartDate = document.getElementById('start_date');
-            const dtrEndDate = document.getElementById('end_date');
-            const dtrStartDateHelp = document.getElementById('startDateHelp');
-            const dtrEndDateHelp = document.getElementById('endDateHelp');
+        // (Legacy report-type date adjustment & search for old modal removed; 
+        //  new DTR modal uses month picker + employee filters handled in attendance-style script.)
+    </script>
+    <!-- Custom Month/Year Picker + Employee Filters for DTR Modal (same as attendance page) -->
+    <script>
+    // Initialize Month/Year Picker for DTR Modal
+    document.addEventListener('DOMContentLoaded', function() {
+        const pickerInput = document.getElementById('dtr_month_picker');
+        if (!pickerInput) return;
+        
+        function createMonthYearPicker() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            pickerInput.value = monthNames[currentMonth] + ' ' + currentYear;
+            updateHiddenDates(currentYear, currentMonth);
             
-            if (dtrReportType && dtrStartDate && dtrEndDate) {
-                // Function to format date as YYYY-MM-DD
-                function formatDate(date) {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                }
-                
-                // Function to get start of week (Monday)
-                function getStartOfWeek(date) {
-                    const d = new Date(date);
-                    const day = d.getDay();
-                    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-                    return new Date(d.setDate(diff));
-                }
-                
-                // Function to get end of week (Sunday)
-                function getEndOfWeek(date) {
-                    const d = new Date(date);
-                    const day = d.getDay();
-                    const diff = d.getDate() + (7 - day) % 7;
-                    return new Date(d.setDate(diff));
-                }
-                
-                // Function to update dates based on report type
-                function updateDatesForReportType() {
-                    const reportType = dtrReportType.value;
-                    const today = new Date();
-                    let startDate, endDate, startHelp, endHelp;
-                    
-                    if (reportType === 'weekly') {
-                        // Set to current week (Monday to Sunday)
-                        startDate = getStartOfWeek(today);
-                        endDate = getEndOfWeek(today);
-                        startHelp = 'Start of current week (Monday)';
-                        endHelp = 'End of current week (Sunday)';
-                    } else if (reportType === 'monthly') {
-                        // Set to current month (1st to last day)
-                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                        startHelp = 'First day of current month';
-                        endHelp = 'Last day of current month';
-                    } else {
-                        // Custom - don't auto-adjust
-                        return;
-                    }
-                    
-                    dtrStartDate.value = formatDate(startDate);
-                    dtrEndDate.value = formatDate(endDate);
-                    
-                    if (dtrStartDateHelp) dtrStartDateHelp.textContent = startHelp;
-                    if (dtrEndDateHelp) dtrEndDateHelp.textContent = endHelp;
-                }
-                
-                // Listen for report type changes
-                dtrReportType.addEventListener('change', updateDatesForReportType);
-                
-                // Initialize dates when modal opens
-                const generateDTRModal = document.getElementById('generateDTRModal');
-                if (generateDTRModal) {
-                    generateDTRModal.addEventListener('shown.bs.modal', function() {
-                        updateDatesForReportType();
-                    });
-                }
+            const overlay = document.createElement('div');
+            overlay.id = 'monthYearPickerOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+                padding: 15px;
+                z-index: 2000;
+                display: none;
+                width: 320px;
+            `;
+            
+            const yearSelect = document.createElement('select');
+            yearSelect.className = 'form-select mb-3';
+            yearSelect.style.cssText = 'border-color: var(--aa-maroon);';
+            for (let y = currentYear; y >= currentYear - 5; y--) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = y;
+                if (y === currentYear) option.selected = true;
+                yearSelect.appendChild(option);
             }
-
-            // Search functionality
-            const searchInput = document.getElementById('employeeSearch');
-            const employeeList = document.getElementById('employeeList');
-            if (searchInput && employeeList) {
-                const items = employeeList.getElementsByTagName('li');
-                searchInput.addEventListener('keyup', function() {
-                    const filter = searchInput.value.toLowerCase();
-                    for (let i = 0; i < items.length; i++) {
-                        const label = items[i].getElementsByTagName('label')[0];
-                        const txtValue = label.textContent || label.innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                            items[i].style.display = "";
-                        } else {
-                            items[i].style.display = "none";
-                        }
+            
+            const monthGrid = document.createElement('div');
+            monthGrid.style.cssText = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;';
+            
+            monthNames.forEach((monthName, index) => {
+                const monthBtn = document.createElement('button');
+                monthBtn.type = 'button';
+                monthBtn.className = 'btn btn-sm';
+                monthBtn.textContent = monthName.substring(0, 3);
+                monthBtn.style.cssText = `
+                    padding: 10px;
+                    border: 1px solid #e5e7eb;
+                    background: white;
+                    transition: all 0.2s ease;
+                `;
+                
+                if (index === currentMonth && parseInt(yearSelect.value) === currentYear) {
+                    monthBtn.style.background = 'var(--aa-maroon)';
+                    monthBtn.style.color = 'white';
+                    monthBtn.style.fontWeight = 'bold';
+                }
+                
+                monthBtn.addEventListener('mouseenter', function() {
+                    if (!this.disabled) {
+                        this.style.background = 'var(--aa-maroon)';
+                        this.style.color = 'white';
                     }
                 });
+                monthBtn.addEventListener('mouseleave', function() {
+                    if (!this.disabled && !(index === currentMonth && parseInt(yearSelect.value) === currentYear)) {
+                        this.style.background = 'white';
+                        this.style.color = 'black';
+                    }
+                });
+                
+                monthBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const selectedYear = parseInt(yearSelect.value);
+                    const selectedMonth = index;
+                    if (selectedYear === currentYear && selectedMonth > currentMonth) return;
+                    pickerInput.value = monthName + ' ' + selectedYear;
+                    updateHiddenDates(selectedYear, selectedMonth);
+                    overlay.style.display = 'none';
+                });
+                
+                monthGrid.appendChild(monthBtn);
+            });
+            
+            yearSelect.addEventListener('change', function() {
+                const selectedYear = parseInt(this.value);
+                Array.from(monthGrid.children).forEach((btn, index) => {
+                    if (selectedYear === currentYear && index > currentMonth) {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.5';
+                        btn.style.cursor = 'not-allowed';
+                    } else {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    }
+                    if (index === currentMonth && selectedYear === currentYear) {
+                        btn.style.background = 'var(--aa-maroon)';
+                        btn.style.color = 'white';
+                    } else if (!btn.disabled) {
+                        btn.style.background = 'white';
+                        btn.style.color = 'black';
+                    }
+                });
+            });
+            
+            overlay.appendChild(yearSelect);
+            overlay.appendChild(monthGrid);
+            document.body.appendChild(overlay);
+            
+            function toggleOverlay(e) {
+                e.stopPropagation();
+                const rect = pickerInput.getBoundingClientRect();
+                let top = rect.bottom + 6;
+                let left = rect.left;
+                const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                const overlayWidth = 320;
+                if (left + overlayWidth + 10 > viewportWidth) {
+                    left = viewportWidth - overlayWidth - 10;
+                }
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const overlayHeight = 260;
+                if (top + overlayHeight + 10 > viewportHeight) {
+                    top = rect.top - overlayHeight - 6;
+                }
+                overlay.style.top = `${top}px`;
+                overlay.style.left = `${left}px`;
+                overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
             }
-        });
+            
+            pickerInput.addEventListener('click', toggleOverlay);
+            const pickerBtn = document.getElementById('dtr_month_picker_btn');
+            if (pickerBtn) pickerBtn.addEventListener('click', toggleOverlay);
+            
+            document.addEventListener('click', function(e) {
+                if (!overlay.contains(e.target) && e.target !== pickerInput && e.target !== pickerBtn && !(pickerBtn && pickerBtn.contains(e.target))) {
+                    overlay.style.display = 'none';
+                }
+            });
+        }
+        
+        function updateHiddenDates(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const firstDayStr = year + '-' + String(month + 1).padStart(2, '0') + '-01';
+            const lastDayStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(lastDay.getDate()).padStart(2, '0');
+            const startInput = document.getElementById('dtr_start_date');
+            const endInput = document.getElementById('dtr_end_date');
+            if (startInput) startInput.value = firstDayStr;
+            if (endInput) endInput.value = lastDayStr;
+        }
+        
+        createMonthYearPicker();
+        
+        // Employment type + search filtering & Select All
+        const selectAllCheckbox = document.getElementById('empSelectAll');
+        const employeeCheckboxes = document.querySelectorAll('.emp-item');
+        const employmentTypeSelect = document.getElementById('dtr_employment_type');
+        const employeeSearchInput = document.getElementById('employeeSearch');
+        const employeeListItems = document.querySelectorAll('#employeeList li');
+
+        function applyEmployeeFilters() {
+            const selectedType = employmentTypeSelect ? employmentTypeSelect.value : '';
+            const searchTerm = employeeSearchInput ? employeeSearchInput.value.toLowerCase().trim() : '';
+
+            employeeListItems.forEach(li => {
+                const empType = (li.dataset.employmentType || '').toLowerCase();
+                const label = li.querySelector('label');
+                const text = (label ? label.textContent : '').toLowerCase();
+
+                const typeMatches = !selectedType || empType === selectedType.toLowerCase();
+                const searchMatches = !searchTerm || text.includes(searchTerm);
+
+                li.style.display = (typeMatches && searchMatches) ? '' : 'none';
+            });
+
+            if (selectAllCheckbox && employeeCheckboxes.length > 0) {
+                const visibleCheckboxes = Array.from(employeeCheckboxes).filter(cb =>
+                    cb.closest('li').style.display !== 'none'
+                );
+                const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+                selectAllCheckbox.checked = visibleCheckboxes.length > 0 && checkedCount === visibleCheckboxes.length;
+            }
+        }
+
+        if (selectAllCheckbox && employeeCheckboxes.length > 0) {
+            selectAllCheckbox.addEventListener('change', function() {
+                employeeCheckboxes.forEach(checkbox => {
+                    if (checkbox.closest('li').style.display !== 'none') {
+                        checkbox.checked = this.checked;
+                    }
+                });
+            });
+
+            employeeCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    applyEmployeeFilters();
+                });
+            });
+        }
+
+        if (employmentTypeSelect) {
+            employmentTypeSelect.addEventListener('change', function() {
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                employeeCheckboxes.forEach(cb => cb.checked = false);
+                applyEmployeeFilters();
+            });
+        }
+
+        if (employeeSearchInput) {
+            employeeSearchInput.addEventListener('keyup', function() {
+                applyEmployeeFilters();
+            });
+        }
+
+        applyEmployeeFilters();
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>

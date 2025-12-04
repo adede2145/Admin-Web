@@ -103,6 +103,10 @@ Route::get('/test-token-simple', function () {
     // DTR Overrides (non-destructive leave overlay)
     Route::post('/dtr-overrides', [\App\Http\Controllers\DTROverrideController::class, 'store'])->name('dtr.override.store');
     Route::delete('/dtr-overrides', [\App\Http\Controllers\DTROverrideController::class, 'destroy'])->name('dtr.override.destroy');
+    
+    // DTR Head Officer Overrides
+    Route::post('/dtr-head-officer', [\App\Http\Controllers\DTROverrideController::class, 'storeHeadOfficer'])->name('dtr.head-officer.store');
+    Route::delete('/dtr-head-officer', [\App\Http\Controllers\DTROverrideController::class, 'destroyHeadOfficer'])->name('dtr.head-officer.destroy');
 
     // Employee Management
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');

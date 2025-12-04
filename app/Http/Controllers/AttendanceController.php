@@ -473,26 +473,33 @@ class AttendanceController extends Controller
     public function generateDTR(Request $request)
     {
         $request->validate([
-            'department_id' => 'nullable|exists:departments,department_id',
+            'employment_type' => 'required|in:full_time,part_time,cos,admin,faculty with designation',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'report_type' => 'required|in:weekly,monthly,custom',
+            'report_type' => 'required|in:monthly',
             'employee_ids' => 'sometimes|array',
             'employee_ids.*' => 'integer|exists:employees,employee_id'
         ]);
 
-        // RBAC: Department admins can only generate reports for their own department
-        if (auth()->user()->role->role_name !== 'super_admin') {
-            if ($request->filled('department_id') && $request->department_id != auth()->user()->department_id) {
-                return back()->with('error', 'You can only generate DTR reports for your own department.');
+        $admin = auth()->user();
+        $requestedEmploymentType = $request->employment_type;
+
+        // RBAC: Check employment type access
+        if (!$admin->isSuperAdmin()) {
+            $accessibleTypes = $admin->employment_type_access ?? [];
+            
+            if (empty($accessibleTypes)) {
+                return back()->with('error', 'You do not have permission to generate DTR reports. No employment types configured.');
             }
-            // Force department_id to user's department for non-super admins
-            $request->merge(['department_id' => auth()->user()->department_id]);
+            
+            if (!in_array($requestedEmploymentType, $accessibleTypes)) {
+                return back()->with('error', 'You do not have permission to generate DTR reports for this employment type.');
+            }
         }
 
         try {
             $dtrService = new \App\Services\DTRService();
-            $dtrReport = $dtrService->generateDTRReport($request, auth()->user());
+            $dtrReport = $dtrService->generateDTRReport($request, $admin);
 
             // Redirect to the generated DTR report details page so user sees the summary immediately
             return redirect()->route('dtr.details', $dtrReport->report_id)
@@ -534,7 +541,12 @@ class AttendanceController extends Controller
                 return $o->employee_id . '|' . $o->date->toDateString();
             });
 
-        return view('dtr.details', compact('report', 'overrides'));
+        // Load head officer overrides for this report (keyed by employee_id)
+        $headOfficerOverrides = \App\Models\DTRHeadOfficerOverride::where('report_id', $reportId)
+            ->get()
+            ->keyBy('employee_id');
+
+        return view('dtr.details', compact('report', 'overrides', 'headOfficerOverrides'));
     }
 
     public function deleteDTR($reportId)
@@ -568,33 +580,49 @@ class AttendanceController extends Controller
                     return $o->employee_id . '|' . $o->date->toDateString();
                 });
 
-            // Format dates properly (Y-m-d format only, no timestamps)
-            $startDate = \Carbon\Carbon::parse($report->start_date)->format('Y-m-d');
-            $endDate = \Carbon\Carbon::parse($report->end_date)->format('Y-m-d');
+            // Load head officer overrides for this report (keyed by employee_id)
+            $headOfficerOverrides = \App\Models\DTRHeadOfficerOverride::where('report_id', $reportId)
+                ->get()
+                ->keyBy('employee_id');
+
+            // Format date as YYYY-MM for monthly reports
+            $monthYear = \Carbon\Carbon::parse($report->start_date)->format('Y-m');
+            
+            // Map employment types to readable names
+            $employmentTypeLabels = [
+                'full_time' => 'Full-Time',
+                'part_time' => 'Part-Time',
+                'cos' => 'COS',
+                'admin' => 'Admin',
+                'faculty with designation' => 'Faculty'
+            ];
+            $employmentTypeName = isset($report->employment_type) && isset($employmentTypeLabels[$report->employment_type]) 
+                ? $employmentTypeLabels[$report->employment_type] 
+                : 'Unknown';
 
             // Generate appropriate filename based on employee count
             if ($report->summaries->count() === 1) {
                 // Single employee - use employee name
                 $employee = $report->summaries->first()->employee;
-                $filename = 'DTR_' . $this->sanitizeFilename($employee->full_name) . '_' . $startDate . '_to_' . $endDate;
+                $filename = 'DTR_' . $this->sanitizeFilename($employee->full_name) . '_' . $monthYear;
             } else {
-                // Multiple employees - use report ID
-                $filename = 'DTR_Report_' . $report->report_id . '_' . $startDate . '_to_' . $endDate;
+                // Multiple employees - use employment type
+                $filename = 'DTR_Report_' . $this->sanitizeFilename($employmentTypeName) . '_' . $monthYear;
             }
 
             Log::info('DTR download processing', ['filename' => $filename, 'format' => $format]);
 
             switch ($format) {
                 case 'pdf':
-                    return $this->downloadAsPDF($report, $overrides, $filename);
+                    return $this->downloadAsPDF($report, $overrides, $filename, $headOfficerOverrides);
                 case 'csv':
-                    return $this->downloadAsCSV($report, $overrides, $filename);
+                    return $this->downloadAsCSV($report, $overrides, $filename, $headOfficerOverrides);
                 case 'excel':
-                    return $this->downloadAsExcel($report, $overrides, $filename);
+                    return $this->downloadAsExcel($report, $overrides, $filename, $headOfficerOverrides);
                 case 'docx':
-                    return $this->downloadAsDOCX($report, $overrides, $filename);
+                    return $this->downloadAsDOCX($report, $overrides, $filename, $headOfficerOverrides);
                 default:
-                    return $this->downloadAsHTML($report, $overrides, $filename);
+                    return $this->downloadAsHTML($report, $overrides, $filename, $headOfficerOverrides);
             }
         } catch (\Exception $e) {
             Log::error('Failed to download DTR report', ['report_id' => $reportId, 'format' => $format, 'error' => $e->getMessage()]);
@@ -602,41 +630,81 @@ class AttendanceController extends Controller
         }
     }
 
-    private function downloadAsHTML($report, $overrides, $filename)
+    private function downloadAsHTML($report, $overrides, $filename, $headOfficerOverrides = null)
     {
-        $htmlContent = $this->generateHTMLContent($report, $overrides);
+        $htmlContent = $this->generateHTMLContent($report, $overrides, $headOfficerOverrides);
 
         return response($htmlContent)
             ->header('Content-Type', 'text/html')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '.html"');
     }
 
-    private function downloadAsPDF($report, $overrides, $filename)
+    private function downloadAsPDF($report, $overrides, $filename, $headOfficerOverrides = null)
     {
         // Check if multiple employees - if so, create ZIP
         if ($report->summaries->count() > 1) {
-            return $this->downloadMultipleEmployeePDFs($report, $overrides, $filename);
+            return $this->downloadMultipleEmployeePDFs($report, $overrides, $filename, $headOfficerOverrides);
         }
 
-        // Single employee - use existing logic
-        $htmlContent = $this->generateHTMLContent($report, $overrides);
+        // Single employee - use DOCX template
+        try {
+            $summary = $report->summaries->first();
+            $employee = $summary->employee;
+            
+            Log::info('Generating PDF from DOCX template', [
+                'report_id' => $report->report_id,
+                'employee_id' => $employee->employee_id
+            ]);
+            
+            // Generate DOCX using template
+            $docxPath = $this->generateSingleEmployeeDOCX($report, $overrides, $employee, $headOfficerOverrides);
+            
+            if (!file_exists($docxPath)) {
+                throw new \Exception('Generated DOCX file not found: ' . $docxPath);
+            }
+            
+            Log::info('DOCX generated, converting to PDF', ['docx_path' => $docxPath]);
+            
+            // Convert DOCX to PDF
+            $pdfContent = $this->convertDocxToPDF($docxPath);
+            
+            // Clean up temp DOCX file
+            if (file_exists($docxPath)) {
+                @unlink($docxPath);
+            }
+            
+            Log::info('PDF successfully generated from DOCX template');
+            
+            return response($pdfContent)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'attachment; filename="' . $filename . '.pdf"');
+                
+        } catch (\Exception $e) {
+            Log::warning('PDF generation from DOCX failed, falling back to HTML', [
+                'report_id' => $report->report_id,
+                'error' => $e->getMessage(),
+                'trace' => substr($e->getTraceAsString(), 0, 500)
+            ]);
+            
+            // Fallback to HTML-based PDF generation
+            $htmlContent = $this->generateHTMLContent($report, $overrides, $headOfficerOverrides);
 
-        // Use Dompdf to convert HTML to PDF
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->loadHtml($htmlContent);
-        $dompdf->setPaper('Letter', 'portrait');
-        $dompdf->render();
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($htmlContent);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
 
-        return response($dompdf->output())
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '.pdf"');
+            return response($dompdf->output())
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'attachment; filename="' . $filename . '.pdf"');
+        }
     }
 
-    private function downloadAsCSV($report, $overrides, $filename)
+    private function downloadAsCSV($report, $overrides, $filename, $headOfficerOverrides = null)
     {
         // Check if multiple employees - if so, create ZIP
         if ($report->summaries->count() > 1) {
-            return $this->downloadMultipleEmployeeCSVs($report, $overrides, $filename);
+            return $this->downloadMultipleEmployeeCSVs($report, $overrides, $filename, $headOfficerOverrides);
         }
 
         // Single employee - use existing logic
@@ -718,7 +786,21 @@ class AttendanceController extends Controller
             $csvData[] = ['VERIFIED as to the prescribed office hours'];
             $csvData[] = [];
             $csvData[] = ['________________________________________'];
-            $csvData[] = ['In Charge'];
+            
+            // Get head officer information for this employee
+            $headOfficer = $headOfficerOverrides && isset($headOfficerOverrides[$employee->employee_id]) 
+                ? $headOfficerOverrides[$employee->employee_id] 
+                : null;
+            
+            if ($headOfficer) {
+                $csvData[] = [$headOfficer->head_officer_name];
+                if ($headOfficer->head_officer_office) {
+                    $csvData[] = [$headOfficer->head_officer_office];
+                }
+            } else {
+                $csvData[] = ['In Charge'];
+            }
+            
             $csvData[] = [];
             $csvData[] = [];
             $csvData[] = ['----------------------------------------'];
@@ -738,7 +820,7 @@ class AttendanceController extends Controller
     }
 
     
-    private function downloadAsDOCX($report, $overrides, $filename)
+    private function downloadAsDOCX($report, $overrides, $filename, $headOfficerOverrides = null)
     {
         try {
             if ($report->summaries->isEmpty()) {
@@ -747,7 +829,7 @@ class AttendanceController extends Controller
 
             // Check if multiple employees - if so, create ZIP
             if ($report->summaries->count() > 1) {
-                return $this->downloadMultipleEmployeeDOCXs($report, $overrides, $filename);
+                return $this->downloadMultipleEmployeeDOCXs($report, $overrides, $filename, $headOfficerOverrides);
             }
 
             // Single employee - use existing logic
@@ -835,6 +917,14 @@ class AttendanceController extends Controller
             $templateProcessor->setValue('period_date', $periodDate);
             $templateProcessor->setValue('office_hours', '8:00AM-12:00NN  /  1:00PM-5:00PM');
             
+            // Set head officer template variables
+            $headOfficer = $headOfficerOverrides && isset($headOfficerOverrides[$employee->employee_id]) 
+                ? $headOfficerOverrides[$employee->employee_id] 
+                : null;
+            
+            $templateProcessor->setValue('head_officer_name', $headOfficer ? $headOfficer->head_officer_name : '');
+            $templateProcessor->setValue('head_officer_office', $headOfficer && $headOfficer->head_officer_office ? $headOfficer->head_officer_office : '');
+            
             // Prepare summary text
             $summaryParts = [];
             if ($totalUndertime['leave_days'] > 0) {
@@ -853,35 +943,42 @@ class AttendanceController extends Controller
             $summaryText = implode('; ', $summaryParts);
             $templateProcessor->setValue('summary_text', $summaryText);
             
-            // Clone the row for days data
+            // Clone the row for days data (both left and right tables)
             $templateProcessor->cloneRow('day', count($daysData));
+            $templateProcessor->cloneRow('day2', count($daysData));
             
             // Keep track of which rows are weekends/leaves for later merging
             $weekendRowIndices = [];
             
-            // Fill in day data
+            // Fill in day data for both tables
             $index = 1;
             foreach ($daysData as $dayData) {
-                $templateProcessor->setValue('day#' . $index, $dayData['day']);
+                // Fill both left table (no suffix) and right table (suffix '2')
+                foreach (['', '2'] as $suffix) {
+                    $templateProcessor->setValue('day' . $suffix . '#' . $index, $dayData['day']);
             
-                // Handle weekends and leave days (span across all columns)
-                if ($dayData['is_leave'] || $dayData['is_weekend']) {
-                    $displayText = $dayData['is_leave'] ? $dayData['leave_text'] : $dayData['day_name'];
-                    $templateProcessor->setValue('am_arrival#' . $index, $displayText);
-                    $templateProcessor->setValue('am_departure#' . $index, '');
-                    $templateProcessor->setValue('pm_arrival#' . $index, '');
-                    $templateProcessor->setValue('pm_departure#' . $index, '');
-                    $templateProcessor->setValue('undertime_hours#' . $index, '');
-                    $templateProcessor->setValue('undertime_minutes#' . $index, '');
-                    $weekendRowIndices[] = $index - 1; // Store for later processing
-                } else {
-                    // Regular day
-                    $templateProcessor->setValue('am_arrival#' . $index, $dayData['am_arrival'] ? $dayData['am_arrival'] . ' ' : '');
-                    $templateProcessor->setValue('am_departure#' . $index, $dayData['am_departure'] ? $dayData['am_departure'] . ' ' : '');
-                    $templateProcessor->setValue('pm_arrival#' . $index, $dayData['pm_arrival'] ? $dayData['pm_arrival'] . ' ' : '');
-                    $templateProcessor->setValue('pm_departure#' . $index, $dayData['pm_departure'] ? $dayData['pm_departure'] . ' ' : '');
-                    $templateProcessor->setValue('undertime_hours#' . $index, $dayData['undertime_hours']);
-                    $templateProcessor->setValue('undertime_minutes#' . $index, $dayData['undertime_minutes']);
+                    // Handle weekends and leave days (span across all columns)
+                    if ($dayData['is_leave'] || $dayData['is_weekend']) {
+                        $displayText = $dayData['is_leave'] ? $dayData['leave_text'] : $dayData['day_name'];
+                        $templateProcessor->setValue('am_arrival' . $suffix . '#' . $index, $displayText);
+                        $templateProcessor->setValue('am_departure' . $suffix . '#' . $index, '');
+                        $templateProcessor->setValue('pm_arrival' . $suffix . '#' . $index, '');
+                        $templateProcessor->setValue('pm_departure' . $suffix . '#' . $index, '');
+                        $templateProcessor->setValue('undertime_hours' . $suffix . '#' . $index, '');
+                        $templateProcessor->setValue('undertime_minutes' . $suffix . '#' . $index, '');
+                        // Only track once for merge processing (both tables will be merged)
+                        if ($suffix === '') {
+                            $weekendRowIndices[] = $index - 1;
+                        }
+                    } else {
+                        // Regular day
+                        $templateProcessor->setValue('am_arrival' . $suffix . '#' . $index, $dayData['am_arrival'] ? $dayData['am_arrival'] . ' ' : '');
+                        $templateProcessor->setValue('am_departure' . $suffix . '#' . $index, $dayData['am_departure'] ? $dayData['am_departure'] . ' ' : '');
+                        $templateProcessor->setValue('pm_arrival' . $suffix . '#' . $index, $dayData['pm_arrival'] ? $dayData['pm_arrival'] . ' ' : '');
+                        $templateProcessor->setValue('pm_departure' . $suffix . '#' . $index, $dayData['pm_departure'] ? $dayData['pm_departure'] . ' ' : '');
+                        $templateProcessor->setValue('undertime_hours' . $suffix . '#' . $index, $dayData['undertime_hours']);
+                        $templateProcessor->setValue('undertime_minutes' . $suffix . '#' . $index, $dayData['undertime_minutes']);
+                    }
                 }
                 $index++;
             }
@@ -934,126 +1031,256 @@ class AttendanceController extends Controller
             $xpath = new \DOMXPath($dom);
             $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
             
-            // Find all table rows
-            $rows = $xpath->query('//w:tbl//w:tr');
+            // Find all tables
+            $tables = $xpath->query('//w:tbl');
             
-            // Find the data table (look for rows with our data)
-            $dataTableStartRow = null;
+            // Find data tables (look for tables with numeric day values)
+            $dataTableStartRows = [];
             
-            // Look for the first numeric day value to identify data rows
-            for ($rowIndex = 0; $rowIndex < $rows->length; $rowIndex++) {
-                $row = $rows->item($rowIndex);
-                $cells = $xpath->query('.//w:tc', $row);
+            foreach ($tables as $tableIndex => $table) {
+                $rows = $xpath->query('.//w:tr', $table);
                 
-                if ($cells->length === 0) {
-                    continue;
-                }
-                
-                // Check first cell for a day number
-                $firstCell = $cells->item(0);
-                $textNodes = $xpath->query('.//w:t', $firstCell);
-                
-                foreach ($textNodes as $textNode) {
-                    $text = trim($textNode->nodeValue);
-                    // Look for single digit or double digit (day numbers 1-31)
-                    if (is_numeric($text) && $text >= 1 && $text <= 31) {
-                        $dataTableStartRow = $rowIndex;
-                        break 2;
+                // Look for the first numeric day value to identify data rows in this table
+                for ($rowIndex = 0; $rowIndex < $rows->length; $rowIndex++) {
+                    $row = $rows->item($rowIndex);
+                    $cells = $xpath->query('.//w:tc', $row);
+                    
+                    if ($cells->length === 0) {
+                        continue;
+                    }
+                    
+                    // Check first cell for a day number
+                    $firstCell = $cells->item(0);
+                    $textNodes = $xpath->query('.//w:t', $firstCell);
+                    
+                    foreach ($textNodes as $textNode) {
+                        $text = trim($textNode->nodeValue);
+                        // Look for single digit or double digit (day numbers 1-31)
+                        if (is_numeric($text) && $text >= 1 && $text <= 31) {
+                            $dataTableStartRows[] = ['table' => $table, 'startRow' => $rowIndex];
+                            break 2;
+                        }
                     }
                 }
             }
             
-            if ($dataTableStartRow === null) {
+            if (empty($dataTableStartRows)) {
                 $zip->close();
-                Log::warning('Could not find data table start row');
+                Log::warning('Could not find data table start rows');
                 return;
             }
             
-            Log::info('Found data table at row: ' . $dataTableStartRow);
+            Log::info('Found ' . count($dataTableStartRows) . ' data table(s)');
             
-            // Merge cells for weekend rows
-            foreach ($weekendRowIndices as $relativeIndex) {
-                $actualRowIndex = $dataTableStartRow + $relativeIndex;
+            // Merge cells for weekend rows in each table
+            foreach ($dataTableStartRows as $tableInfo) {
+                $table = $tableInfo['table'];
+                $startRow = $tableInfo['startRow'];
+                $rows = $xpath->query('.//w:tr', $table);
                 
-                if ($actualRowIndex >= $rows->length) {
-                    continue;
-                }
-                
-                $row = $rows->item($actualRowIndex);
-                $cells = $xpath->query('.//w:tc', $row);
-                
-                if ($cells->length < 2) {
-                    continue; // Not enough cells
-                }
-                
-                // Count total cells to determine span
-                $totalCells = $cells->length;
-                
-                // We want to merge all cells except the first one (Day column)
-                // So we need 6 columns to span (assuming 7 total: Day + 6 data columns)
-                $columnsToSpan = max(1, $totalCells - 1);
-                
-                // Get the second cell (first cell after "Day" column)
-                $firstDataCell = $cells->item(1);
-                
-                // Find or create tcPr (table cell properties)
-                $tcPr = $xpath->query('.//w:tcPr', $firstDataCell)->item(0);
-                if (!$tcPr) {
-                    $tcPr = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:tcPr');
-                    $firstDataCell->insertBefore($tcPr, $firstDataCell->firstChild);
-                }
-                
-                // Add or update gridSpan
-                $existingGridSpan = $xpath->query('.//w:gridSpan', $tcPr)->item(0);
-                if ($existingGridSpan) {
-                    $tcPr->removeChild($existingGridSpan);
-                }
-                
-                // Create new gridSpan element with attribute
-                $gridSpan = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:gridSpan');
-                /** @var \DOMElement $gridSpan */
-                $gridSpan->setAttribute('w:val', (string)$columnsToSpan);
-                $tcPr->appendChild($gridSpan);
-                
-                // Also center-align the text in the merged cell
-                $existingJc = $xpath->query('.//w:jc', $tcPr)->item(0);
-                if ($existingJc) {
-                    $tcPr->removeChild($existingJc);
-                }
-                $jc = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:jc');
-                /** @var \DOMElement $jc */
-                $jc->setAttribute('w:val', 'center');
-                $tcPr->appendChild($jc);
-                
-                // Make text bold for weekends/leaves
-                $paragraphs = $xpath->query('.//w:p', $firstDataCell);
-                foreach ($paragraphs as $paragraph) {
-                    $runs = $xpath->query('.//w:r', $paragraph);
-                    foreach ($runs as $run) {
-                        // Find or create run properties (rPr)
-                        $rPr = $xpath->query('.//w:rPr', $run)->item(0);
-                        if (!$rPr) {
-                            $rPr = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:rPr');
-                            $run->insertBefore($rPr, $run->firstChild);
+                foreach ($weekendRowIndices as $relativeIndex) {
+                    $actualRowIndex = $startRow + $relativeIndex;
+                    
+                    if ($actualRowIndex >= $rows->length) {
+                        continue;
+                    }
+                    
+                    $row = $rows->item($actualRowIndex);
+                    $cells = $xpath->query('.//w:tc', $row);
+                    
+                    if ($cells->length < 2) {
+                        continue; // Not enough cells
+                    }
+                    
+                    // Count total cells to determine span
+                    $totalCells = $cells->length;
+                    
+                    // We want to merge all cells except the first one (Day column)
+                    // So we need 6 columns to span (assuming 7 total: Day + 6 data columns)
+                    $columnsToSpan = max(1, $totalCells - 1);
+                    
+                    // Get reference cells for border copying
+                    $firstCell = $cells->item(0); // Day column cell
+                    $firstDataCell = $cells->item(1); // First data cell
+                    $lastDataCell = $cells->item($cells->length - 1); // Last cell in row
+                    
+                    // Find a reference row (non-merged row) to copy border style from
+                    $referenceRow = null;
+                    for ($refRowIndex = $startRow; $refRowIndex < $rows->length; $refRowIndex++) {
+                        if ($refRowIndex === $actualRowIndex) {
+                            continue; // Skip the current row
                         }
-                        
-                        // Add bold element if not exists
-                        $existingBold = $xpath->query('.//w:b', $rPr)->item(0);
-                        if (!$existingBold) {
-                            $bold = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:b');
-                            $rPr->appendChild($bold);
+                        $refRow = $rows->item($refRowIndex);
+                        $refCells = $xpath->query('.//w:tc', $refRow);
+                        if ($refCells->length > 0) {
+                            // Check if this row is not merged (has gridSpan)
+                            $refFirstDataCell = $refCells->item(1);
+                            if ($refFirstDataCell) {
+                                $refTcPr = $xpath->query('.//w:tcPr', $refFirstDataCell)->item(0);
+                                $refGridSpan = $refTcPr ? $xpath->query('.//w:gridSpan', $refTcPr)->item(0) : null;
+                                if (!$refGridSpan) {
+                                    $referenceRow = $refRow;
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
-                
-                // Remove subsequent cells (except first) - they become part of the merged cell
-                $cellsToRemove = [];
-                for ($i = 2; $i < $cells->length; $i++) {
-                    $cellsToRemove[] = $cells->item($i);
-                }
-                
-                foreach ($cellsToRemove as $cellToRemove) {
-                    $row->removeChild($cellToRemove);
+                    
+                    // Find or create tcPr (table cell properties) for merged cell
+                    $tcPr = $xpath->query('.//w:tcPr', $firstDataCell)->item(0);
+                    if (!$tcPr) {
+                        $tcPr = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:tcPr');
+                        $firstDataCell->insertBefore($tcPr, $firstDataCell->firstChild);
+                    }
+                    
+                    // Remove existing tcBorders if present
+                    $existingTcBorders = $xpath->query('.//w:tcBorders', $tcPr)->item(0);
+                    if ($existingTcBorders) {
+                        $tcPr->removeChild($existingTcBorders);
+                    }
+                    
+                    // Create new tcBorders element
+                    $tcBorders = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:tcBorders');
+                    
+                    // Copy borders from reference row if available, otherwise from current row cells
+                    $borderSources = [];
+                    if ($referenceRow) {
+                        $refCells = $xpath->query('.//w:tc', $referenceRow);
+                        if ($refCells->length >= 2) {
+                            $refFirstDataCell = $refCells->item(1);
+                            $refLastDataCell = $refCells->item($refCells->length - 1);
+                            $borderSources = [
+                                'top' => $refFirstDataCell,
+                                'bottom' => $refLastDataCell,
+                                'left' => $refFirstDataCell,
+                                'right' => $refLastDataCell
+                            ];
+                        }
+                    }
+                    
+                    // Fallback to current row cells if no reference row found
+                    if (empty($borderSources)) {
+                        $borderSources = [
+                            'top' => $firstDataCell,
+                            'bottom' => $lastDataCell,
+                            'left' => $firstDataCell,
+                            'right' => $lastDataCell
+                        ];
+                    }
+                    
+                    // Copy each border side
+                    foreach ($borderSources as $side => $sourceCell) {
+                        if (!$sourceCell) {
+                            continue;
+                        }
+                        
+                        $sourceTcPr = $xpath->query('.//w:tcPr', $sourceCell)->item(0);
+                        if ($sourceTcPr) {
+                            $sourceBorders = $xpath->query('.//w:tcBorders', $sourceTcPr)->item(0);
+                            if ($sourceBorders) {
+                                $borderNode = $xpath->query('.//w:' . $side, $sourceBorders)->item(0);
+                                if ($borderNode) {
+                                    // Clone the border node with all attributes
+                                    $newBorder = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:' . $side);
+                                    foreach ($borderNode->attributes as $attr) {
+                                        $newBorder->setAttribute($attr->nodeName, $attr->nodeValue);
+                                    }
+                                    $tcBorders->appendChild($newBorder);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If no borders were copied, try to get borders from table properties or create defaults
+                    if ($tcBorders->childNodes->length === 0) {
+                        // Try to get borders from table properties
+                        $tblPr = $xpath->query('.//w:tblPr', $table)->item(0);
+                        $tblBorders = $tblPr ? $xpath->query('.//w:tblBorders', $tblPr)->item(0) : null;
+                        
+                        if ($tblBorders) {
+                            // Copy borders from table properties
+                            $borderSides = ['top', 'left', 'bottom', 'right'];
+                            foreach ($borderSides as $side) {
+                                $borderNode = $xpath->query('.//w:' . $side, $tblBorders)->item(0);
+                                if ($borderNode) {
+                                    $newBorder = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:' . $side);
+                                    foreach ($borderNode->attributes as $attr) {
+                                        $newBorder->setAttribute($attr->nodeName, $attr->nodeValue);
+                                    }
+                                    $tcBorders->appendChild($newBorder);
+                                }
+                            }
+                        }
+                        
+                        // If still no borders, create default borders
+                        if ($tcBorders->childNodes->length === 0) {
+                            $defaultBorderSize = '12'; // 0.75pt - adjust based on your table border thickness
+                            $borderSides = ['top', 'left', 'bottom', 'right'];
+                            foreach ($borderSides as $side) {
+                                $border = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:' . $side);
+                                $border->setAttribute('w:val', 'single');
+                                $border->setAttribute('w:sz', $defaultBorderSize);
+                                $border->setAttribute('w:space', '0');
+                                $border->setAttribute('w:color', '000000');
+                                $tcBorders->appendChild($border);
+                            }
+                        }
+                    }
+                    
+                    $tcPr->appendChild($tcBorders);
+                    
+                    // Add or update gridSpan
+                    $existingGridSpan = $xpath->query('.//w:gridSpan', $tcPr)->item(0);
+                    if ($existingGridSpan) {
+                        $tcPr->removeChild($existingGridSpan);
+                    }
+                    
+                    // Create new gridSpan element with attribute
+                    $gridSpan = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:gridSpan');
+                    /** @var \DOMElement $gridSpan */
+                    $gridSpan->setAttribute('w:val', (string)$columnsToSpan);
+                    $tcPr->appendChild($gridSpan);
+                    
+                    // Also center-align the text in the merged cell
+                    $existingJc = $xpath->query('.//w:jc', $tcPr)->item(0);
+                    if ($existingJc) {
+                        $tcPr->removeChild($existingJc);
+                    }
+                    $jc = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:jc');
+                    /** @var \DOMElement $jc */
+                    $jc->setAttribute('w:val', 'center');
+                    $tcPr->appendChild($jc);
+                    
+                    // Make text bold for weekends/leaves
+                    $paragraphs = $xpath->query('.//w:p', $firstDataCell);
+                    foreach ($paragraphs as $paragraph) {
+                        $runs = $xpath->query('.//w:r', $paragraph);
+                        foreach ($runs as $run) {
+                            // Find or create run properties (rPr)
+                            $rPr = $xpath->query('.//w:rPr', $run)->item(0);
+                            if (!$rPr) {
+                                $rPr = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:rPr');
+                                $run->insertBefore($rPr, $run->firstChild);
+                            }
+                            
+                            // Add bold element if not exists
+                            $existingBold = $xpath->query('.//w:b', $rPr)->item(0);
+                            if (!$existingBold) {
+                                $bold = $dom->createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:b');
+                                $rPr->appendChild($bold);
+                            }
+                        }
+                    }
+                    
+                    // Remove subsequent cells (except first) - they become part of the merged cell
+                    $cellsToRemove = [];
+                    for ($i = 2; $i < $cells->length; $i++) {
+                        $cellsToRemove[] = $cells->item($i);
+                    }
+                    
+                    foreach ($cellsToRemove as $cellToRemove) {
+                        $row->removeChild($cellToRemove);
+                    }
                 }
             }
             
@@ -1067,7 +1294,7 @@ class AttendanceController extends Controller
         }
     }
 
-    private function generateHTMLContent($report, $overrides = null)
+    private function generateHTMLContent($report, $overrides = null, $headOfficerOverrides = null)
     {
         $html = '
         <!DOCTYPE html>
@@ -1412,7 +1639,23 @@ class AttendanceController extends Controller
                     <div style="margin-top: 5px;">VERIFIED as to the prescribed office hours</div>
                     <div style="margin-top: 15px;">
                         <div class="line"></div>
-                        <div style="margin-top: 5px;">In Charge</div>
+                        <div style="margin-top: 5px;">';
+                
+                // Get head officer information for this employee
+                $headOfficer = $headOfficerOverrides && isset($headOfficerOverrides[$employee->employee_id]) 
+                    ? $headOfficerOverrides[$employee->employee_id] 
+                    : null;
+                
+                if ($headOfficer) {
+                    $html .= htmlspecialchars($headOfficer->head_officer_name);
+                    if ($headOfficer->head_officer_office) {
+                        $html .= '<br/><small>' . htmlspecialchars($headOfficer->head_officer_office) . '</small>';
+                    }
+                } else {
+                    $html .= 'In Charge';
+                }
+                
+                $html .= '</div>
                     </div>
                 </div>';
                 
@@ -1717,7 +1960,7 @@ class AttendanceController extends Controller
     /**
      * Download multiple employee DTRs as DOCX files in a ZIP archive
      */
-    private function downloadMultipleEmployeeDOCXs($report, $overrides, $filename)
+    private function downloadMultipleEmployeeDOCXs($report, $overrides, $filename, $headOfficerOverrides = null)
     {
         try {
             $tempFiles = [];
@@ -1730,12 +1973,13 @@ class AttendanceController extends Controller
             }
 
             // Generate DOCX for each employee
+            $monthYear = \Carbon\Carbon::parse($report->start_date)->format('Y-m');
             foreach ($report->summaries as $summary) {
                 $employee = $summary->employee;
-                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $report->start_date . '_to_' . $report->end_date);
+                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $monthYear);
                 
                 try {
-                    $docxPath = $this->generateSingleEmployeeDOCX($report, $overrides, $employee);
+                    $docxPath = $this->generateSingleEmployeeDOCX($report, $overrides, $employee, $headOfficerOverrides);
                     $tempFiles[] = $docxPath;
                     
                     // Add to ZIP
@@ -1765,7 +2009,7 @@ class AttendanceController extends Controller
     /**
      * Download multiple employee DTRs as PDF files in a ZIP archive
      */
-    private function downloadMultipleEmployeePDFs($report, $overrides, $filename)
+    private function downloadMultipleEmployeePDFs($report, $overrides, $filename, $headOfficerOverrides = null)
     {
         try {
             $tempFiles = [];
@@ -1778,12 +2022,13 @@ class AttendanceController extends Controller
             }
 
             // Generate PDF for each employee
+            $monthYear = \Carbon\Carbon::parse($report->start_date)->format('Y-m');
             foreach ($report->summaries as $summary) {
                 $employee = $summary->employee;
-                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $report->start_date . '_to_' . $report->end_date);
+                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $monthYear);
                 
                 try {
-                    $pdfContent = $this->generateSingleEmployeePDF($report, $overrides, $employee);
+                    $pdfContent = $this->generateSingleEmployeePDF($report, $overrides, $employee, $headOfficerOverrides);
                     
                     // Add to ZIP directly from content
                     $zip->addFromString($employeeFilename . '.pdf', $pdfContent);
@@ -1805,7 +2050,7 @@ class AttendanceController extends Controller
     /**
      * Download multiple employee DTRs as CSV files in a ZIP archive
      */
-    private function downloadMultipleEmployeeCSVs($report, $overrides, $filename)
+    private function downloadMultipleEmployeeCSVs($report, $overrides, $filename, $headOfficerOverrides = null)
     {
         try {
             $zipFilename = $filename . '.zip';
@@ -1817,12 +2062,13 @@ class AttendanceController extends Controller
             }
 
             // Generate CSV for each employee
+            $monthYear = \Carbon\Carbon::parse($report->start_date)->format('Y-m');
             foreach ($report->summaries as $summary) {
                 $employee = $summary->employee;
-                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $report->start_date . '_to_' . $report->end_date);
+                $employeeFilename = $this->sanitizeFilename('DTR_' . $employee->full_name . '_' . $monthYear);
                 
                 try {
-                    $csvContent = $this->generateSingleEmployeeCSV($report, $overrides, $employee);
+                    $csvContent = $this->generateSingleEmployeeCSV($report, $overrides, $employee, $headOfficerOverrides);
                     
                     // Add to ZIP directly from content
                     $zip->addFromString($employeeFilename . '.csv', $csvContent);
@@ -1844,7 +2090,7 @@ class AttendanceController extends Controller
     /**
      * Generate a single employee DOCX file (returns path to temp file)
      */
-    private function generateSingleEmployeeDOCX($report, $overrides, $employee)
+    private function generateSingleEmployeeDOCX($report, $overrides, $employee, $headOfficerOverrides = null)
     {
         // Load template
         $templatePath = storage_path('app/templates/dtr_template.docx');
@@ -1892,12 +2138,14 @@ class AttendanceController extends Controller
             $ovKey = $employee->employee_id . '|' . $dateKey;
             $ov = $overrides ? ($overrides[$ovKey] ?? null) : null;
             
-            // Check if weekend
-            $isWeekend = $currentDate->isWeekend();
-            $dayName = $isWeekend ? strtoupper($currentDate->format('l')) : '';
-            
             // Calculate AM/PM times and undertime
             $amData = $this->extractAMPMTimes($detail, $ov, $currentDate);
+
+            // Check if weekend (only mark as weekend for display if no attendance data)
+            $isWeekend = $currentDate->isWeekend();
+            $hasAttendance = !empty($amData['am_arrival']) || !empty($amData['pm_arrival']);
+            $showWeekendLabel = $isWeekend && !$hasAttendance;
+            $dayName = $isWeekend ? strtoupper($currentDate->format('l')) : '';
             
             $daysData[] = [
                 'day' => $currentDate->format('j'),
@@ -1907,7 +2155,7 @@ class AttendanceController extends Controller
                 'pm_departure' => $amData['pm_departure'] ?: '',
                 'undertime_hours' => $amData['undertime_hours'] !== '' ? $amData['undertime_hours'] : '',
                 'undertime_minutes' => $amData['undertime_minutes'] !== '' ? $amData['undertime_minutes'] : '',
-                'is_weekend' => $isWeekend,
+                'is_weekend' => $showWeekendLabel,
                 'day_name' => $dayName,
                 'is_leave' => $ov !== null,
                 'leave_text' => $ov ? strtoupper($ov->remarks ?: 'LEAVE') : '',
@@ -1924,6 +2172,14 @@ class AttendanceController extends Controller
         $templateProcessor->setValue('period_label', $periodPrefix);
         $templateProcessor->setValue('period_date', $periodDate);
         $templateProcessor->setValue('office_hours', '8:00AM-12:00NN  /  1:00PM-5:00PM');
+        
+        // Set head officer template variables
+        $headOfficer = $headOfficerOverrides && isset($headOfficerOverrides[$employee->employee_id]) 
+            ? $headOfficerOverrides[$employee->employee_id] 
+            : null;
+        
+        $templateProcessor->setValue('head_officer_name', $headOfficer ? $headOfficer->head_officer_name : '');
+        $templateProcessor->setValue('head_officer_office', $headOfficer && $headOfficer->head_officer_office ? $headOfficer->head_officer_office : '');
         
         // Prepare summary text
         $summaryParts = [];
@@ -1943,35 +2199,42 @@ class AttendanceController extends Controller
         $summaryText = implode('; ', $summaryParts);
         $templateProcessor->setValue('summary_text', $summaryText);
         
-        // Clone the row for days data
+        // Clone the row for days data (both left and right tables)
         $templateProcessor->cloneRow('day', count($daysData));
+        $templateProcessor->cloneRow('day2', count($daysData));
         
         // Keep track of which rows are weekends/leaves for later merging
         $weekendRowIndices = [];
         
-        // Fill in day data
+        // Fill in day data for both tables
         $index = 1;
         foreach ($daysData as $dayData) {
-            $templateProcessor->setValue('day#' . $index, $dayData['day']);
+            // Fill both left table (no suffix) and right table (suffix '2')
+            foreach (['', '2'] as $suffix) {
+                $templateProcessor->setValue('day' . $suffix . '#' . $index, $dayData['day']);
         
-            // Handle weekends and leave days (span across all columns)
-            if ($dayData['is_leave'] || $dayData['is_weekend']) {
-                $displayText = $dayData['is_leave'] ? $dayData['leave_text'] : $dayData['day_name'];
-                $templateProcessor->setValue('am_arrival#' . $index, $displayText);
-                $templateProcessor->setValue('am_departure#' . $index, '');
-                $templateProcessor->setValue('pm_arrival#' . $index, '');
-                $templateProcessor->setValue('pm_departure#' . $index, '');
-                $templateProcessor->setValue('undertime_hours#' . $index, '');
-                $templateProcessor->setValue('undertime_minutes#' . $index, '');
-                $weekendRowIndices[] = $index - 1; // Store for later processing
-            } else {
-                // Regular day
-                $templateProcessor->setValue('am_arrival#' . $index, $dayData['am_arrival'] ? $dayData['am_arrival'] . ' ' : '');
-                $templateProcessor->setValue('am_departure#' . $index, $dayData['am_departure'] ? $dayData['am_departure'] . ' ' : '');
-                $templateProcessor->setValue('pm_arrival#' . $index, $dayData['pm_arrival'] ? $dayData['pm_arrival'] . ' ' : '');
-                $templateProcessor->setValue('pm_departure#' . $index, $dayData['pm_departure'] ? $dayData['pm_departure'] . ' ' : '');
-                $templateProcessor->setValue('undertime_hours#' . $index, $dayData['undertime_hours']);
-                $templateProcessor->setValue('undertime_minutes#' . $index, $dayData['undertime_minutes']);
+                // Handle weekends and leave days (span across all columns)
+                if ($dayData['is_leave'] || $dayData['is_weekend']) {
+                    $displayText = $dayData['is_leave'] ? $dayData['leave_text'] : $dayData['day_name'];
+                    $templateProcessor->setValue('am_arrival' . $suffix . '#' . $index, $displayText);
+                    $templateProcessor->setValue('am_departure' . $suffix . '#' . $index, '');
+                    $templateProcessor->setValue('pm_arrival' . $suffix . '#' . $index, '');
+                    $templateProcessor->setValue('pm_departure' . $suffix . '#' . $index, '');
+                    $templateProcessor->setValue('undertime_hours' . $suffix . '#' . $index, '');
+                    $templateProcessor->setValue('undertime_minutes' . $suffix . '#' . $index, '');
+                    // Only track once for merge processing (both tables will be merged)
+                    if ($suffix === '') {
+                        $weekendRowIndices[] = $index - 1;
+                    }
+                } else {
+                    // Regular day
+                    $templateProcessor->setValue('am_arrival' . $suffix . '#' . $index, $dayData['am_arrival'] ? $dayData['am_arrival'] . ' ' : '');
+                    $templateProcessor->setValue('am_departure' . $suffix . '#' . $index, $dayData['am_departure'] ? $dayData['am_departure'] . ' ' : '');
+                    $templateProcessor->setValue('pm_arrival' . $suffix . '#' . $index, $dayData['pm_arrival'] ? $dayData['pm_arrival'] . ' ' : '');
+                    $templateProcessor->setValue('pm_departure' . $suffix . '#' . $index, $dayData['pm_departure'] ? $dayData['pm_departure'] . ' ' : '');
+                    $templateProcessor->setValue('undertime_hours' . $suffix . '#' . $index, $dayData['undertime_hours']);
+                    $templateProcessor->setValue('undertime_minutes' . $suffix . '#' . $index, $dayData['undertime_minutes']);
+                }
             }
             $index++;
         }
@@ -1989,30 +2252,214 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Generate a single employee PDF file (returns PDF content)
+     * Convert DOCX file to PDF content (DOCX → HTML → PDF)
+     * 
+     * @param string $docxPath Path to the DOCX file
+     * @return string PDF binary content
      */
-    private function generateSingleEmployeePDF($report, $overrides, $employee)
+    private function convertDocxToPDF($docxPath)
     {
-        // Create a temporary report object with only this employee
-        $singleEmployeeReport = clone $report;
-        $singleEmployeeReport->setRelation('summaries', $report->summaries->where('employee_id', $employee->employee_id));
-        $singleEmployeeReport->setRelation('details', $report->details->where('employee_id', $employee->employee_id));
+        try {
+            // Verify DOCX file exists
+            if (!file_exists($docxPath)) {
+                throw new \Exception('DOCX file not found: ' . $docxPath);
+            }
+            
+            Log::info('Starting DOCX to PDF conversion', ['docx_path' => $docxPath, 'file_size' => filesize($docxPath)]);
+            
+            // Load DOCX file - handle EMF image validation errors
+            // PhpWord cannot process EMF images, so we'll create a cleaned version
+            $phpWord = null;
+            $cleanedDocxPath = null;
+            
+            try {
+                $phpWord = \PhpOffice\PhpWord\IOFactory::load($docxPath);
+                Log::info('DOCX file loaded successfully');
+            } catch (\Exception $loadException) {
+                // If loading fails due to invalid EMF image, create cleaned version
+                if (strpos($loadException->getMessage(), 'Invalid image') !== false) {
+                    Log::info('DOCX contains EMF images, creating cleaned version for PDF conversion');
+                    
+                    // Create a cleaned copy without EMF images
+                    $cleanedDocxPath = storage_path('app/temp_dtr_cleaned_' . uniqid() . '.docx');
+                    
+                    $sourceZip = new \ZipArchive();
+                    $cleanedZip = new \ZipArchive();
+                    
+                    if ($sourceZip->open($docxPath) === true && 
+                        $cleanedZip->open($cleanedDocxPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+                        
+                        // Copy all files except EMF/WMF images
+                        for ($i = 0; $i < $sourceZip->numFiles; $i++) {
+                            $filename = $sourceZip->getNameIndex($i);
+                            
+                            // Skip EMF/WMF images that cause validation errors
+                            if (preg_match('/\.(emf|wmf)$/i', $filename)) {
+                                Log::info('Skipping EMF/WMF image', ['filename' => $filename]);
+                                continue;
+                            }
+                            
+                            // Copy the file
+                            $fileContent = $sourceZip->getFromIndex($i);
+                            if ($fileContent !== false) {
+                                $cleanedZip->addFromString($filename, $fileContent);
+                            }
+                        }
+                        
+                        $sourceZip->close();
+                        $cleanedZip->close();
+                        
+                        // Now try loading the cleaned version
+                        try {
+                            $phpWord = \PhpOffice\PhpWord\IOFactory::load($cleanedDocxPath);
+                            Log::info('Cleaned DOCX loaded successfully');
+                        } catch (\Exception $cleanException) {
+                            // Clean up cleaned file before throwing
+                            if (file_exists($cleanedDocxPath)) {
+                                @unlink($cleanedDocxPath);
+                            }
+                            throw new \Exception('Failed to load cleaned DOCX: ' . $cleanException->getMessage());
+                        }
+                    } else {
+                        throw new \Exception('Could not create cleaned DOCX file');
+                    }
+                } else {
+                    // Re-throw if it's not an image error
+                    throw $loadException;
+                }
+            }
+            
+            if (!$phpWord) {
+                if ($cleanedDocxPath && file_exists($cleanedDocxPath)) {
+                    @unlink($cleanedDocxPath);
+                }
+                throw new \Exception('Failed to load DOCX file');
+            }
+            
+            // Convert DOCX to HTML
+            $htmlWriter = new \PhpOffice\PhpWord\Writer\HTML($phpWord);
+            
+            ob_start();
+            $htmlWriter->save('php://output');
+            $htmlContent = ob_get_clean();
+            
+            if (empty($htmlContent)) {
+                throw new \Exception('HTML conversion produced empty content');
+            }
+            
+            Log::info('DOCX converted to HTML', ['html_length' => strlen($htmlContent)]);
+            
+            // Add basic CSS for better PDF rendering
+            $htmlWithStyles = '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0;
+                        padding: 20px;
+                    }
+                    table {
+                        border-collapse: collapse;
+                        width: 100%;
+                    }
+                    table, th, td {
+                        border: 1px solid black;
+                    }
+                    th, td {
+                        padding: 8px;
+                        text-align: left;
+                    }
+                    img {
+                        max-width: 100%;
+                        height: auto;
+                    }
+                </style>
+            </head>
+            <body>
+            ' . $htmlContent . '
+            </body>
+            </html>';
+            
+            // Convert HTML to PDF using Dompdf
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($htmlWithStyles);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            
+            Log::info('PDF generated successfully from DOCX');
+            
+            $pdfContent = $dompdf->output();
+            
+            // Clean up cleaned DOCX file if it was created
+            if (isset($cleanedDocxPath) && $cleanedDocxPath && file_exists($cleanedDocxPath)) {
+                @unlink($cleanedDocxPath);
+                Log::info('Cleaned DOCX file removed', ['path' => $cleanedDocxPath]);
+            }
+            
+            return $pdfContent;
+        } catch (\Exception $e) {
+            // Clean up cleaned DOCX file if it was created (in case of error)
+            if (isset($cleanedDocxPath) && $cleanedDocxPath && file_exists($cleanedDocxPath)) {
+                @unlink($cleanedDocxPath);
+            }
+            
+            Log::error('DOCX to PDF conversion failed', [
+                'docx_path' => $docxPath,
+                'file_exists' => file_exists($docxPath),
+                'error' => $e->getMessage(),
+                'trace' => substr($e->getTraceAsString(), 0, 1000)
+            ]);
+            throw new \Exception('Failed to convert DOCX to PDF: ' . $e->getMessage());
+        }
+    }
 
-        $htmlContent = $this->generateHTMLContent($singleEmployeeReport, $overrides);
+    /**
+     * Generate a single employee PDF file using DOCX template (returns PDF content)
+     */
+    private function generateSingleEmployeePDF($report, $overrides, $employee, $headOfficerOverrides = null)
+    {
+        try {
+            // Generate DOCX using the same template logic
+            $docxPath = $this->generateSingleEmployeeDOCX($report, $overrides, $employee, $headOfficerOverrides);
+            
+            // Convert DOCX to PDF
+            $pdfContent = $this->convertDocxToPDF($docxPath);
+            
+            // Clean up temp DOCX file
+            if (file_exists($docxPath)) {
+                @unlink($docxPath);
+            }
+            
+            return $pdfContent;
+        } catch (\Exception $e) {
+            Log::warning('PDF generation from DOCX failed, falling back to HTML', [
+                'employee_id' => $employee->employee_id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback to HTML-based PDF generation
+            $singleEmployeeReport = clone $report;
+            $singleEmployeeReport->setRelation('summaries', $report->summaries->where('employee_id', $employee->employee_id));
+            $singleEmployeeReport->setRelation('details', $report->details->where('employee_id', $employee->employee_id));
 
-        // Use Dompdf to convert HTML to PDF
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->loadHtml($htmlContent);
-        $dompdf->setPaper('Letter', 'portrait');
-        $dompdf->render();
+            $htmlContent = $this->generateHTMLContent($singleEmployeeReport, $overrides);
 
-        return $dompdf->output();
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($htmlContent);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            return $dompdf->output();
+        }
     }
 
     /**
      * Generate a single employee CSV file (returns CSV content)
      */
-    private function generateSingleEmployeeCSV($report, $overrides, $employee)
+    private function generateSingleEmployeeCSV($report, $overrides, $employee, $headOfficerOverrides = null)
     {
         $csvData = [];
         
@@ -2088,7 +2535,21 @@ class AttendanceController extends Controller
         $csvData[] = ['VERIFIED as to the prescribed office hours'];
         $csvData[] = [];
         $csvData[] = ['________________________________________'];
-        $csvData[] = ['In Charge'];
+        
+        // Get head officer information for this employee
+        $headOfficer = $headOfficerOverrides && isset($headOfficerOverrides[$employee->employee_id]) 
+            ? $headOfficerOverrides[$employee->employee_id] 
+            : null;
+        
+        if ($headOfficer) {
+            $csvData[] = [$headOfficer->head_officer_name];
+            if ($headOfficer->head_officer_office) {
+                $csvData[] = [$headOfficer->head_officer_office];
+            }
+        } else {
+            $csvData[] = ['In Charge'];
+        }
+        
         $csvData[] = [];
         
         // Convert to CSV string

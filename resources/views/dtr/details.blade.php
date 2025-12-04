@@ -292,8 +292,91 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Head Officer Section -->
+                    <div class="mt-4 pt-3 border-top">
+                        @php
+                            $headOfficer = isset($headOfficerOverrides) && isset($headOfficerOverrides[$summary->employee->employee_id]) 
+                                ? $headOfficerOverrides[$summary->employee->employee_id] 
+                                : null;
+                        @endphp
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1" style="color: var(--aa-maroon);">
+                                    <i class="bi bi-person-badge me-2"></i>HEAD Officer
+                                </h6>
+                                @if($headOfficer)
+                                    <p class="mb-0 text-muted">
+                                        <strong>{{ $headOfficer->head_officer_name }}</strong>
+                                        @if($headOfficer->head_officer_office)
+                                            <br><small>{{ $headOfficer->head_officer_office }}</small>
+                                        @endif
+                                    </p>
+                                @else
+                                    <p class="mb-0 text-muted">Not set</p>
+                                @endif
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#headOfficerModal_{{ $summary->employee->employee_id }}">
+                                <i class="bi bi-pencil me-1"></i>@if($headOfficer) Edit @else Set @endif
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Head Officer Modal -->
+            <div class="modal fade" id="headOfficerModal_{{ $summary->employee->employee_id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
+                            <h5 class="modal-title text-white mb-0">
+                                <i class="bi bi-person-badge me-2"></i>Set HEAD Officer - {{ $summary->employee->full_name }}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form action="{{ route('dtr.head-officer.store') }}" method="POST">
+                            @csrf
+                            <div class="modal-body p-4" style="background: #fafbfc;">
+                                <input type="hidden" name="report_id" value="{{ $report->report_id }}">
+                                <input type="hidden" name="employee_id" value="{{ $summary->employee->employee_id }}">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold" style="color: var(--aa-maroon);">
+                                        HEAD Officer Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" name="head_officer_name" class="form-control form-control-lg border-2" 
+                                           placeholder="e.g., JOANNA R. ALFONSO, MPRM, LPT" 
+                                           value="{{ $headOfficer ? $headOfficer->head_officer_name : '' }}" 
+                                           required
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px;">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold" style="color: var(--aa-maroon);">
+                                        Office/Title <span class="text-muted">(optional)</span>
+                                    </label>
+                                    <input type="text" name="head_officer_office" class="form-control form-control-lg border-2" 
+                                           placeholder="e.g., Budget Office" 
+                                           value="{{ $headOfficer && $headOfficer->head_officer_office ? $headOfficer->head_officer_office : '' }}" 
+                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px;">
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0 p-3" style="background: #fafbfc;">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                @if($headOfficer)
+                                    <button type="button" class="btn btn-danger me-2" onclick="deleteHeadOfficer({{ $report->report_id }}, {{ $summary->employee->employee_id }})">
+                                        <i class="bi bi-trash me-1"></i>Remove
+                                    </button>
+                                @endif
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg me-1"></i>Save
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
             @foreach($report->details->where('employee_id', $summary->employee_id) as $detail)
             @php 
                 $dateKey = \Carbon\Carbon::parse($detail->date)->toDateString();
@@ -433,6 +516,44 @@
             document.body.appendChild(form);
             form.submit();
         });
+        
+        /**
+         * Delete head officer override
+         */
+        function deleteHeadOfficer(reportId, employeeId) {
+            if (!confirm('Remove head officer information for this employee?')) return;
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ route('dtr.head-officer.destroy') }}";
+            
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = '_token';
+            csrf.value = '{{ csrf_token() }}';
+            form.appendChild(csrf);
+            
+            const method = document.createElement('input');
+            method.type = 'hidden';
+            method.name = '_method';
+            method.value = 'DELETE';
+            form.appendChild(method);
+            
+            const rid = document.createElement('input');
+            rid.type = 'hidden';
+            rid.name = 'report_id';
+            rid.value = reportId;
+            form.appendChild(rid);
+            
+            const emp = document.createElement('input');
+            emp.type = 'hidden';
+            emp.name = 'employee_id';
+            emp.value = employeeId;
+            form.appendChild(emp);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
         
         /**
          * Keyboard shortcuts

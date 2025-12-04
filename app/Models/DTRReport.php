@@ -15,6 +15,7 @@ class DTRReport extends Model
     protected $fillable = [
         'admin_id',
         'department_id',
+        'employment_type',
         'report_type',
         'report_title',
         'start_date',
