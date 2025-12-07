@@ -299,80 +299,86 @@
                             $headOfficer = isset($headOfficerOverrides) && isset($headOfficerOverrides[$summary->employee->employee_id]) 
                                 ? $headOfficerOverrides[$summary->employee->employee_id] 
                                 : null;
+                            
+                            // Get department head for this employee's department
+                            $employeeDeptHead = isset($departmentHeads) && isset($departmentHeads[$summary->employee->department_id])
+                                ? $departmentHeads[$summary->employee->department_id]
+                                : null;
+                            
+                            // Find the current selected head officer ID
+                            // If there's a head officer override, check if it matches the department head
+                            $currentHeadOfficerId = null;
+                            if ($headOfficer && $employeeDeptHead) {
+                                // Check if the current head officer matches the department head (by name)
+                                // Use case-insensitive comparison and trim whitespace
+                                $savedName = trim(strtolower($headOfficer->head_officer_name));
+                                $deptHeadName = trim(strtolower($employeeDeptHead->head_name));
+                                if ($savedName === $deptHeadName) {
+                                    $currentHeadOfficerId = $employeeDeptHead->id;
+                                }
+                            }
                         @endphp
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1" style="color: var(--aa-maroon);">
+                        <div class="row align-items-end">
+                            <div class="col-12 col-md-8">
+                                <label class="form-label fw-semibold mb-2" style="color: var(--aa-maroon);">
                                     <i class="bi bi-person-badge me-2"></i>HEAD Officer
-                                </h6>
-                                @if($headOfficer)
-                                    <p class="mb-0 text-muted">
-                                        <strong>{{ $headOfficer->head_officer_name }}</strong>
-                                        @if($headOfficer->head_officer_office)
-                                            <br><small>{{ $headOfficer->head_officer_office }}</small>
-                                        @endif
-                                    </p>
+                                </label>
+                                @if($employeeDeptHead)
+                                    <form action="{{ route('dtr.head-officer.store') }}" method="POST" class="head-officer-form" data-employee-id="{{ $summary->employee->employee_id }}">
+                                        @csrf
+                                        <input type="hidden" name="report_id" value="{{ $report->report_id }}">
+                                        <input type="hidden" name="employee_id" value="{{ $summary->employee->employee_id }}">
+                                        <div class="d-flex gap-2 align-items-start">
+                                            @php
+                                                // Get old input value if validation failed for THIS specific employee
+                                                // Check if the old employee_id matches this employee to scope the old input correctly
+                                                $oldEmployeeId = old('employee_id');
+                                                $oldHeadOfficerId = old('head_officer_id');
+                                                
+                                                // Only use old input if it's for this specific employee
+                                                if ($oldEmployeeId == $summary->employee->employee_id && $oldHeadOfficerId) {
+                                                    $selectedHeadOfficerId = $oldHeadOfficerId;
+                                                } else {
+                                                    $selectedHeadOfficerId = $currentHeadOfficerId;
+                                                }
+                                            @endphp
+                                            <select name="head_officer_id" class="form-select head-officer-select @error('head_officer_id') is-invalid @enderror" style="flex: 1;" data-employee-id="{{ $summary->employee->employee_id }}" required>
+                                                <option value="">-- Select Head Officer --</option>
+                                                <option value="{{ $employeeDeptHead->id }}" {{ $selectedHeadOfficerId == $employeeDeptHead->id ? 'selected' : '' }}>
+                                                    {{ $employeeDeptHead->head_name }}{{ $employeeDeptHead->head_title ? ' - ' . $employeeDeptHead->head_title : '' }}
+                                                </option>
+                                            </select>
+                                            @error('head_officer_id')
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                            @if($headOfficer)
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteHeadOfficer({{ $report->report_id }}, {{ $summary->employee->employee_id }})" title="Remove Head Officer">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </form>
                                 @else
-                                    <p class="mb-0 text-muted">Not set</p>
+                                    <div class="alert alert-warning mb-0">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        <small>No head officer has been set for {{ $summary->employee->department ? $summary->employee->department->department_name : 'this department' }}. Please set one in Manage Offices first.</small>
+                                    </div>
                                 @endif
                             </div>
-                            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#headOfficerModal_{{ $summary->employee->employee_id }}">
-                                <i class="bi bi-pencil me-1"></i>@if($headOfficer) Edit @else Set @endif
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Head Officer Modal -->
-            <div class="modal fade" id="headOfficerModal_{{ $summary->employee->employee_id }}" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                        <div class="modal-header header-maroon d-flex justify-content-between align-items-center">
-                            <h5 class="modal-title text-white mb-0">
-                                <i class="bi bi-person-badge me-2"></i>Set HEAD Officer - {{ $summary->employee->full_name }}
-                            </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="{{ route('dtr.head-officer.store') }}" method="POST">
-                            @csrf
-                            <div class="modal-body p-4" style="background: #fafbfc;">
-                                <input type="hidden" name="report_id" value="{{ $report->report_id }}">
-                                <input type="hidden" name="employee_id" value="{{ $summary->employee->employee_id }}">
-                                
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold" style="color: var(--aa-maroon);">
-                                        HEAD Officer Name <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" name="head_officer_name" class="form-control form-control-lg border-2" 
-                                           placeholder="e.g., JOANNA R. ALFONSO, MPRM, LPT" 
-                                           value="{{ $headOfficer ? $headOfficer->head_officer_name : '' }}" 
-                                           required
-                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px;">
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold" style="color: var(--aa-maroon);">
-                                        Office/Title <span class="text-muted">(optional)</span>
-                                    </label>
-                                    <input type="text" name="head_officer_office" class="form-control form-control-lg border-2" 
-                                           placeholder="e.g., Budget Office" 
-                                           value="{{ $headOfficer && $headOfficer->head_officer_office ? $headOfficer->head_officer_office : '' }}" 
-                                           style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px;">
+                            <div class="col-12 col-md-4 mt-2 mt-md-0">
+                                <div class="head-officer-display text-muted" data-employee-id="{{ $summary->employee->employee_id }}">
+                                    @if($headOfficer)
+                                        <small>
+                                            <strong>Current:</strong><br>
+                                            {{ $headOfficer->head_officer_name }}
+                                            @if($headOfficer->head_officer_office)
+                                                <br><small>{{ $headOfficer->head_officer_office }}</small>
+                                            @endif
+                                        </small>
+                                    @endif
                                 </div>
                             </div>
-                            <div class="modal-footer border-0 p-3" style="background: #fafbfc;">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                                @if($headOfficer)
-                                    <button type="button" class="btn btn-danger me-2" onclick="deleteHeadOfficer({{ $report->report_id }}, {{ $summary->employee->employee_id }})">
-                                        <i class="bi bi-trash me-1"></i>Remove
-                                    </button>
-                                @endif
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-check-lg me-1"></i>Save
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -450,6 +456,38 @@
             </div>
         </div>
     </div>
+    
+    <!-- Toast Notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <span id="successMessage"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="errorMessage"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="infoToast" class="toast align-items-center text-white bg-info border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <span id="infoMessage"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    
     @include('layouts.toast-js')
     <script>
         /**
@@ -518,41 +556,81 @@
         });
         
         /**
-         * Delete head officer override
+         * Delete head officer override using AJAX
          */
         function deleteHeadOfficer(reportId, employeeId) {
             if (!confirm('Remove head officer information for this employee?')) return;
             
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = "{{ route('dtr.head-officer.destroy') }}";
+            // Show loading state
+            const form = document.querySelector(`.head-officer-form[data-employee-id="${employeeId}"]`);
+            const select = form ? form.querySelector('.head-officer-select') : null;
+            if (select) {
+                select.disabled = true;
+                select.style.opacity = '0.6';
+            }
             
-            const csrf = document.createElement('input');
-            csrf.type = 'hidden';
-            csrf.name = '_token';
-            csrf.value = '{{ csrf_token() }}';
-            form.appendChild(csrf);
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('report_id', reportId);
+            formData.append('employee_id', employeeId);
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('_method', 'DELETE');
             
-            const method = document.createElement('input');
-            method.type = 'hidden';
-            method.name = '_method';
-            method.value = 'DELETE';
-            form.appendChild(method);
-            
-            const rid = document.createElement('input');
-            rid.type = 'hidden';
-            rid.name = 'report_id';
-            rid.value = reportId;
-            form.appendChild(rid);
-            
-            const emp = document.createElement('input');
-            emp.type = 'hidden';
-            emp.name = 'employee_id';
-            emp.value = employeeId;
-            form.appendChild(emp);
-            
-            document.body.appendChild(form);
-            form.submit();
+            // Send AJAX request
+            fetch('{{ route("dtr.head-officer.destroy") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    if (typeof showNotification === 'function') {
+                        showNotification('success', data.message);
+                    }
+                    
+                    // Clear the display section
+                    updateHeadOfficerDisplay(employeeId, null, null);
+                    
+                    // Reset dropdown to empty
+                    if (select) {
+                        select.value = '';
+                        select.setAttribute('data-previous-value', '');
+                    }
+                    
+                    // Remove delete button
+                    const deleteBtn = form ? form.querySelector('.btn-outline-danger') : null;
+                    if (deleteBtn) {
+                        deleteBtn.remove();
+                    }
+                } else {
+                    // Show error message
+                    if (typeof showNotification === 'function') {
+                        showNotification('error', data.message || 'Failed to remove head officer.');
+                    } else {
+                        alert(data.message || 'Failed to remove head officer.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting head officer:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('error', 'An error occurred while removing the head officer. Please try again.');
+                } else {
+                    alert('An error occurred while removing the head officer. Please try again.');
+                }
+            })
+            .finally(() => {
+                // Re-enable select
+                if (select) {
+                    select.disabled = false;
+                    select.style.opacity = '1';
+                }
+            });
         }
         
         /**
@@ -565,5 +643,175 @@
                 goBack();
             }
         });
+        
+        /**
+         * Handle head officer dropdown change - use AJAX to save without page reload
+         */
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('head-officer-select')) {
+                const form = e.target.closest('.head-officer-form');
+                if (form) {
+                    const select = e.target;
+                    const selectedValue = select.value;
+                    const employeeId = form.getAttribute('data-employee-id');
+                    
+                    console.log('Head officer dropdown changed:', selectedValue);
+                    
+                    // If empty value selected, ask for confirmation to remove
+                    if (!selectedValue) {
+                        if (confirm('Remove head officer for this employee?')) {
+                            const reportId = form.querySelector('input[name="report_id"]').value;
+                            deleteHeadOfficer(reportId, employeeId);
+                        } else {
+                            // Reset to previous value if cancelled
+                            const previousValue = select.getAttribute('data-previous-value') || '';
+                            select.value = previousValue;
+                        }
+                        return;
+                    }
+                    
+                    // Store current value for potential reset
+                    select.setAttribute('data-previous-value', selectedValue);
+                    
+                    // Show loading state
+                    select.disabled = true;
+                    select.style.opacity = '0.6';
+                    select.style.cursor = 'wait';
+                    
+                    // Add a small loading indicator
+                    const existingLoading = select.parentElement.querySelector('.saving-indicator');
+                    if (existingLoading) {
+                        existingLoading.remove();
+                    }
+                    const loadingText = document.createElement('span');
+                    loadingText.className = 'saving-indicator ms-2 text-muted';
+                    loadingText.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+                    select.parentElement.appendChild(loadingText);
+                    
+                    // Get form data
+                    const reportId = form.querySelector('input[name="report_id"]').value;
+                    const formEmployeeId = form.querySelector('input[name="employee_id"]').value;
+                    const csrfToken = form.querySelector('input[name="_token"]').value;
+                    
+                    // Prepare form data
+                    const formData = new FormData();
+                    formData.append('report_id', reportId);
+                    formData.append('employee_id', formEmployeeId);
+                    formData.append('head_officer_id', selectedValue);
+                    formData.append('_token', csrfToken);
+                    
+                    // Send AJAX request
+                    fetch('{{ route("dtr.head-officer.store") }}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove loading indicator
+                        if (loadingText) loadingText.remove();
+                        
+                        if (data.success) {
+                            // Show success message
+                            if (typeof showNotification === 'function') {
+                                showNotification('success', data.message);
+                            }
+                            
+                            // Update the "Current" display section
+                            updateHeadOfficerDisplay(employeeId, data.data.head_officer_name, data.data.head_officer_office);
+                            
+                            // Show delete button if it doesn't exist
+                            const deleteBtn = form.querySelector('.btn-outline-danger');
+                            if (!deleteBtn) {
+                                const deleteButton = document.createElement('button');
+                                deleteButton.type = 'button';
+                                deleteButton.className = 'btn btn-outline-danger btn-sm';
+                                deleteButton.setAttribute('onclick', `deleteHeadOfficer(${reportId}, ${formEmployeeId})`);
+                                deleteButton.setAttribute('title', 'Remove Head Officer');
+                                deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
+                                select.parentElement.appendChild(deleteButton);
+                            }
+                            
+                            // Ensure the selected value is marked as selected in the dropdown
+                            select.setAttribute('data-previous-value', selectedValue);
+                        } else {
+                            // Show error message
+                            if (typeof showNotification === 'function') {
+                                showNotification('error', data.message || 'Failed to save head officer.');
+                            } else {
+                                alert(data.message || 'Failed to save head officer.');
+                            }
+                            
+                            // Reset to previous value
+                            const previousValue = select.getAttribute('data-previous-value') || '';
+                            select.value = previousValue;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error saving head officer:', error);
+                        if (loadingText) loadingText.remove();
+                        
+                        if (typeof showNotification === 'function') {
+                            showNotification('error', 'An error occurred while saving the head officer. Please try again.');
+                        } else {
+                            alert('An error occurred while saving the head officer. Please try again.');
+                        }
+                        
+                        // Reset to previous value
+                        const previousValue = select.getAttribute('data-previous-value') || '';
+                        select.value = previousValue;
+                    })
+                    .finally(() => {
+                        // Re-enable select
+                        select.disabled = false;
+                        select.style.opacity = '1';
+                        select.style.cursor = '';
+                    });
+                }
+            }
+        });
+        
+        /**
+         * Update the head officer display section after successful save or delete
+         */
+        function updateHeadOfficerDisplay(employeeId, headOfficerName, headOfficerOffice) {
+            // Find the display section for this employee
+            const form = document.querySelector(`.head-officer-form[data-employee-id="${employeeId}"]`);
+            if (!form) return;
+            
+            // Find the parent row to locate the display section
+            const row = form.closest('.row');
+            if (!row) return;
+            
+            // Find the display section
+            let displaySection = row.querySelector(`.head-officer-display[data-employee-id="${employeeId}"]`);
+            if (!displaySection) {
+                // Create the display section if it doesn't exist
+                const col = row.querySelector('.col-12.col-md-4');
+                if (col) {
+                    displaySection = document.createElement('div');
+                    displaySection.className = 'head-officer-display text-muted';
+                    displaySection.setAttribute('data-employee-id', employeeId);
+                    col.appendChild(displaySection);
+                }
+            }
+            
+            if (displaySection) {
+                if (headOfficerName) {
+                    displaySection.innerHTML = `
+                        <small>
+                            <strong>Current:</strong><br>
+                            ${headOfficerName}
+                            ${headOfficerOffice ? '<br><small>' + headOfficerOffice + '</small>' : ''}
+                        </small>
+                    `;
+                } else {
+                    displaySection.innerHTML = '';
+                }
+            }
+        }
     </script>
 @endsection

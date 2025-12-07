@@ -49,6 +49,41 @@
                                 @enderror
                             </div>
 
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-person-badge me-2"></i>Head Officer <span class="text-muted">(optional)</span>
+                                </label>
+                                <div class="alert alert-info mb-2 py-2">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <small>You can set the head officer now or add it later.</small>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="head_name" class="form-label small">
+                                        Head Officer Name
+                                    </label>
+                                    <input type="text" name="head_name" id="head_name" 
+                                           class="form-control @error('head_name') is-invalid @enderror" 
+                                           placeholder="e.g., JOAN J. DELA CRUZ, LPT" 
+                                           maxlength="255" 
+                                           value="{{ old('head_name') }}">
+                                    @error('head_name')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label for="head_title" class="form-label small">
+                                        Office/Title <span class="text-muted">(optional)</span>
+                                    </label>
+                                    <input type="text" name="head_title" id="head_title" 
+                                           class="form-control @error('head_title') is-invalid @enderror" 
+                                           placeholder="e.g., Budget Office" 
+                                           maxlength="255" 
+                                           value="{{ old('head_title') }}">
+                                    @error('head_title')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-warning">
@@ -155,6 +190,7 @@
                             <tr>
                                 <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-hash me-1"></i>ID</th>
                                 <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-building me-1"></i>Office Name</th>
+                                <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-person-badge me-1"></i>Head Officer</th>
                                 <th class="py-3 px-4" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-people me-1"></i>Employees</th>
                                 <th class="py-3 px-2 text-center" style="color:#b71c1c; font-size:1.1rem; font-weight:700; background:transparent;"><i class="bi bi-gear me-1"></i>Actions</th>
                             </tr>
@@ -170,11 +206,34 @@
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
+                                        @if($department->head)
+                                            <div>
+                                                <div class="fw-semibold text-primary">
+                                                    <i class="bi bi-person-badge me-1"></i>{{ $department->head->head_name }}
+                                                </div>
+                                                @if($department->head->head_title)
+                                                    <small class="text-muted">{{ $department->head->head_title }}</small>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-muted">
+                                                <i class="bi bi-dash-circle me-1"></i>Not set
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4">
                                         <span class="badge bg-{{ $department->employees_count > 0 ? 'success' : 'secondary' }}">
                                             {{ $department->employees_count }} employee{{ $department->employees_count != 1 ? 's' : '' }}
                                         </span>
                                     </td>
                                     <td class="py-3 px-2 text-center">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-info me-1" 
+                                                onclick="openHeadOfficerModal({{ $department->department_id }})" 
+                                                data-dept-id="{{ $department->department_id }}"
+                                                title="{{ $department->head ? 'Edit' : 'Set' }} Head Officer">
+                                            <i class="bi bi-person-badge"></i>
+                                        </button>
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-primary me-1 edit-dept-btn" 
                                                 onclick="openEditModal({{ $department->department_id }})" 
@@ -199,6 +258,79 @@
                                         @endif
                                     </td>
                                 </tr>
+
+                                <!-- Head Officer Modal -->
+                                <div class="modal" id="headOfficerModal_{{ $department->department_id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="headOfficerModalLabel_{{ $department->department_id }}">
+                                                    <i class="bi bi-person-badge me-2"></i>{{ $department->head ? 'Edit' : 'Set' }} Head Officer - {{ $department->department_name }}
+                                                </h5>
+                                                <button type="button" class="btn-close" onclick="closeHeadOfficerModal(document.getElementById('headOfficerModal_{{ $department->department_id }}'))" aria-label="Close"></button>
+                                            </div>
+                                            <form action="{{ route('departments.head.store') }}" method="POST" id="headOfficerForm_{{ $department->department_id }}">
+                                                @csrf
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="department_id" value="{{ $department->department_id }}">
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="head_name_{{ $department->department_id }}" class="form-label">
+                                                            <i class="bi bi-person me-2"></i>Head Officer Name <span class="text-danger">*</span>
+                                                        </label>
+                                                        <input type="text" 
+                                                               name="head_name" 
+                                                               id="head_name_{{ $department->department_id }}"
+                                                               class="form-control" 
+                                                               value="{{ $department->head ? $department->head->head_name : '' }}" 
+                                                               required 
+                                                               maxlength="255"
+                                                               placeholder="e.g., JOAN J. DELA CRUZ, LPT">
+                                                        <div class="form-text">Enter the full name of the head officer for this office.</div>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="head_title_{{ $department->department_id }}" class="form-label">
+                                                            <i class="bi bi-briefcase me-2"></i>Office/Title <span class="text-muted">(optional)</span>
+                                                        </label>
+                                                        <input type="text" 
+                                                               name="head_title" 
+                                                               id="head_title_{{ $department->department_id }}"
+                                                               class="form-control" 
+                                                               value="{{ $department->head ? $department->head->head_title : '' }}" 
+                                                               maxlength="255"
+                                                               placeholder="e.g., Budget Office">
+                                                        <div class="form-text">Enter the title or office designation (optional).</div>
+                                                    </div>
+                                                    
+                                                    @if($department->head)
+                                                        <div class="alert alert-info">
+                                                            <i class="bi bi-info-circle me-2"></i>
+                                                            <strong>Current Head Officer:</strong><br>
+                                                            {{ $department->head->head_name }}
+                                                            @if($department->head->head_title)
+                                                                <br><small>{{ $department->head->head_title }}</small>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                <div class="modal-footer">
+                                                    @if($department->head)
+                                                        <button type="button" class="btn btn-danger me-auto" onclick="deleteHeadOfficer({{ $department->department_id }})">
+                                                            <i class="bi bi-trash me-1"></i>Remove Head Officer
+                                                        </button>
+                                                    @endif
+                                                    <button type="button" class="btn btn-secondary" onclick="closeHeadOfficerModal(document.getElementById('headOfficerModal_{{ $department->department_id }}'))">
+                                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                                    </button>
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="bi bi-check-circle me-1"></i>Save
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <!-- Edit Office Modal -->
                                 <div class="modal" id="editDepartmentModal_{{ $department->department_id }}" tabindex="-1" aria-hidden="true">
@@ -250,7 +382,7 @@
                                 </div>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-4">
+                                    <td colspan="5" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="bi bi-inbox display-6 d-block mb-2"></i>
                                             <h5>No Offices Found</h5>
@@ -691,6 +823,145 @@
         // Make functions globally available
         window.openEditModal = openEditModal;
         window.closeModal = closeModal;
+        
+        // Head Officer Modal Functions
+        function openHeadOfficerModal(departmentId) {
+            console.log('openHeadOfficerModal called with ID:', departmentId);
+            
+            // Hide all modals first
+            document.querySelectorAll('.modal').forEach(function(m) {
+                m.style.display = 'none';
+                m.classList.remove('show');
+            });
+            
+            // Remove all backdrops
+            document.querySelectorAll('.modal-backdrop').forEach(function(b) {
+                b.remove();
+            });
+            
+            const modal = document.getElementById('headOfficerModal_' + departmentId);
+            console.log('Head Officer Modal element found:', modal);
+            
+            if (modal) {
+                try {
+                    // Reset form state
+                    const form = modal.querySelector('form');
+                    const nameInput = form.querySelector('[name="head_name"]');
+                    const titleInput = form.querySelector('[name="head_title"]');
+                    
+                    if (nameInput) {
+                        nameInput.classList.remove('is-invalid');
+                    }
+                    
+                    // Create backdrop manually
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop';
+                    backdrop.style.cssText = 'position: fixed; top: 0; left: 0; z-index: 1050; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.5);';
+                    document.body.appendChild(backdrop);
+                    
+                    // Show modal manually - no Bootstrap
+                    modal.style.display = 'block';
+                    modal.classList.add('show');
+                    modal.setAttribute('aria-hidden', 'false');
+                    
+                    // Add body class
+                    document.body.classList.add('modal-open');
+                    document.body.style.overflow = 'hidden';
+                    
+                    console.log('Head Officer Modal should be showing now');
+                    
+                    // Focus on name input
+                    setTimeout(() => {
+                        if (nameInput) {
+                            nameInput.focus();
+                            nameInput.select();
+                        }
+                    }, 100);
+                    
+                    // Handle ALL close buttons
+                    const closeBtns = modal.querySelectorAll('.btn-close, [data-bs-dismiss="modal"], .btn-secondary, .cancel-btn');
+                    closeBtns.forEach(function(btn) {
+                        btn.onclick = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            closeHeadOfficerModal(modal);
+                        };
+                    });
+                    
+                    // Handle backdrop click
+                    backdrop.onclick = function(e) {
+                        if (e.target === backdrop) {
+                            closeHeadOfficerModal(modal);
+                        }
+                    };
+                    
+                } catch (error) {
+                    console.error('Error opening head officer modal:', error);
+                    alert('Error opening modal: ' + error.message);
+                }
+            } else {
+                console.error('Head Officer Modal not found with ID: headOfficerModal_' + departmentId);
+                alert('Modal not found. Please refresh the page.');
+            }
+        }
+        
+        function closeHeadOfficerModal(modal) {
+            // Hide modal
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+            
+            // Remove backdrop
+            document.querySelectorAll('.modal-backdrop').forEach(function(b) {
+                b.remove();
+            });
+            
+            // Restore body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }
+        
+        function deleteHeadOfficer(departmentId) {
+            if (!confirm('Are you sure you want to remove the head officer for this office?')) {
+                return;
+            }
+            
+            try {
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("departments.head.destroy") }}';
+
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+                
+                const departmentIdField = document.createElement('input');
+                departmentIdField.type = 'hidden';
+                departmentIdField.name = 'department_id';
+                departmentIdField.value = departmentId;
+
+                form.appendChild(csrfToken);
+                form.appendChild(methodField);
+                form.appendChild(departmentIdField);
+                document.body.appendChild(form);
+                form.submit();
+            } catch (error) {
+                console.error('Error deleting head officer:', error);
+                alert('An error occurred while trying to remove the head officer. Please try again.');
+            }
+        }
+        
+        // Make functions globally available
+        window.openHeadOfficerModal = openHeadOfficerModal;
+        window.closeHeadOfficerModal = closeHeadOfficerModal;
+        window.deleteHeadOfficer = deleteHeadOfficer;
         
         // Form validation handler
         function validateAndSubmit(form) {

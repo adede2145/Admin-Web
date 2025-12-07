@@ -310,7 +310,7 @@ class DTRService
 
     public function getDTRReportDetails($reportId, $admin)
     {
-        $report = DTRReport::with(['admin', 'department', 'summaries.employee', 'details.employee'])
+        $report = DTRReport::with(['admin', 'department', 'summaries.employee.department', 'details.employee.department'])
             ->findOrFail($reportId);
 
         // Check permissions

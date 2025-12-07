@@ -546,7 +546,13 @@ class AttendanceController extends Controller
             ->get()
             ->keyBy('employee_id');
 
-        return view('dtr.details', compact('report', 'overrides', 'headOfficerOverrides'));
+        // Load all active department heads, keyed by department_id
+        $departmentHeads = \App\Models\DepartmentHead::where('is_active', true)
+            ->with('department')
+            ->get()
+            ->keyBy('department_id');
+
+        return view('dtr.details', compact('report', 'overrides', 'headOfficerOverrides', 'departmentHeads'));
     }
 
     public function deleteDTR($reportId)
