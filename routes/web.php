@@ -167,6 +167,11 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
 
     // Department Management
     Route::resource('departments', DepartmentController::class);
+    
+    // Department Head Officer Management
+    Route::post('departments/head/store', [DepartmentController::class, 'storeHead'])->name('departments.head.store');
+    Route::delete('departments/head/destroy', [DepartmentController::class, 'destroyHead'])->name('departments.head.destroy');
+
 
     // Kiosk Management
     Route::resource('kiosks', KioskController::class);

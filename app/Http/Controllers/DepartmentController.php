@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\DepartmentHead;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
@@ -20,7 +21,9 @@ class DepartmentController extends Controller
 
     public function index()
     {
-        $departments = Department::withCount('employees')->get();
+        $departments = Department::withCount('employees')
+            ->with('head')
+            ->get();
         return view('admin.departments.index', compact('departments'));
     }
 
@@ -33,6 +36,8 @@ class DepartmentController extends Controller
     {
         $validated = $request->validate([
             'department_name' => 'required|string|max:100|unique:departments,department_name',
+            'head_name' => 'nullable|string|max:255',
+            'head_title' => 'nullable|string|max:255',
         ], [
             'department_name.required' => 'Office name is required.',
             'department_name.string' => 'Office name must be a valid text.',
@@ -40,7 +45,19 @@ class DepartmentController extends Controller
             'department_name.unique' => 'An office with this name already exists.',
         ]);
 
-        Department::create($validated);
+        $department = Department::create([
+            'department_name' => $validated['department_name']
+        ]);
+
+        // Create head officer if provided
+        if (!empty($validated['head_name'])) {
+            DepartmentHead::create([
+                'department_id' => $department->department_id,
+                'head_name' => $validated['head_name'],
+                'head_title' => $validated['head_title'] ?? null,
+                'is_active' => true
+            ]);
+        }
 
         return redirect()->route('departments.index')
             ->with('success', 'Office created successfully.');
@@ -111,5 +128,44 @@ class DepartmentController extends Controller
             return redirect()->route('departments.index')
                 ->with('error', 'An unexpected error occurred while deleting the office.');
         }
+    }
+
+    /**
+     * Store or update head officer for a department
+     */
+    public function storeHead(Request $request)
+    {
+        $validated = $request->validate([
+            'department_id' => 'required|exists:departments,department_id',
+            'head_name' => 'required|string|max:255',
+            'head_title' => 'nullable|string|max:255'
+        ]);
+        
+        DepartmentHead::updateOrCreate(
+            ['department_id' => $validated['department_id']],
+            [
+                'head_name' => $validated['head_name'],
+                'head_title' => $validated['head_title'],
+                'is_active' => true
+            ]
+        );
+        
+        return redirect()->route('departments.index')
+                         ->with('success', 'Head officer updated successfully!');
+    }
+
+    /**
+     * Remove head officer from a department
+     */
+    public function destroyHead(Request $request)
+    {
+        $validated = $request->validate([
+            'department_id' => 'required|exists:departments,department_id'
+        ]);
+        
+        DepartmentHead::where('department_id', $validated['department_id'])->delete();
+        
+        return redirect()->route('departments.index')
+                         ->with('success', 'Head officer removed successfully!');
     }
 }

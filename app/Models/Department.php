@@ -39,4 +39,9 @@ class Department extends Model
     {
         return $this->hasMany(DTRReport::class, 'department_id', 'department_id');
     }
+
+    public function head()
+    {
+        return $this->hasOne(DepartmentHead::class, 'department_id', 'department_id');
+    }
 }
