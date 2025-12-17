@@ -1732,6 +1732,10 @@ class AttendanceController extends Controller
         if (!$detail || $detail->status === 'absent') {
             return $result; // No attendance = blank, not 8 hours undertime
         }
+
+        // Cap working-time calculation at 6:00 PM and display at just before 6:00 PM
+        $capCalc = \Carbon\Carbon::parse($detail->date)->setTime(18, 0, 0);
+        $capDisplay = \Carbon\Carbon::parse($detail->date)->setTime(17, 59, 59);
         
         // Get all attendance logs for this day to split AM/PM (excluding rejected RFID records)
         $logs = \App\Models\AttendanceLog::where('employee_id', $detail->employee_id)
@@ -1774,15 +1778,18 @@ class AttendanceController extends Controller
                     $result['am_arrival'] = $log->time_in->format('h:i A');
                     $result['am_departure'] = '12:00 PM'; // Assume lunch break starts at 12
                     $result['pm_arrival'] = '01:00 PM'; // Assume lunch break ends at 1 PM
-                    $result['pm_departure'] = $log->time_out->format('h:i A');
+                    $displayOut = $log->time_out->greaterThan($capDisplay) ? $capDisplay : $log->time_out;
+                    $result['pm_departure'] = $displayOut->format('h:i A');
                 } elseif ($timeInHour < 12) {
                     // AM only
                     $result['am_arrival'] = $log->time_in->format('h:i A');
-                    $result['am_departure'] = $log->time_out->format('h:i A');
+                    $displayOut = $log->time_out->greaterThan($capDisplay) ? $capDisplay : $log->time_out;
+                    $result['am_departure'] = $displayOut->format('h:i A');
                 } else {
                     // PM only
                     $result['pm_arrival'] = $log->time_in->format('h:i A');
-                    $result['pm_departure'] = $log->time_out->format('h:i A');
+                    $displayOut = $log->time_out->greaterThan($capDisplay) ? $capDisplay : $log->time_out;
+                    $result['pm_departure'] = $displayOut->format('h:i A');
                 }
             } elseif ($log->time_in) {
                 // Only time in, no time out
@@ -1813,7 +1820,18 @@ class AttendanceController extends Controller
                 
                 // AM departure could be from the same log or the last AM log
                 $lastAM = end($amLogs);
-                $result['am_departure'] = $lastAM->time_out ? $lastAM->time_out->format('h:i A') : '';
+                if ($lastAM->time_out) {
+                    $timeOut = $lastAM->time_out;
+                    $timeOutHour = (int) $timeOut->format('H');
+                    // Cap AM departure at 1:00 PM if it extends beyond
+                    if ($timeOutHour >= 13) {
+                        $result['am_departure'] = '01:00 PM';
+                    } else {
+                        $result['am_departure'] = $timeOut->format('h:i A');
+                    }
+                } else {
+                    $result['am_departure'] = '';
+                }
             }
             
             // Extract PM times
@@ -1822,7 +1840,12 @@ class AttendanceController extends Controller
                 $result['pm_arrival'] = $firstPM->time_in ? $firstPM->time_in->format('h:i A') : '';
                 
                 $lastPM = end($pmLogs);
-                $result['pm_departure'] = $lastPM->time_out ? $lastPM->time_out->format('h:i A') : '';
+                if ($lastPM->time_out) {
+                    $displayOut = $lastPM->time_out->greaterThan($capDisplay) ? $capDisplay : $lastPM->time_out;
+                    $result['pm_departure'] = $displayOut->format('h:i A');
+                } else {
+                    $result['pm_departure'] = '';
+                }
             }
         }
         
@@ -1839,11 +1862,21 @@ class AttendanceController extends Controller
                 
                 // If it spans AM to PM (already detected), deduct 1 hour lunch break
                 if ($isSingleSpanningLog) {
-                    $totalMinutes = $log->time_in->diffInMinutes($log->time_out);
-                    $totalWorkedMinutes = $totalMinutes - 60; // Deduct 1 hour lunch
+                    $cappedOut = $log->time_out->lessThan($capCalc) ? $log->time_out : $capCalc;
+                    if ($cappedOut->lessThanOrEqualTo($log->time_in)) {
+                        $totalMinutes = 0;
+                    } else {
+                        $totalMinutes = $log->time_in->diffInMinutes($cappedOut);
+                    }
+                    $totalWorkedMinutes = max(0, $totalMinutes - 60); // Deduct 1 hour lunch
                 } else {
                     // Single session (either AM only or PM only)
-                    $totalWorkedMinutes = $log->time_in->diffInMinutes($log->time_out);
+                    $cappedOut = $log->time_out->lessThan($capCalc) ? $log->time_out : $capCalc;
+                    if ($cappedOut->lessThanOrEqualTo($log->time_in)) {
+                        $totalWorkedMinutes = 0;
+                    } else {
+                        $totalWorkedMinutes = max(0, $log->time_in->diffInMinutes($cappedOut));
+                    }
                 }
             } elseif ($log->time_in) {
                 $hasTimeIn = true;
@@ -1858,7 +1891,12 @@ class AttendanceController extends Controller
                 if ($firstAM->time_in) {
                     $hasTimeIn = true;
                     if ($lastAM->time_out) {
-                        $totalWorkedMinutes += $firstAM->time_in->diffInMinutes($lastAM->time_out);
+                        $cappedOut = $lastAM->time_out->lessThan($capCalc) ? $lastAM->time_out : $capCalc;
+                        if ($cappedOut->lessThanOrEqualTo($firstAM->time_in)) {
+                            $totalWorkedMinutes += 0;
+                        } else {
+                            $totalWorkedMinutes += max(0, $firstAM->time_in->diffInMinutes($cappedOut));
+                        }
                     }
                 }
             }
@@ -1870,7 +1908,12 @@ class AttendanceController extends Controller
                 if ($firstPM->time_in) {
                     $hasTimeIn = true;
                     if ($lastPM->time_out) {
-                        $totalWorkedMinutes += $firstPM->time_in->diffInMinutes($lastPM->time_out);
+                        $cappedOut = $lastPM->time_out->lessThan($capCalc) ? $lastPM->time_out : $capCalc;
+                        if ($cappedOut->lessThanOrEqualTo($firstPM->time_in)) {
+                            $totalWorkedMinutes += 0;
+                        } else {
+                            $totalWorkedMinutes += max(0, $firstPM->time_in->diffInMinutes($cappedOut));
+                        }
                     }
                 }
             }

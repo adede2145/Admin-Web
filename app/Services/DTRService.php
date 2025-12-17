@@ -226,31 +226,131 @@ class DTRService
             ];
         }
 
-        $firstLog = $logs->first();
-        $lastLog = $logs->last();
-        
-        $timeIn = $firstLog->time_in;
-        $timeOut = $lastLog->time_out;
-        
-        $totalHours = 0;
-        $overtimeHours = 0;
-        $status = 'present';
-        $remarks = 'Regular work day';
+        $capCalc = Carbon::parse($date)->setTime(18, 0, 0);       // cap regular time at 6:00 PM for calculations
+        $capDisplay = Carbon::parse($date)->setTime(17, 59, 0);   // do not display 6:00 PM
 
-        if ($timeIn && $timeOut) {
-            $totalHours = $timeIn->diffInHours($timeOut, false);
-            $overtimeHours = max(0, $totalHours - 8); // Assuming 8 hours is regular work day
-            $remarks = "Worked {$totalHours} hours";
-        } else {
-            $status = 'incomplete';
-            $remarks = $timeIn ? 'No time out recorded' : 'No time in recorded';
+        // Identify AM/PM punches
+        $amIn = null;
+        $amOut = null;
+        $pmIn = null;
+        $pmOut = null;
+        foreach ($logs as $log) {
+            if ($log->time_in) {
+                $hourIn = (int)$log->time_in->format('H');
+                if ($hourIn < 12) {
+                    if (!$amIn || $log->time_in->lessThan($amIn)) {
+                        $amIn = $log->time_in;
+                    }
+                } else {
+                    if (!$pmIn || $log->time_in->lessThan($pmIn)) {
+                        $pmIn = $log->time_in;
+                    }
+                }
+            }
+            if ($log->time_out) {
+                $hourOut = (int)$log->time_out->format('H');
+                if ($hourOut < 12) {
+                    if (!$amOut || $log->time_out->greaterThan($amOut)) {
+                        $amOut = $log->time_out;
+                    }
+                } else {
+                    if (!$pmOut || $log->time_out->greaterThan($pmOut)) {
+                        $pmOut = $log->time_out;
+                    }
+                }
+            }
         }
+
+        // Fallbacks if only one side present
+        $timeIn = $amIn ?: ($pmIn ?: $logs->first()->time_in);
+        $timeOutRaw = $pmOut ?: ($amOut ?: $logs->last()->time_out);
+
+        // Calculate worked minutes (AM + PM), excluding lunch
+        $lunchStart = Carbon::parse($date)->setTime(12, 0, 0);
+        $lunchEnd   = Carbon::parse($date)->setTime(13, 0, 0);
+
+        $workedMinutes = 0;
+        // AM segment: up to lunch start
+        if ($amIn && $amOut && $amOut->greaterThan($amIn)) {
+            $amSegmentEnd = $amOut->lessThan($lunchStart) ? $amOut : $lunchStart;
+            if ($amIn->lessThan($amSegmentEnd)) {
+                $workedMinutes += $amIn->diffInMinutes($amSegmentEnd);
+            }
+        }
+        // PM segment: from first PM in to pmOut capped at 6 PM
+        $timeOutForCalc = null;
+        if ($timeOutRaw) {
+            $timeOutForCalc = $timeOutRaw->lessThan($capCalc) ? $timeOutRaw : $capCalc;
+        }
+        if ($pmIn && $timeOutForCalc && $timeOutForCalc->greaterThan($pmIn)) {
+            $pmSegmentStart = $pmIn->lessThan($lunchEnd) ? $lunchEnd : $pmIn;
+            if ($pmSegmentStart->lessThan($timeOutForCalc)) {
+                $workedMinutes += $pmSegmentStart->diffInMinutes($timeOutForCalc);
+            }
+        }
+
+        $workedMinutes = max(0, $workedMinutes);
+        $totalHours = round($workedMinutes / 60, 2);
+
+        // Overtime: anything beyond 6:00 PM based on raw time-out
+        $overtimeHours = 0;
+        if ($timeOutRaw && $timeOutRaw->greaterThan($capCalc)) {
+            $overtimeMinutes = $capCalc->diffInMinutes($timeOutRaw);
+            $overtimeHours = round($overtimeMinutes / 60, 2);
+        }
+
+        // Determine the display time-out
+        $timeOutDisplay = null;
+        if ($timeIn && $timeOutRaw) {
+            if ($timeOutRaw->lessThanOrEqualTo($capDisplay)) {
+                $timeOutDisplay = $timeOutRaw;
+            } else {
+                // completion after 8 work hours (AM+PM, lunch excluded)
+                $workMinutesNeeded = 8 * 60;
+                $remaining = $workMinutesNeeded;
+
+                // AM contribution
+                if ($amIn && $amOut) {
+                    $amSegmentEnd = $amOut->lessThan($lunchStart) ? $amOut : $lunchStart;
+                    if ($amIn->lessThan($amSegmentEnd)) {
+                        $amMinutes = $amIn->diffInMinutes($amSegmentEnd);
+                        $remaining -= min($remaining, $amMinutes);
+                    }
+                }
+
+                // PM contribution
+                if ($remaining > 0 && $pmIn) {
+                    $pmStart = $pmIn->lessThan($lunchEnd) ? $lunchEnd : $pmIn;
+                    $pmLimit = $timeOutRaw->lessThan($capDisplay) ? $timeOutRaw : $capDisplay;
+                    if ($pmStart->lessThan($pmLimit)) {
+                        $pmCompletion = $pmStart->copy()->addMinutes($remaining);
+                        if ($pmCompletion->greaterThan($pmLimit)) {
+                            $pmCompletion = $pmLimit;
+                        }
+                        $timeOutDisplay = $pmCompletion;
+                    }
+                }
+
+                if (!$timeOutDisplay) {
+                    $timeOutDisplay = $timeOutRaw->lessThan($capDisplay) ? $timeOutRaw : $capDisplay;
+                }
+            }
+            if ($timeOutDisplay && $timeOutDisplay->lessThanOrEqualTo($timeIn)) {
+                $timeOutDisplay = null;
+            }
+        }
+
+        $totalHours = round($workedMinutes / 60, 2);
+        $status = ($timeIn && $timeOutRaw) ? 'present' : 'incomplete';
+        $remarks = $status === 'present'
+            ? ("Worked {$totalHours} hours" . ($overtimeHours > 0 ? " (+{$overtimeHours} OT)" : ''))
+            : ($timeIn ? 'No time out recorded' : 'No time in recorded');
 
         return [
             'employee_id' => $employee->employee_id,
             'date' => $date->toDateString(),
             'time_in' => $timeIn,
-            'time_out' => $timeOut,
+            'time_out' => $timeOutDisplay, // display the time when 8 hours are completed, capped before 6 PM
             'total_hours' => $totalHours,
             'overtime_hours' => $overtimeHours,
             'status' => $status,

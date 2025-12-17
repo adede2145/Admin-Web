@@ -274,3 +274,4 @@ The RBAC enhancement for HR is a well-designed feature, but it's currently incom
 
 After these changes, HR admins will be able to manage employees of all types based on their configured `employment_type_access`.
 
+
