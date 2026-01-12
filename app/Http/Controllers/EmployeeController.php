@@ -364,10 +364,15 @@ class EmployeeController extends Controller
                 'request_method' => $request->method()
             ]);
 
+            // Get active employment types from database
+            $employmentTypes = \App\Models\EmploymentType::where('is_active', true)
+                ->pluck('type_name')
+                ->implode(',');
+
             $request->validate([
                 'full_name' => 'required|string|max:100',
                 'employee_code' => 'required|string|max:50|unique:employees,employee_code,' . $id . ',employee_id',
-                'employment_type' => 'required|in:full_time,part_time,cos,admin,faculty with designation',
+                'employment_type' => "required|in:{$employmentTypes}",
                 'department_id' => 'required|exists:departments,department_id',
                 'photo' => 'nullable|image|max:5120',
             ]);

@@ -64,13 +64,18 @@ class AdminController extends Controller
     // Create new admin
     public function store(Request $request)
     {
+        // Get active employment types from database
+        $employmentTypes = \App\Models\EmploymentType::where('is_active', true)
+            ->pluck('type_name')
+            ->implode(',');
+
         $request->validate([
             'username' => 'required|unique:admins,username',
             // Password: min 8, starts with capital letter, includes at least one symbol
             'password' => ['required','min:8','regex:/^[A-Z].*$/','regex:/[^A-Za-z0-9]/'],
             'employee_id' => 'required|exists:employees,employee_id|unique:admins,employee_id',
             'employment_type_access' => 'required|array|min:1',
-            'employment_type_access.*' => 'in:full_time,part_time,cos,admin,faculty with designation',
+            'employment_type_access.*' => "in:{$employmentTypes}",
         ], [
             'password.min' => 'Password must be at least 8 characters.',
             'password.regex' => 'Password must start with a capital letter and include at least one symbol.',

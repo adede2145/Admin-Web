@@ -25,11 +25,16 @@ class StoreEmployeeRequest extends FormRequest
      */
     public function rules()
     {
+        // Get active employment types from database
+        $employmentTypes = \App\Models\EmploymentType::where('is_active', true)
+            ->pluck('type_name')
+            ->implode(',');
+
         return [
             'emp_name' => 'required|string|max:100',
             'emp_id' => 'required|string|max:50|unique:employees,employee_code',
             'department_id' => 'required|exists:departments,department_id',
-            'employment_type' => 'required|string|in:full_time,cos,admin,faculty with designation',
+            'employment_type' => "required|string|in:{$employmentTypes}",
             // RFID is optional but must be unique when provided
             // Be permissive on content; length mainly to protect DB index sizes
             'rfid_uid' => 'nullable|string|max:191|unique:employees,rfid_code',

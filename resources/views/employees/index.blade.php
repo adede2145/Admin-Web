@@ -214,10 +214,14 @@
                                         style="border-color: #e5e7eb; border-radius: 8px; padding: 12px 16px; font-size: 1rem; transition: all 0.3s ease;"
                                         onfocus="this.style.borderColor='var(--aa-maroon)'; this.style.boxShadow='0 0 0 0.2rem rgba(86, 0, 0, 0.15)'"
                                         onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                                    <option value="full_time" {{ $employee->employment_type === 'full_time' ? 'selected' : '' }}>Full Time</option>
-                                    <option value="cos" {{ $employee->employment_type === 'cos' ? 'selected' : '' }}>COS</option>
-                                    <option value="admin" {{ $employee->employment_type === 'admin' ? 'selected' : '' }}>Admin</option>
-                                    <option value="faculty with designation" {{ $employee->employment_type === 'faculty with designation' ? 'selected' : '' }}>Faculty</option>
+                                    @php
+                                        $employmentTypes = \App\Models\EmploymentType::where('is_active', true)->orderBy('display_name')->get();
+                                    @endphp
+                                    @foreach($employmentTypes as $type)
+                                    <option value="{{ $type->type_name }}" {{ $employee->employment_type === $type->type_name ? 'selected' : '' }}>
+                                        {{ $type->display_name }}
+                                    </option>
+                                    @endforeach
                                 </select>
                             </div>
 

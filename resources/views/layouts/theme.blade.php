@@ -238,6 +238,7 @@
                 @if(auth()->check() && auth()->user()->role && auth()->user()->role->role_name === 'super_admin')
                     <a class="aa-nav-link {{ request()->is('admin-panel') ? 'active' : '' }}" href="{{ route('admin.panel') }}"><i class="bi bi-shield-lock"></i> Manage Admins</a>
                     <a class="aa-nav-link {{ request()->is('departments*') ? 'active' : '' }}" href="{{ route('departments.index') }}"><i class="bi bi-building"></i> Manage Offices</a>
+                    <a class="aa-nav-link {{ request()->is('employment-types*') ? 'active' : '' }}" href="{{ route('employment-types.index') }}"><i class="bi bi-briefcase"></i> Manage Employment Types</a>
                     <a class="aa-nav-link {{ request()->is('kiosks*') ? 'active' : '' }}" href="{{ route('kiosks.index') }}"><i class="bi bi-display"></i> Manage Kiosks</a>
                 @endif
             </nav>

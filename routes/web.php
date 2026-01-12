@@ -9,6 +9,7 @@ use App\Http\Controllers\DTRController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\KioskController;
+use App\Http\Controllers\EmploymentTypeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -172,6 +173,8 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
     Route::post('departments/head/store', [DepartmentController::class, 'storeHead'])->name('departments.head.store');
     Route::delete('departments/head/destroy', [DepartmentController::class, 'destroyHead'])->name('departments.head.destroy');
 
+    // Employment Type Management
+    Route::resource('employment-types', EmploymentTypeController::class);
 
     // Kiosk Management
     Route::resource('kiosks', KioskController::class);

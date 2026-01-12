@@ -292,14 +292,7 @@
                                 <div class="col-md-4">
                                     <label class="form-label">Employment Type <span class="text-danger">*</span></label>
                                     <select id="employmentType" name="employment_type" class="form-select" required>
-                                        <option value="">Select employment type</option>
-                                        <option value="full_time">Full Time</option>
-                                        <option value="cos">COS</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="faculty with designation">Faculty</option>
-                                    </select>
-                                </div>
-
+                        <option value="">Loading employment types...</option>
                                 <div class="col-md-4">
                                     <label class="form-label">RFID (fallback) <span class="optional-badge">(optional)</span> <span
                                             id="rfidStatus" class="ms-2 small text-muted"></span></label>
@@ -754,6 +747,99 @@
         }
 
         /**
+         * Fetch employment types from the hosted Laravel backend
+         * Uses token-based authentication
+         */
+        async function loadEmploymentTypesFromBackend() {
+            const backendUrl = getBackendUrl();
+            const token = getAuthToken();
+            const employmentTypeSelect = document.getElementById('employmentType');
+
+            // Validate token exists
+            if (!token) {
+                employmentTypeSelect.innerHTML = '<option value="">Not authenticated</option>';
+                employmentTypeSelect.disabled = true;
+                return false;
+            }
+
+            // Show loading state
+            employmentTypeSelect.innerHTML = '<option value="">Loading employment types...</option>';
+            employmentTypeSelect.disabled = true;
+
+            try {
+                console.log('Fetching employment types from:', `${backendUrl}/api/employment-types`);
+
+                // Make authenticated request to backend using token
+                const response = await fetch(`${backendUrl}/api/employment-types?token=${encodeURIComponent(token)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    signal: AbortSignal.timeout(10000)
+                });
+
+                console.log('Response status:', response.status);
+
+                // Handle authentication errors
+                if (response.status === 401 || response.status === 403) {
+                    employmentTypeSelect.innerHTML = '<option value="">Not authorized</option>';
+                    employmentTypeSelect.disabled = true;
+                    return false;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Employment types data received:', data);
+
+                // Handle response structure
+                let employmentTypes = [];
+                if (data.success && Array.isArray(data.employment_types)) {
+                    employmentTypes = data.employment_types;
+                } else if (Array.isArray(data)) {
+                    employmentTypes = data;
+                } else if (data.data && Array.isArray(data.data)) {
+                    employmentTypes = data.data;
+                } else {
+                    throw new Error('Invalid response format from backend');
+                }
+
+                // Validate we have employment types
+                if (employmentTypes.length === 0) {
+                    employmentTypeSelect.innerHTML = '<option value="">No employment types available</option>';
+                    employmentTypeSelect.disabled = true;
+                    return false;
+                }
+
+                // Populate dropdown with employment types
+                employmentTypeSelect.innerHTML = '<option value="">Select employment type</option>';
+                employmentTypes.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.type_name;
+                    option.textContent = type.display_name || type.type_name;
+                    employmentTypeSelect.appendChild(option);
+                });
+
+                // Enable the dropdown
+                employmentTypeSelect.disabled = false;
+
+                return true;
+
+            } catch (error) {
+                console.error('Failed to load employment types:', error);
+
+                employmentTypeSelect.innerHTML = '<option value="">Connection failed</option>';
+                employmentTypeSelect.disabled = true;
+
+                return false;
+            }
+        }
+
+        /**
          * Load employee data for edit mode
          */
         async function loadEmployeeData() {
@@ -800,8 +886,9 @@
                     document.getElementById('employmentType').value = emp.employment_type;
                     document.getElementById('employmentType').disabled = true;
 
-                    // Load offices first, then set department
+                    // Load offices and employment types first, then set values
                     await loadOfficesFromBackend();
+                    await loadEmploymentTypesFromBackend();
                     document.getElementById('departmentId').value = emp.department_id;
                     document.getElementById('departmentId').disabled = true;
 
@@ -1846,9 +1933,10 @@
                     console.log('Edit mode detected, loading employee:', employeeId);
                     loadEmployeeData();
                 } else {
-                    // Register mode: load offices
-                    console.log('Register mode, loading offices...');
+                    // Register mode: load offices and employment types
+                    console.log('Register mode, loading offices and employment types...');
                     loadOfficesFromBackend();
+                    loadEmploymentTypesFromBackend();
                 }
             } else {
                 // No token in URL - disable functionality
@@ -1860,6 +1948,10 @@
                 const officeSelect = document.getElementById('departmentId');
                 officeSelect.innerHTML = '<option value="">Open from admin panel first</option>';
                 officeSelect.disabled = true;
+
+                const employmentTypeSelect = document.getElementById('employmentType');
+                employmentTypeSelect.innerHTML = '<option value="">Open from admin panel first</option>';
+                employmentTypeSelect.disabled = true;
             }
 
             checkBridge();

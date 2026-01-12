@@ -104,36 +104,19 @@
                                 The admin will only see and manage employees whose employment type is checked here,
                                 across Dashboard, Attendance Log, Reports, and Manage Employees.
                             </div>
+                            @php
+                                $employmentTypes = \App\Models\EmploymentType::where('is_active', true)->orderBy('display_name')->get();
+                            @endphp
+                            @foreach($employmentTypes as $type)
                             <div class="form-check">
-                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="full_time" id="empTypeFullTime">
-                                <label class="form-check-label" for="empTypeFullTime">
-                                    Full Time
+                                <input class="form-check-input employment-type-checkbox" type="checkbox" 
+                                       name="employment_type_access[]" value="{{ $type->type_name }}" 
+                                       id="empType{{ Str::slug($type->type_name, '') }}">
+                                <label class="form-check-label" for="empType{{ Str::slug($type->type_name, '') }}">
+                                    {{ $type->display_name }}
                                 </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="part_time" id="empTypePartTime">
-                                <label class="form-check-label" for="empTypePartTime">
-                                    Part Time
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="cos" id="empTypeCos">
-                                <label class="form-check-label" for="empTypeCos">
-                                    COS
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="admin" id="empTypeAdmin">
-                                <label class="form-check-label" for="empTypeAdmin">
-                                    Admin
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input employment-type-checkbox" type="checkbox" name="employment_type_access[]" value="faculty with designation" id="empTypeFaculty">
-                                <label class="form-check-label" for="empTypeFaculty">
-                                    Faculty with Designation
-                                </label>
-                            </div>
+                            @endforeach
                             <div id="employment-type-error" class="text-danger small mt-2" style="display: none;">
                                 Please select at least one employment type.
                             </div>

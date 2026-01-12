@@ -135,10 +135,15 @@
                             <label class="form-label">Employment Type</label>
                             <select id="employmentType" name="employment_type" class="form-select" {{ (isset($editFp) && $editFp) ? 'disabled' : 'required' }}>
                                 <option value="">Select employment type</option>
-                                <option value="full_time" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='full_time' ? 'selected' : '' }}>Full-time</option>
-                                <option value="cos" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='cos' ? 'selected' : '' }}>COS</option>
-                                <option value="admin" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='admin' ? 'selected' : '' }}>Admin</option>
-                                <option value="faculty with designation" {{ ($editFp ?? false) && isset($employee) && $employee->employment_type==='faculty with designation' ? 'selected' : '' }}>Faculty</option>
+                                @php
+                                    $employmentTypes = \App\Models\EmploymentType::where('is_active', true)->orderBy('display_name')->get();
+                                @endphp
+                                @foreach($employmentTypes as $type)
+                                <option value="{{ $type->type_name }}" 
+                                    {{ ($editFp ?? false) && isset($employee) && $employee->employment_type === $type->type_name ? 'selected' : '' }}>
+                                    {{ $type->display_name }}
+                                </option>
+                                @endforeach
                             </select>
                         </div>
 

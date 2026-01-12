@@ -472,8 +472,13 @@ class AttendanceController extends Controller
 
     public function generateDTR(Request $request)
     {
+        // Get active employment types from database
+        $employmentTypes = \App\Models\EmploymentType::where('is_active', true)
+            ->pluck('type_name')
+            ->implode(',');
+
         $request->validate([
-            'employment_type' => 'required|in:full_time,part_time,cos,admin,faculty with designation',
+            'employment_type' => "required|in:{$employmentTypes}",
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'report_type' => 'required|in:monthly',

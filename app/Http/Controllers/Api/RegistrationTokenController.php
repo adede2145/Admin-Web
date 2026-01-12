@@ -16,6 +16,56 @@ class RegistrationTokenController extends Controller
     {
         $this->tokenService = $tokenService;
     }
+    /**
+     * Get employment types based on token
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEmploymentTypes(Request $request)
+    {
+        $token = $request->input('token') ?? $request->bearerToken();
+
+        if (!$token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No token provided'
+            ], 400);
+        }
+
+        $payload = $this->tokenService->validateRegistrationToken($token);
+
+        if (!$payload) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired token'
+            ], 401);
+        }
+
+        try {
+            // Get all active employment types
+            $employmentTypes = \App\Models\EmploymentType::where('is_active', true)
+                ->orderBy('display_name')
+                ->get()
+                ->map(function($type) {
+                    return [
+                        'type_name' => $type->type_name,
+                        'display_name' => $type->display_name
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'employment_types' => $employmentTypes
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch employment types: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     /**
      * Generate a token for local registration page access
@@ -187,12 +237,17 @@ class RegistrationTokenController extends Controller
         \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
+            // Get active employment types from database
+            $employmentTypes = \App\Models\EmploymentType::where('is_active', true)
+                ->pluck('type_name')
+                ->implode(',');
+
             // Validate request (same rules as StoreEmployeeRequest)
             $validatedData = $request->validate([
                 'emp_name' => 'required|string|max:100',
                 'emp_id' => 'required|string|max:50|unique:employees,employee_code',
                 'department_id' => 'required|exists:departments,department_id',
-                'employment_type' => 'required|in:full_time,cos,admin,faculty with designation',
+                'employment_type' => "required|in:{$employmentTypes}",
                 'rfid_uid' => 'nullable|string|max:191|unique:employees,rfid_code',
                 'primary_template' => 'required|string',
                 'backup_template' => 'nullable|string',

@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // Public token validation endpoints (no auth required, token validates itself)
 Route::post('/validate-token', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'validateToken']);
 Route::get('/offices', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'getOffices']);
+Route::get('/employment-types', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'getEmploymentTypes']);
 
 // Employee registration with token authentication (for local registration page)
 Route::post('/register-employee', [\App\Http\Controllers\Api\RegistrationTokenController::class, 'registerEmployee']);
